@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<config>
+    <inputData>
+        <type>SMAP</type>
+        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1bProducts/SMAP/SMAP_L1B_TB_47172_D_20231201T000114_R18290_001.h5</path>
+        <splitForeAft>True</splitForeAft>
+        <!-- AMSR2 Specific Configuration Parameters -->
+        <sourceBand>89a</sourceBand>
+        <targetBand>89b</targetBand>
+        <LMT>2200</LMT>
+    </inputData>
+    <GridParams>
+            <gridType>L1c</gridType>
+            <gridDefinition>EASE2_G36km</gridDefinition>
+            <projectionDefinition>G</projectionDefinition>
+    </GridParams>
+    <ReGridderParams>
+        <regriddingAlgorithm>DIB</regriddingAlgorithm>
+        <nnDistancecalc>GreatCircle</nnDistancecalc> <!-- Need to add configuration validation, can be euclidian or great circle-->
+        <sourceBand></sourceBand>
+        <targetBand></targetBand>
+    </ReGridderParams>
+</config>
