@@ -377,9 +377,9 @@ class DataIngestion:
         data_dict, coreg_a, coreg_b, lats_89a, lons_89a, lats_89b, lons_89b = self.read_hdf5()
 
         if self.config.grid_type == "L1r":
-            required_locations = ['source', 'target']
+            required_locations = ['source_band', 'target_band']
         else:
-            required_locations = ['source']
+            required_locations = ['source_band']
 
         for band in required_locations:
             if getattr(self.config, band) == '89a':
