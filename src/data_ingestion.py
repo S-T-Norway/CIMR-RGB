@@ -182,8 +182,8 @@ class DataIngestion:
                 # data_dict['bt_v_target'] = bt_data['tb_v'][:]
                 # data_dict['bt_3_target'] = bt_data['tb_3'][:]
                 # data_dict['bt_4_target'] = bt_data['tb_4'][:]
-                data_dict['lat_target'] = bt_data['tb_lat'][:]
-                data_dict['lon_target'] = bt_data['tb_lon'][:]
+                data_dict['lats_target'] = bt_data['tb_lat'][:]
+                data_dict['lons_target'] = bt_data['tb_lon'][:]
                 data_dict["antenna_scan_angle"] = bt_data["antenna_scan_angle"][:]
                 # data_dict['bt_h_target_nedt'] = bt_data['nedt_h'][:]
                 # data_dict['bt_v_target_nedt'] = bt_data['nedt_v'][:]
@@ -377,20 +377,20 @@ class DataIngestion:
         data_dict, coreg_a, coreg_b, lats_89a, lons_89a, lats_89b, lons_89b = self.read_hdf5()
 
         if self.config.grid_type == "L1r":
-            required_locations = ['source_band', 'target_band']
+            required_locations = ['source', 'target']
         else:
-            required_locations = ['source_band']
+            required_locations = ['source']
 
         for band in required_locations:
-            if getattr(self.config, band) == '89a':
-                data_dict['lat_' + band] = lats_89a
-                data_dict['lon_' + band] = lons_89a
-            elif getattr(self.config, band) == '89b':
-                data_dict['lat_' + band] = lats_89b
-                data_dict['lon_' + band] = lons_89b
+            if getattr(self.config, f"{band}_band") == '89a':
+                data_dict[f"lats_{band}"] = lats_89a
+                data_dict[f"lons_{band}"] = lons_89a
+            elif getattr(self.config, f"{band}_band") == '89b':
+                data_dict[f"lats_{band}"] = lats_89b
+                data_dict[f"lons_{band}"] = lons_89b
             else:
                 # Extract BTs of Target Band using conversion algorithm from 89a channel.
-                coreg_index = self.config.key_mappings[getattr(self.config, band)][0]
+                coreg_index = self.config.key_mappings[getattr(self.config, f"{band}_band")][0]
                 lats, lons = self.amsr2_latlon_conversion(
                     coreg_a=coreg_a[coreg_index],
                     coreg_b=coreg_b[coreg_index],
@@ -398,8 +398,8 @@ class DataIngestion:
                     lats_hi=lats_89a
                 )
 
-                data_dict['lats_' + band] = lats
-                data_dict['lons_' + band] = lons
+                data_dict[f"lats_{band}"] = lats
+                data_dict[f"lons_{band}"] = lons
 
         return data_dict
 

@@ -27,10 +27,11 @@ if __name__ == '__main__':
 
     # Create appropriate grid
     grid_object = (GridGenerator(config)
-                   .generate_swath_grid(target_lons=data_dict['lon_target_band'],
-                                        target_lats=data_dict['lat_target_band']))
+                   .generate_swath_grid(target_lons=data_dict['lons_target'],
+                                        target_lats=data_dict['lats_target']))
     # Regrid Data
     if config.input_data_type == 'SMAP':
         data_dict_out = ReGridder(config).regrid_data(data_dict)
     # elif config.input_data_type == 'AMSR2':
     #     data_dict_out = ReGridder(config).regrid_amsr2_data(data_dict)
+

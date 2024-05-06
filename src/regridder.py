@@ -285,8 +285,8 @@ class ReGridder:
         mask_dict['fore'] = ~mask_dict['aft']
 
         source_x, source_y, target_x, target_y = self.initiate_grid(
-            target_lon=data_dict['lon_target'],
-            target_lat=data_dict['lat_target']
+            target_lon=data_dict['lons_target'],
+            target_lat=data_dict['lats_target']
         )
 
         pixel_map = self.assign_to_pixels(
