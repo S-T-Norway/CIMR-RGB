@@ -2,12 +2,15 @@
 <config>
     <inputData>
         <type>AMSR2</type>
+<!--        Maybe the path (to the data) should be automatically set.-->
 <!--         <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1bProducts/SMAP/SMAP_L1B_TB_47172_D_20231201T000114_R18290_001.h5</path>!-->
         <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1bProducts/AMSR2/GW1AM2_202308301033_051D_L1SGBTBR_2220220.h5</path>
+<!--        The path below is the original granule (for Michele)-->
+<!--        <path>/home/beywood/ST/CIMR_RGB/Data/SMAP/L1b/test_granule/SMAP_L1B_TB_47224_D_20231204T132117_R18290_001.h5</path>-->
         <splitForeAft>True</splitForeAft>
         <!-- AMSR2 Specific Configuration Parameters -->
-        <sourceBand>6</sourceBand>
-        <targetBand>7</targetBand>
+        <sourceBand>36</sourceBand>
+        <targetBand>10</targetBand>
         <LMT>2200</LMT>
     </inputData>
     <GridParams>
@@ -16,9 +19,13 @@
             <projectionDefinition>G</projectionDefinition>
     </GridParams>
     <ReGridderParams>
-        <regriddingAlgorithm>DIB</regriddingAlgorithm>
+        <regriddingAlgorithm>IDS</regriddingAlgorithm>
         <nnDistancecalc>GreatCircle</nnDistancecalc> <!-- Need to add configuration validation, can be euclidian or great circle-->
-        <sourceBand></sourceBand>
-        <targetBand></targetBand>
+        <kernelSize>61</kernelSize>
     </ReGridderParams>
+    <outputData>
+        <saveTodisk>True</saveTodisk>
+<!--For now, gonna put an output path as user input, but I actually think this should be automatically set-->
+        <outputPath>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1cProducts/SMAP/RGB/</outputPath>
+    </outputData>
 </config>

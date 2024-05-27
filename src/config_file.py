@@ -1,6 +1,7 @@
 """
 This script reads the configuration file and validates the chosen parameters.
 """
+from os import path, getcwd
 import sys
 from xml.etree.ElementTree import ParseError, parse
 
@@ -44,6 +45,8 @@ class ConfigFile:
             config_object=config_object,
             input_data_path='inputData/path'
         )
+
+        self.dpr_path = path.join(path.dirname(getcwd()), 'dpr')
 
         self.grid_type = self.validate_grid_type(
             config_object=config_object,
@@ -108,6 +111,7 @@ class ConfigFile:
                 '89a': (None, 'Brightness Temperature (89.0GHz-A,'),
                 '89b': (None, 'Brightness Temperature (89.0GHz-B,')
             }
+            self.kernel_size = config_object.find('ReGridderParams/kernelSize').text
 
     @staticmethod
     def read_config(config_file_path):
