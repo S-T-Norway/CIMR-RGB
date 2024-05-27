@@ -130,9 +130,11 @@ class DataIngestion:
                 coreg_b = self.amsr2_coreg_extraction(data.attrs['CoRegistrationParameterA2'][0])
                 overlap = int(data.attrs['OverlapScans'][0])
                 num_scans = int(data.attrs['NumberOfScans'][0])
-                if num_scans <= self.config.LMT:
-                    self.num_scans = num_scans
-                else:
+                self.config.num_scans = num_scans
+                self.config.AM2_DEF_SNUM_HI = AM2_DEF_SNUM_HI
+                self.config.AM2_DEF_SNUM_LOW = AM2_DEF_SNUM_LOW
+
+                if not num_scans <= self.config.LMT:
                     raise ValueError(
                         f"Number of scans ({num_scans} exceeds limit of {self.config.LMT}."
                     )
@@ -308,10 +310,10 @@ class DataIngestion:
         deg = 180.0 / pi
 
         # Initiate lower frequency channel lat/lon arrays
-        lats_lo = zeros((self.num_scans, AM2_DEF_SNUM_LOW))
-        lons_lo = zeros((self.num_scans, AM2_DEF_SNUM_LOW))
+        lats_lo = zeros((self.config.num_scans, AM2_DEF_SNUM_LOW))
+        lons_lo = zeros((self.config.num_scans, AM2_DEF_SNUM_LOW))
 
-        for scan in range(self.num_scans):
+        for scan in range(self.config.num_scans):
             for sample in range(AM2_DEF_SNUM_LOW):
                 lat_1 = lats_hi[scan, sample * 2 + 0]
                 lat_2 = lats_hi[scan, sample * 2 + 1]
@@ -401,6 +403,8 @@ class DataIngestion:
                 data_dict[f"lats_{band}"] = lats
                 data_dict[f"lons_{band}"] = lons
 
+        for variable in data_dict:
+            data_dict[variable] = data_dict[variable].flatten('C')
         return data_dict
 
     def ingest_smap(self):
