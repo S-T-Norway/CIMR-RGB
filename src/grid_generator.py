@@ -261,10 +261,10 @@ class GridGenerator:
             beta = -1 * np.arcsin(1 - (rho ** 2 / (MAP_EQUATORIAL_RADIUS ** 2 * qp)))
             lam = np.arctan2(x, y)
 
-        phi = (((beta +
-                 ((E2 / 3) + (31 * E4 / 180) + (517 * E6 / 5040)) * np.sin(2 * beta)) +
-                ((23 * E4 / 360) + (251E6 / 3780)) * np.sin(4 * beta)) +
-               (761E6 / 45360) * np.sin(6 * beta))
+        phi = (beta +
+               ((E2 / 3) + (31 * E4 / 180) + (517 * E6 / 5040)) * np.sin(2 * beta) +
+               ((23 * E4 / 360) + (251 * E6 / 3780)) * np.sin(4 * beta) +
+               (761 * E6 / 45360) * np.sin(6 * beta))
 
         lat = np.rad2deg(phi)
         lon = lon_0 + np.rad2deg(lam)
@@ -304,6 +304,7 @@ class GridGenerator:
 
     @staticmethod
     def generate_swath_grid(target_lons, target_lats):
+        test = 0
         """
         TBD
         """
