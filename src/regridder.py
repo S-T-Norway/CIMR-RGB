@@ -286,14 +286,14 @@ class ReGridder:
             scan direction appended to them, and the values are the regridded data arrays.
         """
         # --------------------------------------------------------------------------------
-        if self.config.input_data_type == 'AMSR2' or self.config.input_data_type == 'CIMR':
-            print('Functionality not yet included/tested for AMSR2 or CIMR L1c regrid')
+        if self.config.input_data_type == 'AMSR2':
+            print('Functionality not yet included/tested for AMSR2')
         # --------------------------------------------------------------------------------
 
         data_dict_out = {}
         symetric_diff = None
-        mask_dict = {'aft': (data_dict['antenna_scan_angle'] >= 90) & (
-                data_dict['antenna_scan_angle'] <= 270)}
+        mask_dict = {'aft': (data_dict['antenna_scan_angle'] >= self.config.aft_angle_min) & (
+                data_dict['antenna_scan_angle'] <= self.config.aft_angle_max)}
         mask_dict['fore'] = ~mask_dict['aft']
 
         source_x, source_y, target_x, target_y = self.initiate_grid(

@@ -9,9 +9,10 @@ process.
 """
 
 import re
-from numpy import array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan
+from numpy import array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile
 import numpy as np
 import h5py as h5
+from netCDF4 import Dataset
 
 from config_file import ConfigFile
 from utils import remove_overlap
@@ -205,6 +206,31 @@ class DataIngestion:
 
             if self.config.input_data_type == "CIMR":
                 return data_dict
+    def read_netcdf(self):
+        """
+
+        :return:
+        """
+        data_dict = {}
+        with Dataset(self.config.input_data_path, 'r') as data:
+            if self.config.grid_type == "L1c":
+                target_bands = self.config.target_band.replace(" ", "").split(",")
+                for band in target_bands:
+                    band_data = data[band + '_BAND']
+                    variable_dict = {}
+                    # Eventually "variables" should be defined in the config file.
+                    variables = ['lon', 'lat', 'brightness_temperature_h', 'scan_angle']
+                    for variable in variables:
+                        variable_dict[self.config.variable_key_map[variable]] = array(band_data[variable][:])
+                    # L1c only has "target" designator
+                    variable_dict['lons_target'] = variable_dict.pop('lons')
+                    variable_dict['lats_target'] = variable_dict.pop('lats')
+                    data_dict[band] = variable_dict
+
+            if self.config.grid_type == 'L1r':
+                # Need to concatenate the target and source bands.
+                pass
+        return data_dict
 
     @staticmethod
     def extract_smap_qc(qc_dict):
@@ -365,6 +391,29 @@ class DataIngestion:
 
         return lats_lo, lons_lo
 
+    def combine_cimr_feeds(self, data_dict):
+        """
+        :param data_dict:
+        :return:
+        """
+        for band in data_dict:
+            num_horns = self.config.num_horns[band]
+            for variable in data_dict[band]:
+                var = data_dict[band][variable]
+                if len(var.shape) == 3:
+                    var_out = np.zeros((var.shape[0], var.shape[1] * num_horns))
+                    # Horn involvement
+                    for scan in range(var.shape[0]):
+                        var_out[scan, :] = var[scan, :, :].flatten('F')
+                    data_dict[band][variable] = var_out.flatten('C')
+
+                elif len(data_dict[band][variable].shape) == 2:
+                    var_out = np.zeros((var.shape[0], var.shape[1] * num_horns))
+                    for scan in range(var.shape[0]):
+                        var_out[scan, :] = tile(var[scan, :], num_horns)
+                    data_dict[band][variable] = var_out.flatten('C')
+        return data_dict
+
     def ingest_amsr2(self):
         """
         Ingests AMSR2 data from the user specified path
@@ -423,6 +472,18 @@ class DataIngestion:
         # data_dict = self.apply_smap_qc(qc_dict, data_dict)
         return data_dict
 
+    def ingest_cimr(self):
+        """
+
+        :return:
+        """
+        # Open netcdf file
+        data_dict = self.read_netcdf()
+        # Combine feeds (Move this into read_netcdf?)
+        # Still need to adjust the scan angle feed offsets
+        data_dict = self.combine_cimr_feeds(data_dict)
+        return data_dict
+
     def ingest_data(self):
         """
         Initiates ingestion of user specified data type.
@@ -436,3 +497,5 @@ class DataIngestion:
             return self.ingest_amsr2()
         if self.config.input_data_type == "SMAP":
             return self.ingest_smap()
+        if self.config.input_data_type == "CIMR":
+            return self.ingest_cimr()

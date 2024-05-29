@@ -97,6 +97,11 @@ class ConfigFile:
                 print(f"{e}")
                 sys.exit(1)
 
+        # SMAP specific Parameters
+        if self.input_data_type == "SMAP":
+            self.aft_angle_min = 90
+            self.aft_angle_max = 270
+
         # AMSR2 specific parameters
         if self.input_data_type == "AMSR2":
             self.LMT = 2200
@@ -112,6 +117,25 @@ class ConfigFile:
                 '89b': (None, 'Brightness Temperature (89.0GHz-B,')
             }
             self.kernel_size = config_object.find('ReGridderParams/kernelSize').text
+
+        # CIMR Specific Parameters
+        if self.input_data_type == "CIMR":
+            self.variable_key_map = {
+                'lon': 'lons',
+                'lat': 'lats',
+                'brightness_temperature_h': 'bt_h',
+                'scan_angle': 'antenna_scan_angle'
+            }
+            self.aft_angle_min = 180
+            self.aft_angle_max = 360
+            self.num_horns = {
+                'L': 1,
+                'C': 4,
+                'X': 4,
+                'KA': 8,
+                'KU': 8,
+            }
+
 
     @staticmethod
     def read_config(config_file_path):
@@ -223,10 +247,10 @@ class ConfigFile:
         str
             Validated target band
         """
-        if grid_type == 'L1c':
-            return None
 
         if input_data_type == "AMSR2":
+            if grid_type == "L1c":
+                return None
             valid_input = ['6', '7', '10', '18', '23', '36', '89a', '89b']
             if config_object.find(target_band).text in valid_input:
                 return config_object.find(target_band).text
@@ -239,7 +263,17 @@ class ConfigFile:
             pass
 
         if input_data_type == "CIMR":
-            pass
+            if grid_type == "L1c":
+                valid_input = ['L', 'C', 'X', 'KA', 'KU', 'All']
+                config_input = config_object.find(target_band).text.replace(" ", "").split(',')
+                for i in config_input:
+                    if i not in valid_input:
+                        raise ValueError(
+                            f"Invalid target bands for CIMR L1c remap."
+                            f" Valid target bands are: {valid_input} or any combination of individual bands.")
+                return config_object.find(target_band).text
+
+
 
     @staticmethod
     def validate_source_band(config_object, source_band, input_data_type):
