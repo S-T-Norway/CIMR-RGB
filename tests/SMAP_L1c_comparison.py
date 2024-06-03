@@ -1,4 +1,4 @@
-# This script is to compare the SMAP L1c RGB remap, with the NASA remap for the equivalent granule.
+# This script is to compare the SMAP L1C RGB remap, with the NASA remap for the equivalent granule.
 
 import os
 import h5py
@@ -8,6 +8,8 @@ import pickle
 import matplotlib
 tkagg = matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+
+root_path = os.path.join(os.getcwd(), '..')
 
 GRIDS = {'EASE2_G9km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83,
                         'res': 9008.05, 'n_cols': 3856, 'n_rows': 1624},
@@ -25,8 +27,8 @@ GRIDS = {'EASE2_G9km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83
 class SMAPComparison:
     def __init__(self, root_path):
         self.root_path = root_path
-        self.RGB_dir = os.path.join(root_path, 'dpr/L1cProducts/SMAP/RGB')
-        self.NASA_dir = os.path.join(root_path, 'dpr/L1cProducts/SMAP/NASA/')
+        self.RGB_dir = os.path.join(root_path, 'dpr/L1C/SMAP/RGB')
+        self.NASA_dir = os.path.join(root_path, 'dpr/L1C/SMAP/NASA/')
 
     def check_existence(self):
         pass
@@ -37,9 +39,17 @@ class SMAPComparison:
             rgb_data = pickle.load(f)
         return rgb_data
     def get_NASA_data(self, rgb_granule_name):
-        nasa_granule_name = rgb_granule_name[0:46] + '.h5'
+        if "9km" in rgb_granule_name:
+            self.NASA_dir = self.NASA_dir + 'Enhanced'
+            for file in os.listdir(self.NASA_dir):
+                if rgb_granule_name[12:28] in file:
+                    nasa_granule_name = file
+                    grid = GRIDS[f"{rgb_granule_name[46:]}"]
+        else:
+            nasa_granule_name = rgb_granule_name[0:46] + '.h5'
+            grid = GRIDS[f"{rgb_granule_name[47:]}"]
         nasa_dict = {}
-        grid = GRIDS[f"{rgb_granule_name[47:]}"]
+
         if 'G' in rgb_granule_name:
             projection = 'Global_Projection'
         elif 'N' in rgb_granule_name:
@@ -98,13 +108,13 @@ class SMAPComparison:
 
         # Plot data
         cmap='plasma'
-        im1 = ax1.imshow(rgb[variable][:, 0:450], aspect='auto', cmap = cmap)
+        im1 = ax1.imshow(rgb[variable][:, :], aspect='auto', cmap = cmap, interpolation='nearest')
         ax1.set_title('RGB Remap', fontsize = 14)
 
-        im2 = ax2.imshow(nasa[variable][:, 0:450], aspect='auto', cmap = cmap)
+        im2 = ax2.imshow(nasa[variable][:, :], aspect='auto', cmap = cmap)
         ax2.set_title('NASA Remap', fontsize = 14)
 
-        im3 = ax3.imshow(diff[:, 0:450], aspect='auto',cmap=cmap)
+        im3 = ax3.imshow(diff[:, :], aspect='auto',cmap=cmap, interpolation = 'nearest')
         ax3.set_title('Difference', fontsize = 14)
 
         # Add color bar to the dedicated axis
@@ -119,14 +129,10 @@ class SMAPComparison:
         ax1.set_ylabel('EASE2 Grid Rows [-]', fontsize = 14)
         ax2.set_xlabel('EASE2 Grid Columns [-]', fontsize = 14)
 
-
-
         plt.tight_layout()
         plt.show()
 
         fig.savefig('/home/beywood/ST/CIMR_RGB/WP200/SMAP_L1C_TB_47224_D_20231204T132117_R18290_001_frequency.png', dpi=300, bbox_inches='tight')
-
-
         # plt.figure()
         # plt.imshow(diff)
 
@@ -135,9 +141,11 @@ class SMAPComparison:
 
 
 # The name of the file you want to compare
-root_path = '/home/beywood/ST/CIMR_RGB/CIMR-RGB'
-# rgb_granule_name = 'SMAP_L1C_TB_47172_D_20231201T000114_R18290_001_EASE2_G36km'
-rgb_granule_name = 'SMAP_L1C_TB_47224_D_20231204T132117_R18290_001_EASE2_G36km'
+rgb_granule_name = 'SMAP_L1C_TB_47185_D_20231201T212120_R18290_001EASE2_G9km'
+# rgb_granule_name = 'SMAP_L1C_TB_47185_D_20231201T212120_R18290_001EASE2_G9km'
 
+
+# Make the plot
 SMAPComparison(root_path).compare_single_granule(rgb_granule_name)
+
 
