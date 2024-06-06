@@ -84,7 +84,7 @@ class ReGridder:
             Y-coordinates of the center of a grid cell in the target grid defined from a given grid
             definition.
         """
-        if self.config.grid_type == 'L1c':
+        if self.config.grid_type == 'L1C':
             source_x, source_y = GridGenerator(self.config).lonlat_to_xy(
                 lon=target_lon,
                 lat=target_lat
@@ -98,7 +98,7 @@ class ReGridder:
             source_x[out_of_bounds_inds] = nan
             return source_x, source_y, target_x, target_y
 
-        if self.config.grid_type == 'L1r':
+        if self.config.grid_type == 'L1R':
             return source_lon, source_lat, target_lon, target_lat
 
     @staticmethod
@@ -500,7 +500,6 @@ class ReGridder:
         measure_out = nansum(weights* measurements)/nansum(weights)
         return measure_out
 
-
     def regrid_l1r(self, data_dict):
         """
         TBD
@@ -514,7 +513,7 @@ class ReGridder:
         """
         #--------------------------------------------------------------------------------
         if self.config.input_data_type == 'SMAP' or self.config.input_data_type == 'CIMR':
-            print('Functionality not yet included/tested for SMAP or CIMR L1r regrid')
+            print('Functionality not yet included/tested for SMAP or CIMR L1R regrid')
         # --------------------------------------------------------------------------------
 
         data_dict_out = {}
@@ -535,7 +534,6 @@ class ReGridder:
 
         # Check for pre-calculated weights, otherwise calculate them.
         weights = self.pre_calc_check(data_dict)
-        test = 0
 
         # Apply the weights for the regrid convolution
         count = 0

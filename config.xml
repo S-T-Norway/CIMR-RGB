@@ -1,29 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <config>
     <inputData>
-        <type>AMSR2</type>
-<!--        Maybe the path (to the data) should be automatically set.-->
-<!--         <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1bProducts/SMAP/SMAP_L1B_TB_47172_D_20231201T000114_R18290_001.h5</path>!-->
-        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1bProducts/AMSR2/GW1AM2_202308301033_051D_L1SGBTBR_2220220.h5</path>
-<!--        <path>/home/beywood/ST/CIMR_RGB/Data/L1B_datasets/Updated_L1B/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>-->
-<!--        <path>/home/beywood/ST/CIMR_RGB/Data/L1B_datasets/Updated_L1B/SCEPS_l1b_sceps_geo_polar_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>-->
-<!--        The path below is the original granule (for Michele)-->
-<!--        <path>/home/beywood/ST/CIMR_RGB/Data/SMAP/L1b/test_granule/SMAP_L1B_TB_47224_D_20231204T132117_R18290_001.h5</path>-->
+        <type>CIMR</type>
+         <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_polar_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>!
         <splitForeAft>True</splitForeAft>
         <!-- AMSR2 Specific Configuration Parameters -->
-        <sourceBand>36</sourceBand>
-        <targetBand>10</targetBand> <!-- For CIMR, you can choose a target band/s or all of them -->
+        <sourceBand>23</sourceBand>
+        <targetBand>C</targetBand> <!-- For CIMR, you can choose a target band/s or all of them -->
         <LMT>2200</LMT>
     </inputData>
     <GridParams>
-            <gridType>L1c</gridType>
-            <gridDefinition>EASE2_N36km</gridDefinition>
+            <gridType>L1C</gridType>
+            <gridDefinition>EASE2_N9km</gridDefinition>
             <projectionDefinition>N</projectionDefinition>
     </GridParams>
     <ReGridderParams>
         <regriddingAlgorithm>IDS</regriddingAlgorithm>
         <nnDistancecalc>GreatCircle</nnDistancecalc> <!-- Need to add configuration validation, can be euclidian or great circle-->
-        <kernelSize>61</kernelSize>
+        <kernelSize>9</kernelSize>
     </ReGridderParams>
     <outputData>
         <saveTodisk>True</saveTodisk>

@@ -213,7 +213,7 @@ class DataIngestion:
         """
         data_dict = {}
         with Dataset(self.config.input_data_path, 'r') as data:
-            if self.config.grid_type == "L1c":
+            if self.config.grid_type == "L1C":
                 target_bands = self.config.target_band.replace(" ", "").split(",")
                 for band in target_bands:
                     band_data = data[band + '_BAND']
@@ -222,12 +222,12 @@ class DataIngestion:
                     variables = ['lon', 'lat', 'brightness_temperature_h', 'scan_angle']
                     for variable in variables:
                         variable_dict[self.config.variable_key_map[variable]] = array(band_data[variable][:])
-                    # L1c only has "target" designator
+                    # L1C only has "target" designator
                     variable_dict['lons_target'] = variable_dict.pop('lons')
                     variable_dict['lats_target'] = variable_dict.pop('lats')
                     data_dict[band] = variable_dict
 
-            if self.config.grid_type == 'L1r':
+            if self.config.grid_type == 'L1R':
                 # Need to concatenate the target and source bands.
                 pass
         return data_dict
@@ -427,7 +427,7 @@ class DataIngestion:
 
         data_dict, coreg_a, coreg_b, lats_89a, lons_89a, lats_89b, lons_89b = self.read_hdf5()
 
-        if self.config.grid_type == "L1r":
+        if self.config.grid_type == "L1R":
             required_locations = ['source', 'target']
         else:
             required_locations = ['source']

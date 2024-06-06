@@ -85,7 +85,7 @@ class GridGenerator:
             Root element of the configuration file
         """
         self.config = config_object
-        if self.config.grid_type == 'L1c':
+        if self.config.grid_type == 'L1C':
             self.projection = PROJECTIONS[config_object.projection_definition]
 
     def generate_grid_xy(self, return_resolution=False):

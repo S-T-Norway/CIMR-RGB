@@ -23,7 +23,6 @@ class ConfigFile:
     validate_{configuration_variable}
         Validates the configuration variable and returns the value if valid
 
-
     """
     def __init__(self, config_file_path):
         """
@@ -89,7 +88,12 @@ class ConfigFile:
             split_fore_aft='inputData/splitForeAft'
         )
 
-        if self.grid_type == "L1r":
+        self.save_to_disk = self.validate_save_to_disk(
+            config_object=config_object,
+            save_to_disk='outputData/saveTodisk'
+        )
+
+        if self.grid_type == "L1R":
             try:
                 if self.target_band == self.source_band:
                     raise ValueError("Error: Source and Target bands cannot be the same")
@@ -217,9 +221,9 @@ class ConfigFile:
             Validated grid type
         """
         if input_data_type == "SMAP":
-            valid_input = ['L1c']
+            valid_input = ['L1C']
         else:
-            valid_input = ['L1c', 'L1r']
+            valid_input = ['L1C', 'L1R']
 
         if config_object.find(grid_type).text in valid_input:
             return config_object.find(grid_type).text
@@ -249,7 +253,7 @@ class ConfigFile:
         """
 
         if input_data_type == "AMSR2":
-            if grid_type == "L1c":
+            if grid_type == "L1C":
                 return None
             valid_input = ['6', '7', '10', '18', '23', '36', '89a', '89b']
             if config_object.find(target_band).text in valid_input:
@@ -263,17 +267,15 @@ class ConfigFile:
             pass
 
         if input_data_type == "CIMR":
-            if grid_type == "L1c":
+            if grid_type == "L1C":
                 valid_input = ['L', 'C', 'X', 'KA', 'KU', 'All']
                 config_input = config_object.find(target_band).text.replace(" ", "").split(',')
                 for i in config_input:
                     if i not in valid_input:
                         raise ValueError(
-                            f"Invalid target bands for CIMR L1c remap."
+                            f"Invalid target bands for CIMR L1C remap."
                             f" Valid target bands are: {valid_input} or any combination of individual bands.")
                 return config_object.find(target_band).text
-
-
 
     @staticmethod
     def validate_source_band(config_object, source_band, input_data_type):
@@ -328,7 +330,7 @@ class ConfigFile:
         str
             Validated grid definition
         """
-        if grid_type == 'L1r':
+        if grid_type == 'L1R':
             return None
 
         valid_input = ['EASE2_G9km', 'EASE2_N9km', 'EASE2_S9km',
@@ -420,3 +422,12 @@ class ConfigFile:
             f"Invalid split fore aft. Check Configuration File."
             f" Valid split fore aft are: {valid_input}"
         )
+
+    @staticmethod
+    def validate_save_to_disk(config_object, save_to_disk):
+        value = bool(config_object.find(save_to_disk).text)
+        if value is not True and value is not False:
+            raise ValueError(
+                f"Invalid saveToDisk. Check Configuration File."
+                f" SaveToDisk must be either True or False")
+        return value
