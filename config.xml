@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<config>
+    <inputData>
+        <type>CIMR</type>
+         <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_polar_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>!
+        <splitForeAft>True</splitForeAft>
+        <!-- AMSR2 Specific Configuration Parameters -->
+        <sourceBand>23</sourceBand>
+        <targetBand>C</targetBand> <!-- For CIMR, you can choose a target band/s or all of them -->
+        <LMT>2200</LMT>
+    </inputData>
+    <GridParams>
+            <gridType>L1C</gridType>
+            <gridDefinition>EASE2_N9km</gridDefinition>
+            <projectionDefinition>N</projectionDefinition>
+    </GridParams>
+    <ReGridderParams>
+        <regriddingAlgorithm>IDS</regriddingAlgorithm>
+        <nnDistancecalc>GreatCircle</nnDistancecalc> <!-- Need to add configuration validation, can be euclidian or great circle-->
+        <kernelSize>9</kernelSize>
+    </ReGridderParams>
+    <outputData>
+        <saveTodisk>True</saveTodisk>
+<!--For now, gonna put an output path as user input, but I actually think this should be automatically set-->
+        <outputPath>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1cProducts/SMAP/RGB/</outputPath>
+    </outputData>
+</config>
