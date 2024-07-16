@@ -16,10 +16,18 @@ MAP_EQUATORIAL_RADIUS = 6378137.0
 E = 0.081819190843  # EASEv2 Map Eccentricity
 E2 = E ** 2
 
-GRIDS = {'EASE2_G9km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83,
+GRIDS = {'EASE2_G1km': {'epsg': 6933, 'x_min':-17367530.44 , 'y_max':7314540.83,
+                        'res':1000.9 , 'n_cols': 34704, 'n_rows':14616},
+         'EASE2_G3km': {'epsg': 6933, 'x_min': -17367530.44	, 'y_max':7314540.83,
+                        'res':3002.69, 'n_cols':11568 , 'n_rows':4872},
+         'EASE2_G9km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83,
                         'res': 9008.05, 'n_cols': 3856, 'n_rows': 1624},
+         'EASE2_N3km': {'epsg': 6931, 'x_min': -9000000.0, 'y_max': 9000000.0,
+                        'res': 3000, 'n_cols': 6000, 'n_rows': 6000},
          'EASE2_N9km': {'epsg': 6931, 'x_min': -9000000.0, 'y_max': 9000000.0,
                         'res': 9000.0, 'n_cols': 2000, 'n_rows': 2000},
+         'EASE2_S3km': {'epsg': 6932, 'x_min': -9000000.0, 'y_max': 9000000.0,
+                        'res': 3000, 'n_cols': 6000, 'n_rows': 6000},
          'EASE2_S9km': {'epsg': 6932, 'x_min': -9000000.0, 'y_max': 9000000.0,
                         'res': 9000.0, 'n_cols': 2000, 'n_rows': 2000},
          'EASE2_G36km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83,
