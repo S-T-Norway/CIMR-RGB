@@ -262,7 +262,7 @@ class GridGenerator:
         elif self.config.projection_definition == 'N':
             rho = np.sqrt(x ** 2 + y ** 2)
             beta = np.arcsin(1 - (rho ** 2 / (MAP_EQUATORIAL_RADIUS ** 2 * qp)))
-            lam = np.arctan2(x, y)
+            lam = np.arctan2(x, -y)
 
         elif self.config.projection_definition == 'S':
             rho = np.sqrt(x ** 2 + y ** 2)
