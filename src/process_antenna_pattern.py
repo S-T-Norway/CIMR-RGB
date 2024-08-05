@@ -13,7 +13,7 @@ class AntennaPattern:
 
     def __init__(self, config_object):
         self.config = config_object
-        self.antenna_file = '/home/davide/Desktop/CIMR/CIMR-RGB-testing/dpr/Antenna_patterns/SMAP/RadiometerAntPattern_170830_v011.h5' # Should be in config file and provided in repository
+        self.antenna_file = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/Antenna_patterns/SMAP/RadiometerAntPattern_170830_v011.h5' # Should be in config file and provided in repository
         self.theta, self.phi, self.gain_dict = self.get_full_patterns_in_dict(self.antenna_file, phi_range=None, theta_range=None)
         self.scalar_antenna_pattern = self.get_scalar_antenna_pattern()
 
@@ -167,12 +167,12 @@ class AntennaPattern:
                 var_data = spacecraft[var][:]
             except:
                 try:
-                    var_data = measurement[var][:]
+                    var_data = measurement[var][:].flatten()
                     # This is a temporary solution as we remove the Nans from the data
                     # in order to be able to use the search tree.
                     # There might be problems here if things arent working.
 
-                    #var_data = var_data[self.config.non_nan_mask]
+                    var_data = var_data[self.config.non_nan_mask]
                 except:
                     print(f"{var} not found in L1b file")
                     exit()
@@ -183,7 +183,8 @@ class AntennaPattern:
             elif earth_sample_ind is None:
                 return var_data[scan_ind]
             else:
-                return var_data[scan_ind][earth_sample_ind]
+                flattened_ind = np.ravel_multi_index((scan_ind, earth_sample_ind), (779, 241))
+                return var_data[flattened_ind]
 
     def antenna_pattern_to_earth_simplified(self, scan_ind, earth_sample_ind, int_dom_lons, int_dom_lats, use_full_mueller_matrix=False):
 
