@@ -12,17 +12,21 @@ import time
 class AntennaPattern:
 
     def __init__(self, config_object):
+        threshold_dB = -9. #this could maybe be a parameter
         self.config = config_object
-        self.antenna_file = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/Antenna_patterns/SMAP/RadiometerAntPattern_170830_v011.h5' # Should be in config file and provided in repository
-        self.theta, self.phi, self.gain_dict = self.get_full_patterns_in_dict(self.antenna_file, phi_range=None, theta_range=None)
-        self.scalar_antenna_pattern = self.get_scalar_antenna_pattern()
+        self.antenna_file = '/home/davide/Desktop/CIMR/CIMR-RGB-testing/dpr/Antenna_patterns/SMAP/RadiometerAntPattern_170830_v011.h5' # Should be in config file and provided in repository
+        theta, phi, gain_dict = self.get_full_patterns_in_dict(self.antenna_file, phi_range=None, theta_range=None)
+        scalar_gain = self.get_scalar_antenna_pattern(gain_dict, threshold_dB)
+        self.gain_interpolating_function = RegularGridInterpolator((phi, theta), scalar_gain)
+        self.average_radius = 200000 #this number has to be computed separately somehow
 
-    def get_scalar_antenna_pattern(self):
 
-        Ghco = self.gain_dict['G1h'] + 1j * self.gain_dict['G2h']
-        Ghcx = self.gain_dict['G3h'] + 1j * self.gain_dict['G4h']
-        Gvco = self.gain_dict['G1v'] + 1j * self.gain_dict['G2v']
-        Gvcx = self.gain_dict['G3v'] + 1j * self.gain_dict['G4v']
+    def get_scalar_antenna_pattern(self, gain_dict, threshold_dB=None):
+
+        Ghco = gain_dict['G1h'] + 1j * gain_dict['G2h']
+        Ghcx = gain_dict['G3h'] + 1j * gain_dict['G4h']
+        Gvco = gain_dict['G1v'] + 1j * gain_dict['G2v']
+        Gvcx = gain_dict['G3v'] + 1j * gain_dict['G4v']
 
         Ghco_norm = np.abs(Ghco)
         Ghcx_norm = np.abs(Ghcx)
@@ -33,18 +37,20 @@ class AntennaPattern:
         Gh = np.sqrt(Ghco_norm**2 + Ghcx_norm**2)
 
         Gscalar = 0.5*(Gv + Gh)
-        mask = Gscalar < 0.01
-        Gscalar[mask] = 0.
+
+        if threshold_dB is not None:
+            mask = Gscalar < 10**(threshold_dB/10.)
+            Gscalar[mask] = 0.
 
         return Gscalar
 
 
-    def get_mueller_matrix(self):
+    def get_mueller_matrix(self, theta, phi, gain_dict):
 
-        Ghh = self.gain_dict('G1h') + 1j * self.gain_dict('G2h')
-        Ghv = self.gain_dict('G3h') + 1j * self.gain_dict('G4h')
-        Gvv = self.gain_dict('G1v') + 1j * self.gain_dict('G2v')
-        Gvh = self.gain_dict('G3v') + 1j * self.gain_dict('G4v')           
+        Ghh = gain_dict('G1h') + 1j * gain_dict('G2h')
+        Ghv = gain_dict('G3h') + 1j * gain_dict('G4h')
+        Gvv = gain_dict('G1v') + 1j * gain_dict('G2v')
+        Gvh = gain_dict('G3v') + 1j * gain_dict('G4v')           
 
         n1, n2 = Ghh.shape
         G = np.zeros((4, 4, n1, n2))
@@ -67,6 +73,7 @@ class AntennaPattern:
         G[3, 3] = np.real(Gvv*np.conj(Ghh)-Gvh*np.conj(Ghv))
 
         return G
+
         
     @staticmethod
     def get_full_patterns_in_dict(antenna_file, phi_range=None, theta_range=None):
@@ -101,22 +108,29 @@ class AntennaPattern:
         
 
 
-    def make_integration_grid(self, lon_target, lat_target):
+    def make_integration_grid(self, longitudes, latitudes, margin=None):
 
-        #size of the interpolation grid, we could choose it based on the position of the antenna patterns
-        dx = 500000.
+        longitudes = np.array(longitudes)
+        latitudes  = np.array(latitudes)
 
-        if np.abs(lat_target) < 83.: # 75
+        if np.all(np.abs(latitudes) < 83.): # 75
             # Check that this doesnt permanently change the config object in other places in the file.
             # Temporary fix to not permenently change the config object.
             original_grid_definition = self.config.grid_definition
             self.config.grid_definition = 'EASE2_G3km'
             self.config.projection_definition = 'G'
-            x0, y0 = GridGenerator(self.config).lonlat_to_xy(lon_target, lat_target)
-            xmin = x0 - dx/2
-            xmax = x0 + dx/2
-            ymin = y0 - dx/2
-            ymax = y0 + dx/2
+            xpoints = []
+            ypoints = []
+            for lon, lat in zip(longitudes, latitudes):
+                x0, y0 = GridGenerator(self.config).lonlat_to_xy(lon, lat)
+                xpoints.append(x0)
+                ypoints.append(y0)
+            if margin is None:
+                margin = self.average_radius
+            xmin = np.min(xpoints) - margin
+            xmax = np.max(xpoints) + margin
+            ymin = np.min(ypoints) - margin
+            ymax = np.max(ypoints) + margin
             xs, ys = GridGenerator(self.config).generate_grid_xy()
             xs = xs[np.logical_and(xs > xmin, xs < xmax)]
             ys = ys[np.logical_and(ys > ymin, ys < ymax)]
@@ -232,8 +246,7 @@ class AntennaPattern:
         phi = 0. #this is the big simplification! I assume azimuthal simmetry, so I don't need to care about the scan angle
 
         if not use_full_mueller_matrix:
-            gain = self.scalar_antenna_pattern
-            Ginterp  = RegularGridInterpolator((self.phi, self.theta), gain)((phi, theta))
+            Ginterp  = self.gain_interpolating_function((phi, theta))
             Ginterp *= cos_angle_proj
 
         else:
@@ -312,8 +325,7 @@ class AntennaPattern:
         phi[phi<0] += 2.*np.pi
 
         if not use_full_mueller_matrix:
-            gain = self.scalar_antenna_pattern
-            Ginterp  = RegularGridInterpolator((self.phi, self.theta), gain)((phi, theta))
+            Ginterp  = self.gain_interpolating_function((phi, theta))
             Ginterp *= cos_angle_proj
 
         else:
@@ -416,8 +428,7 @@ class AntennaPattern:
         # To be discussed
 
         if not use_full_mueller_matrix:
-            gain = self.scalar_antenna_pattern
-            Ginterp  = RegularGridInterpolator((self.phi, self.theta), gain)((phi, theta))
+            Ginterp  = self.gain_interpolating_function((phi, theta))
             Ginterp *= cos_angle_proj
 
         else:
@@ -497,23 +508,23 @@ class AntennaPattern:
 
 ############################ test code 
 
-# scan_ind = 81038 // 241
-# earth_sample_ind = 81038 % 241
+scan_ind = 81038 // 241
+earth_sample_ind = 81038 % 241
 
-# lon, lat = 124.9500000000116, 6.749999992828501
+lon, lat = 124.9500000000116, 6.749999992828501
 
-# from data_ingestion import DataIngestion
-# import os
+from data_ingestion import DataIngestion
+import os
 
-# ingestion_object = DataIngestion(os.path.join(os.getcwd(), '..', 'config.xml'))
-# config = ingestion_object.config
-# data_dict = ingestion_object.ingest_data()
+ingestion_object = DataIngestion(os.path.join(os.getcwd(), '..', 'config.xml'))
+config = ingestion_object.config
+data_dict = ingestion_object.ingest_data()
 
-# AP = AntennaPattern(config)
+AP = AntennaPattern(config)
 
-# int_dom_lons, int_dom_lats = AP.make_integration_grid(lon_target=lon, lat_target=lat)
-# pattern = AP.antenna_pattern_from_boresight(scan_ind, lon, lat, int_dom_lons, int_dom_lats)
+int_dom_lons, int_dom_lats = AP.make_integration_grid([lon], [lat])
+pattern = AP.antenna_pattern_from_boresight(scan_ind, lon, lat, int_dom_lons, int_dom_lats)
 
-# import matplotlib.pyplot as plt
-# plt.imshow(pattern)
-# plt.show()
+import matplotlib.pyplot as plt
+plt.imshow(pattern)
+plt.show()

@@ -175,12 +175,17 @@ class BGInterpolation():
         else:
             if source_antenna_pattern_approx == 'gaussian' or target_antenna_pattern_approx == 'gaussian':
                 assert np.isin(['sigma_lat', 'sigma_lon',  'rotation'], list(parameters.keys())).all()
-            
-        int_dom_lons, int_dom_lats = AP.make_integration_grid(
-            lon_target=target_cell_lon,
-            lat_target=target_cell_lat
-        )
 
+        longitudes = [target_cell_lon]
+        latitudes  = [target_cell_lat]
+
+        for i in l1b_inds:
+            scan_ind = i // 241  # remember the dimensions should come from configuration/self
+            earth_sample_ind = i % 241   
+            longitudes.append(AP.get_l1b_data('tb_lon', scan_ind, earth_sample_ind))
+            latitudes.append(AP.get_l1b_data('tb_lat', scan_ind, earth_sample_ind))
+
+        int_dom_lons, int_dom_lats = AP.make_integration_grid(longitudes, latitudes)
 
         if approx_integrals:
             pass
@@ -252,7 +257,7 @@ class BGInterpolation():
                     boresight_lon = AP.get_l1b_data('tb_lon', scan_ind, earth_sample_ind)
                     boresight_lat = AP.get_l1b_data('tb_lat', scan_ind, earth_sample_ind)
                     if boresight_lon < -1000 or boresight_lat < -1000:
-                        print(boresight_lon,boresight_lat )
+                        print('data point with invalid coordinates', boresight_lon, boresight_lat)
                         continue
                     ant_pattern = AP.antenna_pattern_from_boresight(
                         scan_ind=scan_ind,
@@ -322,13 +327,13 @@ class BGInterpolation():
         min_x, max_x = -17367530.44, -17367530.44 + 3856*9008.05 # From grid generator
         # start_time = time.time()
         print('starting point selection')
-        samples_dict = self.points_selection(source_points, target_grid, min_x, max_x, search_radius)
-        with open('samples_dict.pkl', 'wb') as file:
-            pickle.dump(samples_dict, file)
+        # samples_dict = self.points_selection(source_points, target_grid, min_x, max_x, search_radius)
+        # with open('samples_dict.pkl', 'wb') as file:
+        #     pickle.dump(samples_dict, file)
         # print(f"Samples Selection took {time.time() - start_time} seconds")
         # Open precalculated samples dict
-        # with open('samples_dict.pkl', 'rb') as f:
-        #     samples_dict = pickle.load(f)
+        with open('samples_dict.pkl', 'rb') as f:
+            samples_dict = pickle.load(f)
         # --------------  POINTS SELECTION -----------------#
 
 
@@ -420,6 +425,9 @@ if __name__ == '__main__':
     # t_interp = BGInterpolation(config, ap).bg_interpolation(lon, lat, indexes, 'tb_v', False, 'boresight_inferred', 'boresight_inferred')
     
     bg_out, target_grid, fore_sample_frequency, aft_sample_frequency  = BGInterpolation(config, ap).regrid_l1c(data_dict)
+    with open('bg_out.pkl', 'wb') as file:
+        pickle.dump(bg_out, file)
+    
     
     print(time.time() - start_time)
     # print(t_interp)
