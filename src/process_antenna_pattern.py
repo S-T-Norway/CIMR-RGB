@@ -18,7 +18,7 @@ class AntennaPattern:
         theta, phi, gain_dict = self.get_full_patterns_in_dict(self.antenna_file, phi_range=None, theta_range=None)
         scalar_gain = self.get_scalar_antenna_pattern(gain_dict, threshold_dB)
         self.gain_interpolating_function = RegularGridInterpolator((phi, theta), scalar_gain)
-        self.average_radius = 200000 #this number has to be computed separately somehow
+        self.average_radius = 200000 #this number depends on the instrument, we could compute it in some way
 
 
     def get_scalar_antenna_pattern(self, gain_dict, threshold_dB=None):
@@ -107,53 +107,66 @@ class AntennaPattern:
         return theta, phi, gain_dict
         
 
-
     def make_integration_grid(self, longitudes, latitudes, margin=None):
 
         longitudes = np.array(longitudes)
         latitudes  = np.array(latitudes)
 
-        if np.all(np.abs(latitudes) < 83.): # 75
-            # Check that this doesnt permanently change the config object in other places in the file.
-            # Temporary fix to not permenently change the config object.
-            original_grid_definition = self.config.grid_definition
+        gdef = self.config.grid_definition
+        pdef = self.config.projection_definition
+
+        if np.all(np.abs(latitudes) <= 75.): # 83.
             self.config.grid_definition = 'EASE2_G3km'
             self.config.projection_definition = 'G'
-            xpoints = []
-            ypoints = []
-            for lon, lat in zip(longitudes, latitudes):
-                x0, y0 = GridGenerator(self.config).lonlat_to_xy(lon, lat)
-                xpoints.append(x0)
-                ypoints.append(y0)
-            if margin is None:
-                margin = self.average_radius
-            xmin = np.min(xpoints) - margin
-            xmax = np.max(xpoints) + margin
-            ymin = np.min(ypoints) - margin
-            ymax = np.max(ypoints) + margin
-            xs, ys = GridGenerator(self.config).generate_grid_xy()
-            xs = xs[np.logical_and(xs > xmin, xs < xmax)]
-            ys = ys[np.logical_and(ys > ymin, ys < ymax)]
-            lons, lats = GridGenerator(self.config).xy_to_lonlat(xs, ys)
-            lons, lats = np.meshgrid(lons, lats)
-            self.config.grid_definition = original_grid_definition
-        else:
-            original_grid_definition = self.config.grid_definition
+
+        elif np.any(latitudes > 75.):
             self.config.grid_definition = 'EASE2_N3km'
             self.config.projection_definition = 'N'
-            x0, y0 = GridGenerator(self.config).lonlat_to_xy(lon_target, lat_target)
-            xmin = x0 - dx
-            xmax = x0 + dx
-            ymin = y0 - dx
-            ymax = y0 + dx
-            xs, ys = GridGenerator(self.config).generate_grid_xy()
+
+        elif np.any(latitudes < -75.):
+            self.config.grid_definition = 'EASE2_S3km'
+            self.config.projection_definition = 'S'
+
+        xpoints = []
+        ypoints = []
+        for lon, lat in zip(longitudes, latitudes):
+            x0, y0 = GridGenerator(self.config).lonlat_to_xy(lon, lat)
+            xpoints.append(x0)
+            ypoints.append(y0)
+        if margin is None:
+            margin = self.average_radius
+        xmin = np.min(xpoints) - margin
+        xmax = np.max(xpoints) + margin
+        ymin = np.min(ypoints) - margin
+        ymax = np.max(ypoints) + margin
+
+        xs, ys = GridGenerator(self.config).generate_grid_xy()
+        xeasemin = xs.min() #should be the cell edge, not the cell center
+        xeasemax = xs.max() #should be the cell edge, not the cell center
+
+        if self.config.projection_definition == 'G':
+            xmin1 = xeasemax
+            xmax1 = xeasemin
+            if xmin < xeasemin:
+                xmin1 = xeasemax - (xeasemin - xmin)
+            if xmax > xeasemax:
+                xmax1 = xeasemin + (xmax - xeasemax)
+
+            xs = np.concatenate((xs[xs > xmin1], xs[np.logical_and(xs > xmin, xs < xmax)], xs[xs < xmax1]))
+            ys = ys[np.logical_and(ys > ymin, ys < ymax)]
+
+        else:
             xs = xs[np.logical_and(xs > xmin, xs < xmax)]
             ys = ys[np.logical_and(ys > ymin, ys < ymax)]
-            xs, ys = np.meshgrid(xs, ys)
-            lons, lats = GridGenerator(self.config).xy_to_lonlat(xs, ys)
-            self.config.grid_definition = original_grid_definition
+
+        Xs, Ys = np.meshgrid(xs, ys)        
+        lons, lats = GridGenerator(self.config).xy_to_lonlat(Xs, Ys)
+
+        self.config.grid_definition = gdef
+        self.config.projection_definition = pdef
 
         return lons, lats
+
 
     @staticmethod
     def make_gaussian(grid_lons, grid_lats, lon0, lat0, slon, slat, rot=0.):
@@ -508,23 +521,27 @@ class AntennaPattern:
 
 ############################ test code 
 
-scan_ind = 81038 // 241
-earth_sample_ind = 81038 % 241
+# scan_ind = 81038 // 241
+# earth_sample_ind = 81038 % 241
+# scan_ind = 27
+# scan_ind = 27
 
-lon, lat = 124.9500000000116, 6.749999992828501
+# # lon, lat = 124.9500000000116, 6.749999992828501
+# lon, lat = -179.91505, 84.00648
 
-from data_ingestion import DataIngestion
-import os
+# from data_ingestion import DataIngestion
+# import os
 
-ingestion_object = DataIngestion(os.path.join(os.getcwd(), '..', 'config.xml'))
-config = ingestion_object.config
-data_dict = ingestion_object.ingest_data()
+# ingestion_object = DataIngestion(os.path.join(os.getcwd(), '..', 'config.xml'))
+# config = ingestion_object.config
+# data_dict = ingestion_object.ingest_data()
 
-AP = AntennaPattern(config)
+# AP = AntennaPattern(config)
 
-int_dom_lons, int_dom_lats = AP.make_integration_grid([lon], [lat])
-pattern = AP.antenna_pattern_from_boresight(scan_ind, lon, lat, int_dom_lons, int_dom_lats)
+# int_dom_lons, int_dom_lats = AP.make_integration_grid([lon], [lat])
 
-import matplotlib.pyplot as plt
-plt.imshow(pattern)
-plt.show()
+# pattern = AP.antenna_pattern_from_boresight(scan_ind, lon, lat, int_dom_lons, int_dom_lats)
+
+# import matplotlib.pyplot as plt
+# plt.imshow(pattern)
+# plt.show()
