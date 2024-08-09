@@ -12,14 +12,11 @@ import matplotlib.pyplot as plt
 from   colorama import Fore, Back, Style   
 import tqdm 
 
-import grasp_lib as lib  
 import grasp_io  as io 
-
-
 
 # TODO: - Use xarrays instead of python dictionaries: https://tutorial.xarray.dev/overview/xarray-in-45-min.html 
 #       - Use netCDF instead of HDF5 (?)
-#       - Create a standalone script to process the files based o this one  
+#       - Create a standalone script to process the files based on this one  
 
 # Update by 2024-08-08: We are going to use SMAP as the baseline for the
 # standardized format for parsed antenna patterns 

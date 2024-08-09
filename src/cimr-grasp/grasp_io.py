@@ -9,6 +9,16 @@ from   colorama import Fore, Back, Style
 def get_header(beamfile):
     """
     Method to get some useful information from the header file. 
+    
+    Parameters:
+    -----------
+    beamfile: text (.grd) file 
+        The file to parse the header information from. 
+
+    Returns:
+    --------
+    header: list 
+        List containing header information from the given text file. 
     """
     
     header = [] 
@@ -49,6 +59,20 @@ def get_header(beamfile):
 
 
 def check_outfile_existance(outfile): 
+    """
+    Checks for the existence of a given (e.g., antenna pattern) file and
+    returns boolean value.   
+
+    Parameters:
+    -----------
+    outfile: str or Path
+        The file name to check for. 
+
+    Returns:
+    --------
+    bool  
+        Wheteher given file exists or not. 
+    """
 
     if not outfile.exists(): 
         print(f"| Output File: {Fore.BLUE}{outfile.name} {Fore.RED}{Style.BRIGHT}doesn't exist\n| Starting creation{Style.RESET_ALL}")
@@ -58,14 +82,35 @@ def check_outfile_existance(outfile):
         return True  
 
 
-
-
 def parse_file_name(file_name):
     """
     Parses the beamfile name to get the band, horn and half-space identifier. 
     The file name should be of format: 
 
-    S-12345-E-FR", F1-12345-E-BK",
+    S-12345-E-FR" or F1-12345-E-BK"
+    
+    Parameters:
+    -----------
+    file_name: str or Path
+        The beam file name to get information from.
+
+    Returns:
+    --------
+    band: str  
+        Band number. 
+    horn: str  
+        Horn number. 
+    freq: str 
+        Frequency value. 
+    pol:  str 
+        Polarisation value. 
+    half_space: str 
+        The half-space of the antenna pattern sphere.  
+
+    Raises:
+    -------
+    ValueError 
+        If the aformentioned file format was not uphold. 
     """
     
     parts = file_name.split('-')
@@ -88,6 +133,15 @@ def parse_file_name(file_name):
 
 
 def save_dict_to_hdf5(hdf5_group, data_dict):
+    """
+    Recursively saves (e.g, parsed beam) dictionary data into HDF5. 
+
+    Parameters:
+    -----------
+    hdf_group:  
+        The HDF5 group to work with. 
+    """
+    
     for key, value in data_dict.items():
         if isinstance(value, dict):
             # If the value is a dictionary, create a subgroup
@@ -109,6 +163,21 @@ def save_dict_to_hdf5(hdf5_group, data_dict):
             
 # Function to recursively load HDF5 file into a dictionary
 def load_hdf5_to_dict(hdf5_group):
+    """
+    Loads (e.g, parsed beam) information from the HDF5 file in a form of a
+    dictionary. 
+
+    Parameters:
+    -----------
+    hdf_group:  
+        The HDF5 group to work with. 
+
+    Returns:
+    --------
+    data_dict: dict 
+        Root path to the directory. 
+    """
+    
     data_dict = {}
     for key, value in hdf5_group.items():
         if isinstance(value, h5py.Group):
@@ -125,6 +194,25 @@ def load_hdf5_to_dict(hdf5_group):
 
 
 def find_repo_root(start_path: pathlib.Path = None) -> pathlib.Path:
+    """
+    Finds the root path of the repo based off the location of `.git` directory. 
+
+    Parameters:
+    -----------
+    start_path: Path
+        The start path to start the search from/at.
+
+    Returns:
+    --------
+    parent: str or Path   
+        Root path to the directory. 
+
+    Raises:
+    -------
+    FileNotFoundError 
+        No `.git` was found in any of the parent directories. 
+    """
+    
     # If no start path is provided, use the current working directory
     if start_path is None:
         start_path = pathlib.Path.cwd()
