@@ -71,7 +71,8 @@ def uv_to_tp(u,v):
     return theta, phi 
 
 
-def get_beamdata(beamfile, half_space, cimr_uv, cimr_tp): #cimr, apat_hdf5): 
+#def get_beamdata(beamfile, half_space, cimr_uv, cimr_tp): #cimr, apat_hdf5): 
+def get_beamdata(beamfile, half_space, cimr): #cimr, apat_hdf5): 
     """
     Opens GRASP `grd` file defined in uv-coordinates (IGRID value is 1) and
     returns electric field values on a (theta, phi) and (u,v) grid. 
@@ -349,44 +350,59 @@ def get_beamdata(beamfile, half_space, cimr_uv, cimr_tp): #cimr, apat_hdf5):
         #print(f"{np.shape(apat['u_grid'])}")
     
     # Theta Phi grid 
-    cimr_tp["Gain"]['G1h']   = G1h 
-    cimr_tp["Gain"]['G2h']   = G2h 
-    cimr_tp["Gain"]['G3h']   = G3h 
-    cimr_tp["Gain"]['G4h']   = G4h 
+    #cimr_tp["Gain"]['G1h']   = G1h 
+    #cimr_tp["Gain"]['G2h']   = G2h 
+    #cimr_tp["Gain"]['G3h']   = G3h 
+    #cimr_tp["Gain"]['G4h']   = G4h 
 
-    cimr_tp["Gain"]['G1v']   = G1v 
-    cimr_tp["Gain"]['G2v']   = G2v 
-    cimr_tp["Gain"]['G3v']   = G3v 
-    cimr_tp["Gain"]['G4v']   = G4v 
+    #cimr_tp["Gain"]['G1v']   = G1v 
+    #cimr_tp["Gain"]['G2v']   = G2v 
+    #cimr_tp["Gain"]['G3v']   = G3v 
+    #cimr_tp["Gain"]['G4v']   = G4v 
 
-    cimr_tp["Grid"]['theta'] = theta  
-    cimr_tp["Grid"]['phi']   = phi  
+    #cimr_tp["Grid"]['theta'] = theta  
+    #cimr_tp["Grid"]['phi']   = phi  
 
     # u,v grid 
-    cimr_uv["Gain"]['G1h']   = G1h 
-    cimr_uv["Gain"]['G2h']   = G2h 
-    cimr_uv["Gain"]['G3h']   = G3h 
-    cimr_uv["Gain"]['G4h']   = G4h 
+    #cimr_uv["Gain"]['G1h']   = G1h 
+    #cimr_uv["Gain"]['G2h']   = G2h 
+    #cimr_uv["Gain"]['G3h']   = G3h 
+    #cimr_uv["Gain"]['G4h']   = G4h 
 
-    cimr_uv["Gain"]['G1v']   = G1v 
-    cimr_uv["Gain"]['G2v']   = G2v 
-    cimr_uv["Gain"]['G3v']   = G3v 
-    cimr_uv["Gain"]['G4v']   = G4v 
+    #cimr_uv["Gain"]['G1v']   = G1v 
+    #cimr_uv["Gain"]['G2v']   = G2v 
+    #cimr_uv["Gain"]['G3v']   = G3v 
+    #cimr_uv["Gain"]['G4v']   = G4v 
 
-    cimr_uv["Grid"]['u']     = u0  
-    cimr_uv["Grid"]['v']     = v0   
+    #cimr_uv["Grid"]['u']     = u0  
+    #cimr_uv["Grid"]['v']     = v0   
     
     #cimr[f'{bn}'] = apat  #{'horns_1': {bn: apat}}
+    cimr["Gain"]['G1h']   = G1h 
+    cimr["Gain"]['G2h']   = G2h 
+    cimr["Gain"]['G3h']   = G3h 
+    cimr["Gain"]['G4h']   = G4h 
+
+    cimr["Gain"]['G1v']   = G1v 
+    cimr["Gain"]['G2v']   = G2v 
+    cimr["Gain"]['G3v']   = G3v 
+    cimr["Gain"]['G4v']   = G4v 
+    
+    cimr["Grid"]['u']     = u0  
+    cimr["Grid"]['v']     = v0   
+    cimr["Grid"]['theta'] = theta  
+    cimr["Grid"]['phi']   = phi  
         
     #return cimr, apat_hdf5  
-    return cimr_uv, cimr_tp    
+    #return cimr_uv, cimr_tp    
+    return cimr    
 
 
 # TODO: Make save_uv and safe_tp variables work, i.e., which files output to disk 
 #def main(datadir, outdir, ref_tilt_ang_deg, downscale_factor, vsign, nu, nv, file_version, save_tp=True, save_uv=True):     
 def main(datadir, outdir, file_version, save_tp=True, save_uv=True):     
     """
-    Main method 
+    Main method (entry point to the program)
     """
 
     # List of all beams files 
@@ -458,8 +474,9 @@ def main(datadir, outdir, file_version, save_tp=True, save_uv=True):
             # Object to be saved into file 
             #cimr = {}
             # This one is for hdf5 standardized format 
-            cimr_tp = {"Gain": {}, "Grid": {}, "Version": file_version} 
-            cimr_uv = {"Gain": {}, "Grid": {}, "Version": file_version} 
+            #cimr_tp = {"Gain": {}, "Grid": {}, "Version": file_version} 
+            #cimr_uv = {"Gain": {}, "Grid": {}, "Version": file_version} 
+            cimr = {"Gain": {}, "Grid": {}, "Version": file_version} 
             
             for half_space in half_spaces: 
 
@@ -470,11 +487,29 @@ def main(datadir, outdir, file_version, save_tp=True, save_uv=True):
                     infile = band + str(horn) + "-" + freq + "-" + pol + "-" + half_space + ".grd" 
                 
                 infile = pathlib.Path(str(datadir) + "/" + band + "/" + infile)  
+                print(f"| {Fore.YELLOW}------------------------------{Style.RESET_ALL}") 
                 print(f"| {Fore.GREEN}Working with Input File: {infile.name}{Style.RESET_ALL}") 
 
                 # Returns cimr object as dictionary with FHS and BHS 
                 #cimr, apat_hdf5 = get_beamdata(infile, half_space, cimr, apat_hdf5)     
-                cimr_uv, cimr_tp = get_beamdata(infile, half_space, cimr_uv, cimr_tp)     
+                #cimr_uv, cimr_tp = get_beamdata(infile, half_space, cimr_uv, cimr_tp)     
+
+
+                parsedfile_prefix = f"CIMR-AP-{half_space}" 
+                parsedfile_suffix = "TP"
+                outfile_tp = pathlib.Path(str(parsed_dir) + f"/{parsedfile_prefix}-" + band + horn + f"-{parsedfile_suffix}v{file_version}.h5")   
+                
+                if io.check_outfile_existance(outfile_tp) == True: 
+                    continue 
+                else: 
+                    cimr = get_beamdata(infile, half_space, cimr) #_uv, cimr_tp)     
+                    
+                    print(f"| {Fore.BLUE}Saving Output File: {outfile_tp.name}{Style.RESET_ALL}") 
+                    
+                    with h5py.File(outfile_tp, 'w') as hdf5_file:
+                        io.save_dict_to_hdf5(hdf5_file, cimr)
+                
+                #cimr = get_beamdata(infile, half_space, cimr) #_uv, cimr_tp)     
 
                 #print(apat_hdf5.keys())
                 #exit() 
@@ -483,27 +518,28 @@ def main(datadir, outdir, file_version, save_tp=True, save_uv=True):
                 
                 # TODO: These checks DO NOT WORK because you are still calculating things above  
                 #  Theta Phi grid 
-                parsedfile_prefix = f"CIMR-AP-{half_space}" 
-                parsedfile_suffix = "TP"
-                outfile_tp = pathlib.Path(str(parsed_dir) + f"/{parsedfile_prefix}-" + band + horn + f"-{parsedfile_suffix}v{file_version}.h5")   
                 
-                if io.check_outfile_existance(outfile_tp) == True: 
-                    continue 
-                else: 
-                    print(f"| {Fore.BLUE}Saving Output File: {outfile_tp.name}{Style.RESET_ALL}") 
-                    with h5py.File(outfile_tp, 'w') as hdf5_file:
-                        io.save_dict_to_hdf5(hdf5_file, cimr_tp)
+                #parsedfile_prefix = f"CIMR-AP-{half_space}" 
+                #parsedfile_suffix = "TP"
+                #outfile_tp = pathlib.Path(str(parsed_dir) + f"/{parsedfile_prefix}-" + band + horn + f"-{parsedfile_suffix}v{file_version}.h5")   
+                #
+                #if io.check_outfile_existance(outfile_tp) == True: 
+                #    continue 
+                #else: 
+                #    print(f"| {Fore.BLUE}Saving Output File: {outfile_tp.name}{Style.RESET_ALL}") 
+                #    with h5py.File(outfile_tp, 'w') as hdf5_file:
+                #        io.save_dict_to_hdf5(hdf5_file, cimr_tp)
 
-                # u,v grid 
-                parsedfile_suffix = "UV"
-                outfile_uv = pathlib.Path(str(parsed_dir) + f"/{parsedfile_prefix}-" + band + horn + f"-{parsedfile_suffix}v{file_version}.h5")   
-                
-                if io.check_outfile_existance(outfile_uv) == True: 
-                    continue 
-                else: 
-                    print(f"| {Fore.BLUE}Saving Output File: {outfile_uv.name}{Style.RESET_ALL}") 
-                    with h5py.File(outfile_uv, 'w') as hdf5_file:
-                        io.save_dict_to_hdf5(hdf5_file, cimr_uv)
+                ## u,v grid 
+                #parsedfile_suffix = "UV"
+                #outfile_uv = pathlib.Path(str(parsed_dir) + f"/{parsedfile_prefix}-" + band + horn + f"-{parsedfile_suffix}v{file_version}.h5")   
+                #
+                #if io.check_outfile_existance(outfile_uv) == True: 
+                #    continue 
+                #else: 
+                #    print(f"| {Fore.BLUE}Saving Output File: {outfile_uv.name}{Style.RESET_ALL}") 
+                #    with h5py.File(outfile_uv, 'w') as hdf5_file:
+                #        io.save_dict_to_hdf5(hdf5_file, cimr_uv)
 
 
                 
