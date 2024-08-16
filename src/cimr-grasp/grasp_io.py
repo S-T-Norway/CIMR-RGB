@@ -175,7 +175,7 @@ def load_hdf5_to_dict(hdf5_group):
     Returns:
     --------
     data_dict: dict 
-        Root path to the directory. 
+        Data to be returned in a python dictionary format. 
     """
     
     data_dict = {}
