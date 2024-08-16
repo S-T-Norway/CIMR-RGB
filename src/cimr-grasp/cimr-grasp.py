@@ -565,6 +565,13 @@ def get_beamdata(beamfile, half_space, cimr): #cimr, apat_hdf5):
         
     return cimr    
 
+def recenter_beam(cimr): 
+    """
+    Method to recenter original beam.  
+    """
+
+    return cimr 
+
 
 #def main(datadir, outdir, ref_tilt_ang_deg, downscale_factor, vsign, nu, nv, file_version, save_tp=True, save_uv=True):     
 def main(datadir, outdir, file_version):     
@@ -583,7 +590,7 @@ def main(datadir, outdir, file_version):
         Version of the parsed files to be prodiced. 
     """
 
-    # List of all beams files 
+    # List of all beam files 
     beamfiles_in  = [] 
     beamfiles_out = [] 
     # List of all band dirs containing respective beam files 
@@ -623,14 +630,23 @@ def main(datadir, outdir, file_version):
     # Creating directory to store parsed files  
     parsed_dir = outdir.joinpath("parsed")
     if not parsed_dir.exists(): 
-        print(f"| Creating parsed directory:\n{parsed_dir}")
+        print(f"| Creating 'parsed' directory:\n{parsed_dir}")
         pathlib.Path(parsed_dir).mkdir()
+        
+    preprocessed_dir = outdir.joinpath("preprocessed")
+    if not preprocessed_dir.exists(): 
+        print(f"| Creating 'preprocessed' directory:\n{preprocessed_dir}")
+        pathlib.Path(preprocessed_dir).mkdir()
 
     parsedfile_prefix = "CIMR-AP-FULL" 
     parsedfile_suffix = "XE"
     
     print(f"| {Fore.GREEN}Data Directory:{Fore.RESET}\n| {Fore.BLUE}{datadir}{Style.RESET_ALL}") 
     print(f"| {Fore.GREEN}Parsed Directory:{Fore.RESET}\n| {Fore.BLUE}{parsed_dir}{Style.RESET_ALL}") 
+    print(f"| {Fore.GREEN}Preprocessed Directory:{Fore.RESET}\n| {Fore.BLUE}{preprocessed_dir}{Style.RESET_ALL}") 
+
+    exit() 
+    
     # Main parsing loop 
     for band in apat_name_info.keys(): 
         
@@ -655,7 +671,7 @@ def main(datadir, outdir, file_version):
                 print(f"| {Fore.GREEN}Working with Input File: {infile.name}{Style.RESET_ALL}") 
 
                 # Output filename 
-                parsedfile_prefix = f"CIMR-AP-{half_space}" 
+                parsedfile_prefix = f"CIMR-OAP-{half_space}" 
                 parsedfile_suffix = "TP"
                 outfile_tp = pathlib.Path(str(parsed_dir) + f"/{parsedfile_prefix}-" + band + horn + f"-{parsedfile_suffix}v{file_version}.h5")   
                 
@@ -668,6 +684,8 @@ def main(datadir, outdir, file_version):
                     
                     with h5py.File(outfile_tp, 'w') as hdf5_file:
                         io.save_dict_to_hdf5(hdf5_file, cimr)
+
+                # Performing Beam Recentering and Interpolation on rectilinear grid  
                 
 
             print(f"| {Fore.YELLOW}------------------------------{Style.RESET_ALL}") 
