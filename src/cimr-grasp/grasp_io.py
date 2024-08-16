@@ -71,7 +71,7 @@ def check_outfile_existance(outfile):
     Returns:
     --------
     bool  
-        Wheteher given file exists or not. 
+        Whether given file exists or not. 
     """
 
     if not outfile.exists(): 

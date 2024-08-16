@@ -259,19 +259,12 @@ def get_beamdata(beamfile, half_space, cimr): #cimr, apat_hdf5):
             #phi   = np.full((ny, nx), np.nan, dtype=float)
             
             
-            # i_row is J in GRASP manual 
+            # j_ is J in GRASP manual 
             # 
-            # Here i_row is the row number after (nx, ny, klimit) row in a
+            # Here j_ is the row number after (nx, ny, klimit) row in a
             # file. So, to get the current row in a grd file, we need to add
-            # i_row and line_shift 
+            # j_ and line_shift 
             
-            #for i_row in tqdm(range(0, ny), desc=f"Working on row {i_row+1}", unit=i_row):
-            #for i_row in tqdm.tqdm(range(0, ny), desc=f"| {bn}: Working on chunks (1 chunk = IS rows in a file)", unit=" chunk"): 
-            
-            #X = []
-            #Y = [] 
-
-            #for j_ in range(0, ny): 
             for j_ in tqdm.tqdm(range(0, ny), desc=f"| {bn}: Working on chunks (1 chunk = IS rows in a file)", unit=" chunk"): 
                 
                 line_numbers = re.findall(r'-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?',
@@ -280,12 +273,12 @@ def get_beamdata(beamfile, half_space, cimr): #cimr, apat_hdf5):
                 # Get the number of columns to read 
                 if klimit == 0: 
                     # It is IS in GRASP manual --- the column number of 1st datapoint  
-                    is_ = 1 #ix0 = 1 
-                    # It is IN in GRASP manual --- the # of datapoints in row J (i_row)
-                    in_ = nx #nxr = nx  
+                    is_ = 1  
+                    # It is IN in GRASP manual --- the # of datapoints in row J (j_)
+                    in_ = nx   
                 elif klimit == 1: 
-                    is_ = int(line_numbers[0]) #ix0 = int(line_numbers[0]) 
-                    in_ = int(line_numbers[1]) #nxr = int(line_numbers[1])
+                    is_ = int(line_numbers[0]) 
+                    in_ = int(line_numbers[1]) 
 
                 """
                 In GRASP manual it is written that this line should be looped
@@ -300,34 +293,6 @@ def get_beamdata(beamfile, half_space, cimr): #cimr, apat_hdf5):
                 default, so we loop to in_ which is IN in our case. 
                 """
 
-                #Y.append(ycen + ys + dy * (j_ - 1)) 
-                #
-                #ie_ = is_ + in_ 
-                #print(f"| IS = {is_}, IN = {in_}, IE = {ie_}")
-
-                #x_test = np.full(in_, np.nan, dtype=float)
-                #for i_ in range(is_, ie_): 
-                #    print(i_)
-                #    line_numbers = re.findall(r'-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?',
-                #                              info[j_ + line_shift + (i_ - is_ + 1)])
-                #    G3h[i_, j_] = float(line_numbers[0])
-                #    print(G3h[i_, j_])
-
-                #    x_test[i_ - is_] = xcen + xs + dx * (i_ - 1) 
-                #X.append(x_test)
-                #
-                #print(X)
-
-                #line_shift = line_shift + in_ #nxr 
-                #print(line_shift) 
-                #if j_ >= 3: 
-                #    exit() 
-
-                
-                #v0[i_row] = ycen + ys + dy * (i_row - 1)
-                
-                #print(line_shift) 
-                #for ict in range(nxr):
                 for ict in range(in_):
                 #for ict in tqdm.tqdm(range(nxr), desc="NX", leave=False, unit=" col"):
 
@@ -335,8 +300,7 @@ def get_beamdata(beamfile, half_space, cimr): #cimr, apat_hdf5):
                                               info[j_ + line_shift + (ict + 1)])
                     # If is_ = 1, then ic and ict are exactly the same it seems 
                     # the matlab version starts with index 1, but python starts with 0 
-                    ic = is_ + ict - 1 #ix0 + ict - 1  
-                    #print(f"is_={is_}: ic={ic}") 
+                    ic = is_ + ict - 1   
                     
                     # We were given only horizontal component files, so we copy
                     # those values into vertical as well 
@@ -350,58 +314,32 @@ def get_beamdata(beamfile, half_space, cimr): #cimr, apat_hdf5):
                     G3v[ic, j_] = float(line_numbers[0])
                     G4v[ic, j_] = float(line_numbers[1]) 
                     
-                    ## Grid points (x,y) run through the values  
-                    #u0[ic, i_row] = xcen + xs + dx * (ic - 1) 
-                    #v0[ic, i_row] = ycen + ys + dy * (i_row - 1)
+                    # Grid points (x,y) run through the values  
+                    # 
+                    # [Note]: this is how the grid generated accroding to GRASP
+                    # manula. But this way results in more NaN grid values than
+                    # the way below, so we will be using that instead.  
+                    
+                    #u0[ic, j_] = xcen + xs + dx * (ic - 1) 
+                    #v0[ic, j_] = ycen + ys + dy * (j_ - 1)
                     
                     #u0[ic] = xcen + xs + dx * (ic - 1) 
 
                     ## Converting the cartesian (u,v) grid into (theta, phi)   
-                    #theta[ic, i_row], phi[ic, i_row] = uv_to_tp(u0[ic, i_row], v0[ic, i_row])
+                    #theta[ic, j_], phi[ic, j_] = uv_to_tp(u0[ic, j_], v0[ic, j_])
                 
                 # To go to the next block of points within the file we need to
                 # increase the line counter 
-                line_shift = line_shift + in_ #nxr 
-                #print(line_shift) 
-                #if j_ >= 3: 
-                #    exit() 
+                line_shift = line_shift + in_ 
 
 
 
+        # Generating the grid 
         u0 = xcen + xs
         u1 = u0 + dx * (nx - 1)
         v0 = ycen + ys
         v1 = v0 + dy * (ny - 1)
 
-        # The uv coordinates 
-        #u_values = np.arange(u0, u1 + dx, dx)
-        #v_values = np.arange(v0, v1 + dy, dy)
-        ## Theta.phi coordinates 
-        #theta = np.full(ny, np.nan, dtype=float)
-        #phi   = np.full(ny, np.nan, dtype=float)
-        ##theta, phi = uv_to_tp(u_values, v_values)
-        ##theta, phi = [], [] 
-        #for i in range(len(u0)): 
-            #theta[i], phi[i] = uv_to_tp(u_values[i], v_values[i]) 
-        #    theta[i], phi[i] = uv_to_tp(u0[i], v0[i]) 
-            
-        #theta = np.full((ny, nx), np.nan, dtype=float)
-        #phi   = np.full((ny, nx), np.nan, dtype=float)
-        
-        #u_vec = np.full(nx, np.nan, dtype=float)
-        #v_vec = np.full(ny, np.nan, dtype=float)
-
-        #is_ = 1 
-        #for ic in range(0, nx): 
-        #    #ic = is_ + ict - 1 #ix0 + ict - 1  
-        #    u_vec[ic]    = u0 + dx * (ic - 1) 
-        #for i_row in range(0, ny): 
-        #    v_vec[i_row] = v0 + dy * (i_row - 1)
-
-        #print(u_vec)
-        #print(v_vec)
-        #exit() 
-        
         u_grid, v_grid = np.mgrid[u0:(u1 + dx):dx, v0:(v1 + dy):dy]  
         
     print(f"| ------------------------------") 
@@ -423,19 +361,6 @@ def get_beamdata(beamfile, half_space, cimr): #cimr, apat_hdf5):
     Ghv = G3h + 1j * G4h 
     Gvv = G1v + 1j * G2v
     Gvh = G3v + 1j * G4v 
-
-    
-    #G1h_max_index  = get_max_index(G1h) 
-    #G2h_max_index  = get_max_index(G2h) 
-    #G3h_max_index  = get_max_index(G3h) 
-    #G4h_max_index  = get_max_index(G4h) 
-    #
-    #print(f"G1h_max_index = {G1h_max_index}")  
-    #print(f"G2h_max_index = {G2h_max_index}")  
-    #print(f"G3h_max_index = {G3h_max_index}")  
-    #print(f"G4h_max_index = {G4h_max_index}")  
-
-    #exit() 
     
     Ghh_max_index = get_max_index(Ghh) 
     Ghv_max_index = get_max_index(Ghv) 
@@ -466,10 +391,6 @@ def get_beamdata(beamfile, half_space, cimr): #cimr, apat_hdf5):
     print(f"| v_coordinate = {v_coordinate}")
 
 
-    # Calculating coordinate shift. The value can be positive or negative.  
-    #u_shift = xcen + u_coordinate     
-    #v_shift = ycen + v_coordinate     
-
     # "Shift" is the distance between two coordinates (the center of the beam
     # and the coordinate that corresponds to its maximum gain value). So we
     # just take an absolute difference  
@@ -494,28 +415,14 @@ def get_beamdata(beamfile, half_space, cimr): #cimr, apat_hdf5):
     else: 
         v_grid = v_grid - v_shift 
     
-    # Getting unique values which represent coordinates 
-    #u_vec = np.unique(u_grid[:, 0]) 
-    #v_vec = np.unique(v_grid[0, :]) 
-
-    #print(u_grid[:, :])
-
-    #print() 
-    #print(u_vec)
-
-
-    #print("v")
-    #print(v_grid[:, :])
-    #print(v_vec)
-    #exit() 
-    
-    #print(u_grid[800:900][:])  
-    #print(v_grid[800:900][:])  
-    #print() 
-    #theta, phi = uv_to_tp(u_grid, v_grid) 
-    
-    # We cannot get unique values for theta and phi, because the converted
-    # grid is not rectilinear anymore   
+    # Converting (u,v) into (theta,phi)
+    # 
+    # [Note]: We cannot get unique values for theta and phi (write them down as
+    # vectors), because the converted grid is not rectilinear anymore.
+    # Therefore, we have to interpolate gain values onto rectilinear grid.
+    # Otherwise, scipy functionality will be very slow and limited later on,
+    # when we are dealing with conversion from satellite reference fram to
+    # Earth reference frame (i.e., projection).    
     theta_grid, phi_grid = uv_to_tp(u_grid, v_grid) 
     
     end_time_recen = time.time() - start_time_recen
@@ -537,12 +444,6 @@ def get_beamdata(beamfile, half_space, cimr): #cimr, apat_hdf5):
     Gvv        = Gvv.flatten() 
     Gvh        = Gvh.flatten()  
 
-    #print(phi_grid)
-    #print(Ghh)
-    #
-    #print(phi_grid.shape)
-    #print(Ghh.shape)
-    
     # Removing NaN values from the data (it is the same as to do: 
     # arr = arr[~np.isnan(arr)])
     mask_phi   = np.logical_not(np.isnan(phi_grid))
@@ -562,36 +463,15 @@ def get_beamdata(beamfile, half_space, cimr): #cimr, apat_hdf5):
     Gvv        = Gvv[mask]  
     Gvh        = Gvh[mask]  
 
-    #print(phi_grid)
-    #print(Ghh)
-    #
-    #print(phi_grid.shape)
-    #print(Ghh.shape)
-
-    ##print(2 * np.pi)
-    #print(np.any(np.isnan(Ghh)))
-    #print(np.any(np.isnan(Gvv)))
-    #print(np.any(np.isnan(Gvh)))
-    #print(np.any(np.isnan(Ghv)))
-    
     # TODO: Add programmatic way to do this. Technically, we can do this by
     # using max and min values of phi and theta grids. 
     
-    #print(np.min(phi_grid), phi_grid.max()) 
-    #print(np.min(theta_grid), theta_grid.max()) 
-    phi_max = np.max(phi_grid)
-    phi_min = np.min(phi_grid)
-
-    #print(f"phi_max = {phi_max}, phi_min = {phi_min}")
-    #print(phi_max * 0.975)
-    #print(phi_min * 1.025)
-    #exit()
+    phi_max    = np.max(phi_grid)
+    phi_min    = np.min(phi_grid)
 
     buffermask = phi_grid > phi_max * 0.975 #6.2
     phi_grid   = np.concatenate((phi_grid, phi_grid[buffermask] - 2. * np.pi))
     theta_grid = np.concatenate((theta_grid, theta_grid[buffermask]))
-    #phi   = np.concatenate((phi, phi[buffermask] - 2. * np.pi))
-    #theta = np.concatenate((theta, theta[buffermask]))
     Ghh        = np.concatenate((Ghh, Ghh[buffermask]))  
     Ghv        = np.concatenate((Ghv, Ghv[buffermask]))   
     Gvv        = np.concatenate((Gvv, Gvv[buffermask]))  
@@ -624,105 +504,44 @@ def get_beamdata(beamfile, half_space, cimr): #cimr, apat_hdf5):
     # Should be smaller than the buffer zone defined above
     res = 0.01 
     
-    #print(np.min(phi_grid), phi_grid.max()) 
-    #print(np.min(theta_grid), theta_grid.max()) 
-    #exit() 
-
     #def interpolate_gain(theta, phi, gain): 
     #    return sp.interpolate.LinearNDInterpolator(list(zip(phi, theta)), gain)
+    
+    # This line is from online tutorial. Just leave it be. 
     fhh        = sp.interpolate.LinearNDInterpolator(list(zip(phi_grid, theta_grid)), Ghh) #, fill_value=0)
     fhv        = sp.interpolate.LinearNDInterpolator(list(zip(phi_grid, theta_grid)), Ghv) #, fill_value=0)
     fvv        = sp.interpolate.LinearNDInterpolator(list(zip(phi_grid, theta_grid)), Gvv) #, fill_value=0)
     fvh        = sp.interpolate.LinearNDInterpolator(list(zip(phi_grid, theta_grid)), Gvh) #, fill_value=0)
+    
     # Creating rectilinear grid 
     phi        = np.arange(0, 2. * np.pi + res, res)
     theta      = np.arange(0, np.max(theta_grid), res)
     phi, theta = np.meshgrid(phi, theta)  
     
-    #print(np.min(phi), phi.max()) 
-    #print(np.min(theta), theta.max()) 
-    #exit() 
-    #print(phi.shape)
-    #print(phi_grid.shape)
-    #Ghh = fhh((2.0, 0.2)) #np.meshgrid(phi, theta)).T 
-    #Ghh = fhh(X, Y) #np.meshgrid(phi, theta)).T 
-    
-    #print(Ghh)
-   
-    #Ghh = fhh(np.meshgrid(phi, theta)).T 
-    #Ghv = fhv(np.meshgrid(phi, theta)).T 
-    #Gvv = fvv(np.meshgrid(phi, theta)).T 
-    #Ghh = fhh(np.meshgrid(phi, theta)).T 
-    
     # Interpolating the function and substituting the last NaN values in the
     # arrays with zeros, because they are not intersecting the Earth (once you
     # do the projection) 
     
-    Ghh = np.nan_to_num(fhh(phi, theta).T, nan=0.0)  
-    Gvv = np.nan_to_num(fvv(phi, theta).T, nan=0.0) 
-    Gvh = np.nan_to_num(fvh(phi, theta).T, nan=0.0) 
-    Ghv = np.nan_to_num(fhv(phi, theta).T, nan=0.0)
+    Ghh        = np.nan_to_num(fhh(phi, theta).T, nan=0.0)  
+    Gvv        = np.nan_to_num(fvv(phi, theta).T, nan=0.0) 
+    Gvh        = np.nan_to_num(fvh(phi, theta).T, nan=0.0) 
+    Ghv        = np.nan_to_num(fhv(phi, theta).T, nan=0.0)
 
     phi, theta = phi.T, theta.T 
 
     # Getting back initial vectors and converting them into degrees 
-    phi   = np.rad2deg(np.unique(phi[:, 0])) 
-    theta = np.rad2deg(np.unique(theta[0, :])) 
+    phi        = np.rad2deg(np.unique(phi[:, 0])) 
+    theta      = np.rad2deg(np.unique(theta[0, :])) 
     
     # Splitting the arrays into real and imaginary parts 
-    G1h, G2h = np.real(Ghh), np.imag(Ghh)  
-    G3h, G4h = np.real(Ghv), np.imag(Ghv)  
-    G1v, G2v = np.real(Gvv), np.imag(Gvv) 
-    G3v, G4v = np.real(Gvh), np.imag(Gvh)  
+    G1h, G2h   = np.real(Ghh), np.imag(Ghh)  
+    G3h, G4h   = np.real(Ghv), np.imag(Ghv)  
+    G1v, G2v   = np.real(Gvv), np.imag(Gvv) 
+    G3v, G4v   = np.real(Gvh), np.imag(Gvh)  
     
 
-    #Ghh = np.nan_to_num(fhh(0., 0.01) 
-    # (630, 158)
-    #print(Ghh)
-    #print(np.shape(Ghh)) 
-
-    #print(Gvv)
-    #print(Gvh)
-    #print(Ghv)
-    
     end_time_interpn = time.time() - start_time_interpn
     print(f"| Finished Interpolation in: {end_time_interpn:.2f}s") 
-
-    #exit() 
-    
-
-    #theta, phi = uv_to_tp(u0, v0) 
-
-    ## I am getting errors associated with interpolation later on, so it
-    ## is better to save the grid as a ranged instead of meshgrid.  
-    ##apat['u'], apat['v'] = np.meshgrid(u_values, v_values)
-    ##apat['u'] = apat['u'].T
-    ##apat['v'] = apat['v'].T
-
-    #apat['u'] = u_values 
-    #apat['v'] = v_values 
-
-    ## Creating a grid from values 
-    #apat['u_grid'], apat['v_grid'] = np.mgrid[u0:(u1 + dx):dx, v0:(v1 + dy):dy]  
-
-    #print(f"{np.shape(apat['u_grid'])}")
-
-
-    # Start value for the grid (top left corner)  
-    #u1 = xcen + xs
-    #v1 = ycen + ys
-
-    #print(u1, v1) 
-
-    #theta1, phi1 = uv_to_tp(u1, v1)  
-    #print(theta1, phi1) 
-    #
-    #u2 = u1 + dx * (nx - 1)
-    #v2 = v1 + dy * (ny - 1)
-    #
-    #theta2, phi2 = uv_to_tp(u2, v2)  
-    #print(theta2, phi2) 
-        
 
     # Getting the resulting dictionary  
     
