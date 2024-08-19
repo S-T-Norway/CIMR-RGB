@@ -15,8 +15,8 @@ class AntennaPattern:
     def __init__(self, config_object):
         threshold_dB = -9. #this could maybe be a parameter
         self.config = config_object
-        # self.antenna_file = '/home/davide/Desktop/CIMR/CIMR-RGB-testing/dpr/Antenna_patterns/SMAP/RadiometerAntPattern_170830_v011.h5' # Should be in config file and provided in repository
-        self.antenna_file = '/home/davide/Downloads/CIMR-PAP-FR-L1-TPv0.3.h5'
+        self.antenna_file = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/Antenna_patterns/SMAP/RadiometerAntPattern_170830_v011.h5' # Should be in config file and provided in repository
+        # self.antenna_file = '/home/davide/Downloads/CIMR-PAP-FR-L1-TPv0.3.h5'
         theta, phi, gain_dict = self.get_full_patterns_in_dict(self.antenna_file, phi_range=None, theta_range=None)
 
         self.average_radius = 200000 #this number depends on the instrument. 
@@ -202,43 +202,20 @@ class AntennaPattern:
         
         return Z
 
-    def get_l1b_data(self, var, scan_ind, earth_sample_ind=None):
-        # This is just a placeholder function for now
-        # We should be able to get the data directly from the file
-        # and this should be passed from the DataIngestion
-        # and should be in some sort of data_dict.
-        with h5py.File(self.config.input_data_path, 'r') as data:
-            spacecraft = data['Spacecraft_Data']
-            measurement = data['Brightness_Temperature']
-            try:
-                var_data = spacecraft[var][:]
-            except:
-                try:
-                    var_data = measurement[var][:].flatten()
-                    # This is a temporary solution as we remove the Nans from the data
-                    # in order to be able to use the search tree.
-                    # There might be problems here if things arent working.
+    def get_l1b_data(self, data_dict, var, scan_ind, earth_sample_ind):
+        if var in self.config.variables_1d:
+            return data_dict[var][scan_ind]
+        else:
+            return data_dict[var][earth_sample_ind]
 
-                    var_data = var_data[self.config.non_nan_mask]
-                except:
-                    print(f"{var} not found in L1b file")
-                    exit()
-                    return
 
-            if scan_ind is None and earth_sample_ind is None:
-                return var_data
-            elif earth_sample_ind is None:
-                return var_data[scan_ind]
-            else:
-                flattened_ind = np.ravel_multi_index((scan_ind, earth_sample_ind), (779, 241))
-                return var_data[flattened_ind]
 
     #this function can be removed
-    def antenna_pattern_to_earth_simplified(self, scan_ind, earth_sample_ind, int_dom_lons, int_dom_lats, use_full_mueller_matrix=False):
+    def antenna_pattern_to_earth_simplified(self, data_dict, scan_ind, earth_sample_ind, int_dom_lons, int_dom_lats, use_full_mueller_matrix=False):
 
-        x_pos = self.get_l1b_data('x_pos', scan_ind, None)
-        y_pos = self.get_l1b_data('y_pos', scan_ind, None)
-        z_pos = self.get_l1b_data('z_pos', scan_ind, None)    
+        x_pos = self.get_l1b_data(data_dict,'x_pos', scan_ind, None)
+        y_pos = self.get_l1b_data(data_dict,'y_pos', scan_ind, None)
+        z_pos = self.get_l1b_data(data_dict,'z_pos', scan_ind, None)
 
         lonb, latb = self.boresight_to_earth(scan_ind, earth_sample_ind)      
     
@@ -290,7 +267,7 @@ class AntennaPattern:
         return Ginterp
 
 
-    def antenna_pattern_from_boresight(self, scan_ind,
+    def antenna_pattern_from_boresight(self,data_dict, scan_ind,
                                        boresight_lon, boresight_lat, 
                                        int_dom_lons, int_dom_lats, 
                                        use_full_mueller_matrix=False):
@@ -300,11 +277,11 @@ class AntennaPattern:
         antenna pattern on Earth. Currently it doens't include roll, pitch and yaw.
         """
                         
-        x_pos = self.get_l1b_data('x_pos', scan_ind, None)
-        y_pos = self.get_l1b_data('y_pos', scan_ind, None)
-        z_pos = self.get_l1b_data('z_pos', scan_ind, None)
-        nadir_lon = self.get_l1b_data('sc_nadir_lon', scan_ind, None)
-        nadir_lat = self.get_l1b_data('sc_nadir_lat', scan_ind, None)
+        x_pos = self.get_l1b_data(data_dict,'x_pos', scan_ind, None)
+        y_pos = self.get_l1b_data(data_dict,'y_pos', scan_ind, None)
+        z_pos = self.get_l1b_data(data_dict,'z_pos', scan_ind, None)
+        nadir_lon = self.get_l1b_data(data_dict,'sc_nadir_lon', scan_ind, None)
+        nadir_lat = self.get_l1b_data(data_dict,'sc_nadir_lat', scan_ind, None)
         
         crs_ecef = CRS.from_epsg(4978)
         crs_wgs84 = CRS.from_epsg(4326)
@@ -370,18 +347,15 @@ class AntennaPattern:
         return Ginterp      
 
 
-    def antenna_pattern_to_earth(self, scan_ind, earth_sample_ind, int_dom_lons, int_dom_lats, use_full_mueller_matrix=False):
+    def antenna_pattern_to_earth(self, data_dict, scan_ind, earth_sample_ind, int_dom_lons, int_dom_lats, use_full_mueller_matrix=False):
 
-        scan_angle = self.get_l1b_data('antenna_scan_angle', scan_ind, earth_sample_ind)
-        x_pos = self.get_l1b_data('x_pos', scan_ind, None)
-        y_pos = self.get_l1b_data('y_pos', scan_ind, None)
-        z_pos = self.get_l1b_data('z_pos', scan_ind, None)
-        x_vel = self.get_l1b_data('x_vel', scan_ind, None)
-        y_vel = self.get_l1b_data('y_vel', scan_ind, None)
-        z_vel = self.get_l1b_data('z_vel', scan_ind, None)
-        pitch = self.get_l1b_data('pitch', scan_ind, None)
-        roll = self.get_l1b_data('roll', scan_ind, None)
-        yaw = self.get_l1b_data('yaw', scan_ind, None)
+        scan_angle = self.get_l1b_data(data_dict,'antenna_scan_angle', scan_ind, earth_sample_ind)
+        x_pos = self.get_l1b_data(data_dict,'x_pos', scan_ind, None)
+        y_pos = self.get_l1b_data(data_dict,'y_pos', scan_ind, None)
+        z_pos = self.get_l1b_data(data_dict,'z_pos', scan_ind, None)
+        x_vel = self.get_l1b_data(data_dict,'x_vel', scan_ind, None)
+        y_vel = self.get_l1b_data(data_dict,'y_vel', scan_ind, None)
+        z_vel = self.get_l1b_data(data_dict,'z_vel', scan_ind, None)
 
         crs_ecef = CRS.from_epsg(4978)
         crs_wgs84 = CRS.from_epsg(4326)
@@ -461,18 +435,18 @@ class AntennaPattern:
         return Ginterp    
 
 
-    def boresight_to_earth(self, scan_ind, earth_sample_ind):
+    def boresight_to_earth(self,data_dict, scan_ind, earth_sample_ind):
 
-        scan_angle = self.get_l1b_data('antenna_scan_angle', scan_ind, earth_sample_ind)
-        x_pos = self.get_l1b_data('x_pos', scan_ind, None)
-        y_pos = self.get_l1b_data('y_pos', scan_ind, None)
-        z_pos = self.get_l1b_data('z_pos', scan_ind, None)
-        x_vel = self.get_l1b_data('x_vel', scan_ind, None)
-        y_vel = self.get_l1b_data('y_vel', scan_ind, None)
-        z_vel = self.get_l1b_data('z_vel', scan_ind, None)
-        pitch = self.get_l1b_data('pitch', scan_ind, None)
-        roll = self.get_l1b_data('roll', scan_ind, None)
-        yaw = self.get_l1b_data('yaw', scan_ind, None)
+        scan_angle = self.get_l1b_data(data_dict,'antenna_scan_angle', scan_ind, earth_sample_ind)
+        x_pos = self.get_l1b_data(data_dict,'x_pos', scan_ind, None)
+        y_pos = self.get_l1b_data(data_dict,'y_pos', scan_ind, None)
+        z_pos = self.get_l1b_data(data_dict,'z_pos', scan_ind, None)
+        x_vel = self.get_l1b_data(data_dict,'x_vel', scan_ind, None)
+        y_vel = self.get_l1b_data(data_dict,'y_vel', scan_ind, None)
+        z_vel = self.get_l1b_data(data_dict,'z_vel', scan_ind, None)
+        pitch = self.get_l1b_data(data_dict,'pitch', scan_ind, None)
+        roll = self.get_l1b_data(data_dict,'roll', scan_ind, None)
+        yaw = self.get_l1b_data(data_dict,'yaw', scan_ind, None)
     
         P0         = np.array([x_pos, y_pos, z_pos])
         tilt_angle = np.deg2rad(144.54)

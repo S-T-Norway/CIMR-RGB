@@ -93,6 +93,11 @@ class ConfigFile:
             save_to_disk='outputData/saveTodisk'
         )
 
+        self.search_radius = self.validate_search_radius(
+            config_object=config_object,
+            search_radius='ReGridderParams/searchRadius'
+        )
+
         if self.grid_type == "L1R":
             try:
                 if self.target_band == self.source_band:
@@ -431,3 +436,26 @@ class ConfigFile:
                 f"Invalid saveToDisk. Check Configuration File."
                 f" SaveToDisk must be either True or False")
         return value
+
+    @staticmethod
+    def validate_search_radius(config_object, search_radius):
+        """
+        Validates the search radius and returns the value if valid
+
+        Parameters
+        ----------
+        config_object: xml.etree.ElementTree.Element
+            Root element of the configuration file
+        search_radius: str
+            Path to the search radius in the configuration file
+
+        Returns
+        -------
+        int
+            Validated search radius
+        """
+        value = config_object.find(search_radius).text
+        if value is not None:
+            value = float(value)
+        return value
+

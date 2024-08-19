@@ -9,8 +9,7 @@ process.
 """
 
 import re
-from numpy import array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile
-import numpy as np
+from numpy import array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile, repeat, arange, isnan, delete, where
 import h5py as h5
 from netCDF4 import Dataset
 
@@ -187,7 +186,7 @@ class DataIngestion:
                 # data_dict['bt_4_target'] = bt_data['tb_4'][:]
                 data_dict['lats_target'] = bt_data['tb_lat'][:]
                 data_dict['lons_target'] = bt_data['tb_lon'][:]
-                data_dict["antenna_scan_angle"] = bt_data["antenna_scan_angle"][:]
+                data_dict['antenna_scan_angle'] = bt_data['antenna_scan_angle'][:]
                 # data_dict['bt_h_target_nedt'] = bt_data['nedt_h'][:]
                 # data_dict['bt_v_target_nedt'] = bt_data['nedt_v'][:]
                 # data_dict['bt_3_target_nedt'] = bt_data['nedt_3'][:]
@@ -199,6 +198,17 @@ class DataIngestion:
                 # data_dict['boresight_angle'] = bt_data['earth_boresight_incidence'][:]
                 # data_dict['sol_specular_theta'] = bt_data['solar_specular_theta'][:]
                 # data_dict['sol_specular_phi'] = bt_data['solar_specular_phi'][:]
+
+                # Required variables with 1 value per scan
+                # TBD Add this to the config file
+                self.config.variables_1d = ['x_pos', 'y_pos', 'z_pos', 'sc_nadir_lon', 'sc_nadir_lat']
+                spacecraft_data = data['Spacecraft_Data']
+                for variable in self.config.variables_1d:
+                    data_dict[variable] = spacecraft_data[variable][:]
+
+                # Create a map between scan number and earth sample number
+                num_scans, num_earth_samples = data_dict['lons_target'].shape
+                data_dict['scan_number'] = repeat(arange(num_scans), num_earth_samples).reshape(num_scans, num_earth_samples)
 
                 for variable in data_dict:
                     data_dict[variable] = data_dict[variable].flatten('C')
@@ -252,7 +262,7 @@ class DataIngestion:
 
         """
         for qc in qc_dict:
-            qc_dict[qc] = np.where(qc_dict[qc] == 0, 1, np.nan)
+            qc_dict[qc] = where(qc_dict[qc] == 0, 1, nan)
         return qc_dict
 
     @staticmethod
@@ -297,15 +307,20 @@ class DataIngestion:
 
         """
         if self.config.input_data_type == "SMAP":
-            nan_map = np.zeros(next(iter(data_dict.values())).shape, dtype=bool)
+            nan_map = zeros(next(iter(data_dict.values())).shape, dtype=bool)
 
             for variable in data_dict:
-                if data_dict[variable].dtype == 'float32':
-                    data_dict[variable][data_dict[variable] == SMAP_FILL_FLOAT_32] = nan
-                nan_map |= np.isnan(data_dict[variable])
-
+                if variable in self.config.variables_1d:
+                    continue
+                else:
+                    if data_dict[variable].dtype == 'float32':
+                        data_dict[variable][data_dict[variable] == SMAP_FILL_FLOAT_32] = nan
+                    nan_map |= isnan(data_dict[variable])
             for variable in data_dict:
-                data_dict[variable] = np.where(nan_map, np.nan, data_dict[variable])
+                if variable in self.config.variables_1d:
+                    continue
+                else:
+                    data_dict[variable] = delete(data_dict[variable], where(nan_map)[0], axis=0)
 
         return data_dict
 
@@ -401,14 +416,14 @@ class DataIngestion:
             for variable in data_dict[band]:
                 var = data_dict[band][variable]
                 if len(var.shape) == 3:
-                    var_out = np.zeros((var.shape[0], var.shape[1] * num_horns))
+                    var_out = zeros((var.shape[0], var.shape[1] * num_horns))
                     # Horn involvement
                     for scan in range(var.shape[0]):
                         var_out[scan, :] = var[scan, :, :].flatten('F')
                     data_dict[band][variable] = var_out.flatten('C')
 
                 elif len(data_dict[band][variable].shape) == 2:
-                    var_out = np.zeros((var.shape[0], var.shape[1] * num_horns))
+                    var_out = zeros((var.shape[0], var.shape[1] * num_horns))
                     for scan in range(var.shape[0]):
                         var_out[scan, :] = tile(var[scan, :], num_horns)
                     data_dict[band][variable] = var_out.flatten('C')
