@@ -158,7 +158,7 @@ class BGInterpolation():
         samples_dict = self.wrapped_search(search_tree,source_points, target_grid, search_radius, original_indices, min_x, max_x)
         return samples_dict
 
-    def bg_interpolation(self, target_cell_lon, target_cell_lat, l1b_inds, variable, 
+    def bg_interpolation(self, target_cell_lon, target_cell_lat, l1b_inds, variable,
                          approx_integrals=False,        #if true, next 2 options are ignored. Not implemented yet. 
                          source_antenna_pattern_approx=None, 
                          target_antenna_pattern_approx='gaussian',
@@ -297,7 +297,7 @@ class BGInterpolation():
                     g[i, j] = np.sum(ant_patterns[i] * ant_patterns[j])
         
         k = 0. #regularization factor
-        g = g + k*np.ones((count,count))
+        g = g + k*np.identity(count )
         ginv = np.linalg.inv(g)
 
         a = ginv @ (v + (1 - u.T @ (ginv @ v)) / (u.T @ (ginv @ u)) * u)
