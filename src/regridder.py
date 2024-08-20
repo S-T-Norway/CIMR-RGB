@@ -15,6 +15,7 @@ import pickle
 import sys
 from tqdm import tqdm
 from grid_generator import GridGenerator
+from config_file import ConfigFile
 
 MAP_EQUATORIAL_RADIUS = 6378137.0
 
@@ -53,9 +54,10 @@ class ReGridder:
         Todo
     """
 
-    def __init__(self, config_object):
+    def __init__(self, config_object, band_to_remap=None):
         self.config = config_object
         self.regridding_algorithm = self.config.regridding_algorithm
+        self.num_scans, self.num_earth_samples = ConfigFile.get_scan_geometry(self.config, band_to_remap)
 
     def initiate_grid(self, data_dict):
         """
@@ -109,7 +111,7 @@ class ReGridder:
 
             # Remove out of bounds variables from data_dict
             for variable in data_dict:
-                if variable in self.config.variables_1d:
+                if variable in getattr(self.config, 'variables_1d', []):
                     continue
                 else:
                     data_dict[variable] = delete(data_dict[variable], out_of_bounds_inds, axis=0)
@@ -384,6 +386,7 @@ class ReGridder:
                 data_dict_out['cell_frequency_' + scan_direction] = frequency_out
                 print(f"Calculated IDS Weights {scan_direction}")
                 break
+
 
         for var in data_dict:
             for scan_direction in ['fore', 'aft']:

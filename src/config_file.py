@@ -459,3 +459,29 @@ class ConfigFile:
             value = float(value)
         return value
 
+    @staticmethod
+    def get_scan_geometry(config, band_to_remap=None):
+        if config.input_data_type == 'SMAP':
+            num_scans = 779
+            num_earth_samples = 241
+        elif config.input_data_type == 'CIMR':
+            if band_to_remap == 'L':
+                num_scans = 74
+                num_earth_samples = 691
+            elif band_to_remap == 'C':
+                num_scans = 74
+                num_earth_samples = 2747*4
+            elif band_to_remap == 'X':
+                num_scans = 74
+                num_earth_samples = 2807*4
+            elif band_to_remap == 'KA':
+                num_scans = 74
+                num_earth_samples = 10395*8
+            elif band_to_remap == 'KU':
+                num_scans = 74
+                num_earth_samples = 7692*8
+        return num_scans, num_earth_samples
+
+
+
+

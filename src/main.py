@@ -42,7 +42,7 @@ if __name__ == '__main__':
     if config.input_data_type == 'CIMR':
         data_dict_out = {}
         for band in data_dict:
-            data_dict_out[band] = ReGridder(config).regrid_l1c(data_dict[band])
+            data_dict_out[band] = ReGridder(config_object=config, band_to_remap=band).regrid_l1c(data_dict[band])
 
 
 

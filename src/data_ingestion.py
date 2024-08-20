@@ -216,6 +216,7 @@ class DataIngestion:
 
             if self.config.input_data_type == "CIMR":
                 return data_dict
+    @property
     def read_netcdf(self):
         """
 
@@ -232,10 +233,25 @@ class DataIngestion:
                     variables = ['lon', 'lat', 'brightness_temperature_h', 'scan_angle']
                     for variable in variables:
                         variable_dict[self.config.variable_key_map[variable]] = array(band_data[variable][:])
+
+                    # Variables needed for the regridding, but wont be re-gridded
+                    sat_pos = array(band_data['satellite_position'][:])
+                    variable_dict['x_pos'] = sat_pos[:,:,0]
+                    variable_dict['y_pos'] = sat_pos[:,:,1]
+                    variable_dict['z_pos'] = sat_pos[:,:,2]
+                    variable_dict['sc_nadir_lon'] = array(band_data['sub_satellite_lon'][:])
+                    variable_dict['sc_nadir_lat'] = array(band_data['sub_satellite_lat'][:])
+
                     # L1C only has "target" designator
                     variable_dict['lons_target'] = variable_dict.pop('lons')
                     variable_dict['lats_target'] = variable_dict.pop('lats')
+                    variable_dict['bt_h_target'] = variable_dict.pop('bt_h')
                     data_dict[band] = variable_dict
+
+                    # Create a map between scan number and earth sample number
+                    num_scans, num_earth_samples = ConfigFile.get_scan_geometry(self.config, band)
+                    variable_dict['scan_number'] = repeat(arange(num_scans), num_earth_samples).reshape(num_scans, num_earth_samples)
+
 
             if self.config.grid_type == 'L1R':
                 # Need to concatenate the target and source bands.
@@ -493,7 +509,7 @@ class DataIngestion:
         :return:
         """
         # Open netcdf file
-        data_dict = self.read_netcdf()
+        data_dict = self.read_netcdf
         # Combine feeds (Move this into read_netcdf?)
         # Still need to adjust the scan angle feed offsets
         data_dict = self.combine_cimr_feeds(data_dict)
