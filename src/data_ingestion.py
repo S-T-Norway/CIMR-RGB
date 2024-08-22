@@ -430,6 +430,9 @@ class DataIngestion:
         for band in data_dict:
             num_horns = self.config.num_horns[band]
             for variable in data_dict[band]:
+                if variable == 'scan_number':
+                    data_dict[band][variable] = data_dict[band][variable].flatten('C')
+                    continue
                 var = data_dict[band][variable]
                 if len(var.shape) == 3:
                     var_out = zeros((var.shape[0], var.shape[1] * num_horns))

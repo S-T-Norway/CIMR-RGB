@@ -389,24 +389,21 @@ class ReGridder:
 
 
         for var in data_dict:
+            if hasattr(self.config, 'variables_1d'):
+                # Do something if variables_1d exists
+                if var in self.config.variables_1d:
+                    continue
+            else:
+                if var in ['x_pos', 'y_pos', 'z_pos', 'sc_nadir_lon', 'sc_nadir_lat']:
+                    continue
+            if var == 'scan_number':
+                continue
             for scan_direction in ['fore', 'aft']:
                 print(f"Regridding {var} {scan_direction}")
                 measurement_out = full((target_y.shape[0], target_x.shape[0]), nan)
                 mask = mask_dict[scan_direction]
 
                 if self.regridding_algorithm == 'IDS':
-                    # if 'bt' in var and 'nedt' not in var:
-                        # try:
-                        #     data_dict_out['cell_frequency_' + scan_direction]
-                        #
-                        # except KeyError:
-                        #     print(f"Calculating cell_frequency_{scan_direction}")
-                        #     data_dict_out['cell_frequency_' + scan_direction] = self.get_frequency(
-                        #         pixel_map=pixel_map,
-                        #         measurement_variable=where(mask, data_dict[var], nan),
-                        #         x_shape=target_x.shape[0],
-                        #         y_shape=target_y.shape[0])
-                        #     print(f"Calculated cell_frequency_{scan_direction}")
 
                     if isinstance(pixel_map, ndarray) is False: # I do this a few times, maybe I only need to do it once
                         max_length = max(len(sublist) for sublist in pixel_map)
@@ -423,6 +420,8 @@ class ReGridder:
                         y_out, x_out = np.unravel_index(int(weight), (1624, 3856))
                         measurement_out[y_out, x_out] = remapped_measurement
                     print(f"{var}_{scan_direction} re-gridded")
+
+
 
                 elif self.regridding_algorithm == 'NN':
                     if 'bt' in var and 'nedt' not in var:
@@ -502,18 +501,20 @@ class ReGridder:
                         measurement_out[y_target_ind, x_target_ind] = remapped_measurement
 
                 data_dict_out[var + '_' + scan_direction] = measurement_out
+                break
 
 
 
-            if symetric_diff is None:
-                fore_nan = isnan(data_dict_out[var + '_fore'])
-                aft_nan = isnan(data_dict_out[var + '_aft'])
-                unique_fore = (~fore_nan) & aft_nan
-                unique_aft = fore_nan & (~aft_nan)
-                symetric_diff = ~(unique_fore | unique_aft)
 
-        for var in data_dict_out:
-            data_dict_out[var] = where(symetric_diff, data_dict_out[var], nan)
+        #     if symetric_diff is None:
+        #         fore_nan = isnan(data_dict_out[var + '_fore'])
+        #         aft_nan = isnan(data_dict_out[var + '_aft'])
+        #         unique_fore = (~fore_nan) & aft_nan
+        #         unique_aft = fore_nan & (~aft_nan)
+        #         symetric_diff = ~(unique_fore | unique_aft)
+        #
+        # for var in data_dict_out:
+        #     data_dict_out[var] = where(symetric_diff, data_dict_out[var], nan)
 
         return data_dict_out
 

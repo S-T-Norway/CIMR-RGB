@@ -72,7 +72,7 @@ class BGInterpolation():
         return array(dists)
 
     @staticmethod
-    def filter_samples(samples, distances, num_scans, num_earth_samples, max_samples=6):
+    def filter_samples(samples, distances, num_scans, num_earth_samples, max_samples=10):
         # Convert samples to numpy array for easier indexing
         samples = np.array(samples)
         distances = np.array(distances)
@@ -207,7 +207,8 @@ class BGInterpolation():
                     earth_sample_ind=earth_sample_ind,
                     int_dom_lons=int_dom_lons,
                     int_dom_lats=int_dom_lats,
-                )          
+                )
+
             elif target_antenna_pattern_approx == 'boresight_inferred':
                 target_ant_pattern = AP.antenna_pattern_from_boresight(
                     data_dict = data_dict,
@@ -302,7 +303,7 @@ class BGInterpolation():
                     g[i, j] = np.sum(ant_patterns[i] * ant_patterns[j])
         
         k = 0. #regularization factor
-        g = g + k*np.identity(count )
+        g = g + k*np.identity(count)
         ginv = np.linalg.inv(g)
 
         a = ginv @ (v + (1 - u.T @ (ginv @ v)) / (u.T @ (ginv @ u)) * u)
@@ -317,7 +318,7 @@ class BGInterpolation():
         target_grid, source_points = self.get_grid(data_dict)
 
         # Make a smaller grid for testing
-        reduced_grid_inds = reduce_grid(510, 610, 875, 970, 1624, 3856)    #ocean
+        reduced_grid_inds = reduce_grid(510, 520, 875, 985, 1624, 3856)    #ocean
         #reduced_grid_inds = reduce_grid(1110, 1440, 3080, 3170, 1624, 3856)  #
 
 
@@ -329,7 +330,7 @@ class BGInterpolation():
         # --------------  POINTS SELECTION -----------------#
         # Define parameters for points selection, these should be dealt
         # with in the config file eventually.
-        bg_search_radius = 4 # Pixels
+        bg_search_radius = 12 # Pixels
         grid_resolution = 9 # km
         search_radius = (bg_search_radius/2 * grid_resolution)*1000 # m
         min_x, max_x = -17367530.44, -17367530.44 + 3856*9008.05 # From grid generator
