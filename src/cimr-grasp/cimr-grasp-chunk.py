@@ -1,4 +1,4 @@
-import pathlib 
+import pathlib as pb  
 import re 
 import glob 
 import numbers 
@@ -18,6 +18,7 @@ from   colorama import Fore, Back, Style
 import tqdm 
 
 import grasp_io as io 
+import grasp_utils as utils 
 
 # TODO: - Use xarrays instead of python dictionaries: https://tutorial.xarray.dev/overview/xarray-in-45-min.html 
 #       - Use netCDF instead of HDF5 (?)
@@ -29,7 +30,8 @@ import grasp_io as io
 # save them so we are stuck with matlab or native numpy/scipy routines (such s
 # npy and npz files)
 
-def get_max_index(G): 
+# TODO: Shouldn't this be an integer value? 
+def get_max_index(G) -> (int, int): 
     """
     Returns the index that correponds to the max value of NxN array.   
     
@@ -39,84 +41,13 @@ def get_max_index(G):
         Gain value to get the maximum value from.  
     Returns:
     --------
-     : float 
+     : tuple(int, int) 
         Index value that corresponds to the maximum value of G array.   
     """
 
     return np.unravel_index(np.nanargmax(np.abs(G)), G.shape) 
 
 
-
-def uv_to_tp(u,v): 
-    """
-    Converting (u,v) into (theta,phi) and returning the grid in radians.   
-    
-    According to the GRASP manual, the relations between (u, v) and (theta,
-    phi) coordinates are:  
-    
-    $$
-    u=\\sin\\theta\\cos\\phi
-    $$
-    $$
-    v=\\sin\\theta\\sin\\phi
-    $$ 
-
-    which makes up the unit vector to the field point as  
-
-    $$
-    \\hat{r} = \\left( u, v, \\sqrt{1 - u^2 - v^2} \\right)
-    $$ 
-
-    The reverse relations then are: 
-    
-    $$
-    \\theta=\\arccos{\\sqrt{1-u^2-v^2}}
-    $$
-    $$
-    \\phi = \\arctan\\left(\\frac{v}{u}\\right)
-    $$ 
-
-    where $\\phi$ is of [-180, 180] and $\\theta$ is [-90, 90] (in degrees).  
-
-    See, e.g. for different conventions: 
-    https://en.wikipedia.org/wiki/Spherical_coordinate_system 
-
-    Parameters:
-    -----------
-    u: float or ndarray 
-        U coordinate in director cosine coordinate system 
-        
-    v: float or ndarray 
-        V coordinate in director cosine coordinate system 
-
-    Returns:
-    --------
-    theta: float or ndarray  
-        Theta angle value 
-        
-    phi  : float or ndarray 
-        Phi angle value 
-    """
-
-    #theta = np.degrees(np.arccos(np.sqrt(1 - u**2 - v**2))) 
-    #phi   = np.degrees(np.arctan2(v, u)) 
-    
-    theta = np.arccos(np.sqrt(1 - u**2 - v**2)) 
-    phi   = np.arctan2(v, u) 
-
-    # Following SMAP convention, we need values for phi to be [0, 360]. 
-    # 
-    # [Note]: pcolor from matplotlib won't be able to properly output it on the
-    # screen after this operation, but the arrays we get are correct
-    # nevertheless.  
-    #phi[phi < 0] += np.rad2deg(2.0 * np.pi) 
-    phi[phi < 0] += 2.0 * np.pi 
-      
-    return theta, phi 
-
-
-
-#def get_beamdata(beamfile, half_space, cimr_uv, cimr_tp): #cimr, apat_hdf5): 
 def get_beamdata(beamfile, half_space, file_version, cimr): #cimr, apat_hdf5): 
     """
     Opens GRASP `grd` file defined in uv-coordinates (IGRID value is 1) and
@@ -161,6 +92,9 @@ def get_beamdata(beamfile, half_space, file_version, cimr): #cimr, apat_hdf5):
         bn = "FHS"
     elif half_space == "BK": 
         bn = "BHS"
+
+    # Precompile regex pattern to find numbers in each consecutive line  
+    reline_pattern = re.compile(r'-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?') 
     
     with open(beamfile, mode = "r", encoding = "UTF-8") as bfile: 
 
@@ -172,8 +106,9 @@ def get_beamdata(beamfile, half_space, file_version, cimr): #cimr, apat_hdf5):
         info = [line.strip("\n") for i, line in enumerate(bfile)] 
         line_shift = 3
         for i in range(0, line_shift):
-            line_numbers = re.findall(r'-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?',
-                                      info[i])
+            #line_numbers = re.findall(r'-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?',
+            #                          info[i])
+            line_numbers = reline_pattern.findall(info[i])
 
             if i == 0 :
                 ktype  = int(line_numbers[0])
@@ -201,7 +136,8 @@ def get_beamdata(beamfile, half_space, file_version, cimr): #cimr, apat_hdf5):
             
             for k in range(line_shift, line_shift+2):
                 
-                line_numbers = re.findall(r'-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?', info[k])
+                #line_numbers = re.findall(r'-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?', info[k])
+                line_numbers = reline_pattern.findall(info[k])
 
                 if k == 3:
                     xs     = float(line_numbers[0])
@@ -263,26 +199,18 @@ def get_beamdata(beamfile, half_space, file_version, cimr): #cimr, apat_hdf5):
             G3v = np.full((ny, nx), np.nan, dtype=float)
             G4v = np.full((ny, nx), np.nan, dtype=float)
             
-            #u0 = np.full((ny, nx), np.nan, dtype=float)
-            #v0 = np.full((ny, nx), np.nan, dtype=float)
-            
-            #u0 = np.full(ny, np.nan, dtype=float)
-            #v0 = np.full(ny, np.nan, dtype=float)
-
-            #theta = np.full((ny, nx), np.nan, dtype=float)
-            #phi   = np.full((ny, nx), np.nan, dtype=float)
-            
-            
             # j_ is J in GRASP manual 
             # 
             # Here j_ is the row number after (nx, ny, klimit) row in a
             # file. So, to get the current row in a grd file, we need to add
             # j_ and line_shift 
-            
+        
             for j_ in tqdm.tqdm(range(0, ny), desc=f"| {bn}: Working on chunks (1 chunk = IS rows in a file)", unit=" chunk"): 
                 
-                line_numbers = re.findall(r'-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?',
-                                          info[j_ + line_shift])
+                #line_numbers = re.findall(r'-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?',
+                #                          info[j_ + line_shift])
+                line_numbers = reline_pattern.findall(info[j_ + line_shift])
+                
                 
                 # Get the number of columns to read 
                 if klimit == 0: 
@@ -307,11 +235,16 @@ def get_beamdata(beamfile, half_space, file_version, cimr): #cimr, apat_hdf5):
                 default, so we loop to in_ which is IN in our case. 
                 """
 
+                #exit() 
+
                 for ict in range(in_):
                 #for ict in tqdm.tqdm(range(nxr), desc="NX", leave=False, unit=" col"):
 
-                    line_numbers = re.findall(r'-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?',
-                                              info[j_ + line_shift + (ict + 1)])
+                    #line_numbers = re.findall(r'-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?',
+                    #                          info[j_ + line_shift + (ict + 1)])
+
+                    line_numbers = reline_pattern.findall(info[j_ + line_shift + (ict + 1)])
+
                     # If is_ = 1, then ic and ict are exactly the same it seems 
                     # the matlab version starts with index 1, but python starts with 0 
                     ic = is_ + ict - 1   
@@ -347,17 +280,15 @@ def get_beamdata(beamfile, half_space, file_version, cimr): #cimr, apat_hdf5):
                 line_shift = line_shift + in_ 
 
     # Generating the grid 
-    u0 = xcen + xs
-    u1 = u0 + dx * (nx - 1)
-    v0 = ycen + ys
-    v1 = v0 + dy * (ny - 1)
+    #u0 = xcen + xs
+    #u1 = u0 + dx * (nx - 1)
+    #v0 = ycen + ys
+    #v1 = v0 + dy * (ny - 1)
 
-    u_grid, v_grid = np.mgrid[u0:(u1 + dx):dx, v0:(v1 + dy):dy]  
+    #u_grid, v_grid = np.mgrid[u0:(u1 + dx):dx, v0:(v1 + dy):dy]  
 
-    #print(u_grid) 
-    #print() 
-    #print(v_grid) 
-    #print() 
+    u_grid, v_grid = utils.generate_uv_grid(xcen, ycen, xs, ys, nx, ny, dx, dy)
+
     
     # Getting Vectors Back 
     u = np.unique(u_grid[:, 0]) 
@@ -377,7 +308,7 @@ def get_beamdata(beamfile, half_space, file_version, cimr): #cimr, apat_hdf5):
     cimr["Gain"]['G3v']  = G3v 
     cimr["Gain"]['G4v']  = G4v 
 
-    cimr['Version'] = file_version 
+    cimr['Version']      = file_version 
 
     # Optional Parameters (mainly to restore the grid if needed) 
     cimr["Grid"]['xcen'] = xcen 
@@ -394,270 +325,62 @@ def get_beamdata(beamfile, half_space, file_version, cimr): #cimr, apat_hdf5):
 
     return cimr 
     
-    #print(f"| ------------------------------") 
-    #print(f"| ReCentering")
-    #print(f"| ------------------------------") 
-    #
-    #start_time_recen = time.time() 
-    # 
-    ## The beam center in the (u,v) grid is dictated by xcen and ycen
-    ## variables calculated above. However, as it runed out, the maximum
-    ## beam value is not located in the center, but instead shifted in
-    ## space. Therefore, we need to find where the maximum value is located
-    ## on the u,v grid and offset u,v values to recenter the beam grid on
-    ## beam's maximum value.  
+
+def recenter_beamdata(cimr: dict()) -> dict(): 
+    """
+    Method to recenter original beam.  
+
+    The beam center in the (u,v) grid is dictated by xcen and ycen
+    variables calculated above. However, as it turned out, the maximum
+    beam value is not located in the center, but instead shifted in
+    space. Therefore, we need to find where the maximum value is located
+    on the u,v grid and offset u,v values to recenter the beam grid on
+    beam's maximum value.  
+    """
 
     ## Building the complex array and getting the index that corresponds to its
     ## maximum value. 
-    #Ghh = G1h + 1j * G2h 
-    #Ghv = G3h + 1j * G4h 
-    #Gvv = G1v + 1j * G2v
-    #Gvh = G3v + 1j * G4v 
-    #
-    #Ghh_max_index = get_max_index(Ghh) 
-    #Ghv_max_index = get_max_index(Ghv) 
-    #Gvv_max_index = get_max_index(Gvv) 
-    #Gvh_max_index = get_max_index(Gvh) 
-
-    #print(f"| Ghh_max_index = {Ghh_max_index}")  
-    #print(f"| Ghv_max_index = {Ghv_max_index}")  
-    #print(f"| Gvv_max_index = {Gvv_max_index}")  
-    #print(f"| Gvh_max_index = {Gvh_max_index}")  
-    #
-    ## Get the maximum value
-    #Ghh_max_value = Ghh[Ghh_max_index]
-    #Ghv_max_value = Ghv[Ghv_max_index]
-    #Gvv_max_value = Gvv[Gvv_max_index]
-    #Gvh_max_value = Gvh[Gvh_max_index]
-
-    #print(f"| Ghh_max_value = {Ghh_max_value}")
-    #print(f"| Ghv_max_value = {Ghh_max_value}")
-    #print(f"| Gvv_max_value = {Ghh_max_value}")
-    #print(f"| Gvh_max_value = {Ghh_max_value}")
-    #
-    ## Get the coordinates corresponding to maximum gain inside the mesh grids
-    ## (u, v). This is our new central value.  
-    #u_coordinate = u_grid[Ghh_max_index]
-    #v_coordinate = v_grid[Ghh_max_index] 
-    #print(f"| u_coordinate = {u_coordinate}")
-    #print(f"| v_coordinate = {v_coordinate}")
-
-
-    ## "Shift" is the distance between two coordinates (the center of the beam
-    ## and the coordinate that corresponds to its maximum gain value). So we
-    ## just take an absolute difference  
-    ## 
-    ## [Note]: Due to floating point precision, we can get crap after 15th
-    ## point, so I am cutting it off.  
-    #u_shift = float(format(np.abs(xcen - u_coordinate), '.15f'))       
-    #v_shift = float(format(np.abs(ycen - v_coordinate), '.15f'))       
-    ##v_shift = np.abs(ycen - v_coordinate)      
-    #print(f"| u_shift = {u_shift}")
-    #print(f"| v_shift = {v_shift}")
-    #
-    ## If the maximum gain coordinate is negative then we add the shift value
-    ## (go right to reach zero), else --- we subtract (go left).  
-    #if u_coordinate < 0: 
-    #    u_grid = u_grid + u_shift 
-    #else: 
-    #    u_grid = u_grid - u_shift 
-    #    
-    #if v_coordinate < 0: 
-    #    v_grid = v_grid + v_shift 
-    #else: 
-    #    v_grid = v_grid - v_shift 
-    #
-    ## Converting (u,v) into (theta,phi)
-    ## 
-    ## [Note]: We cannot get unique values for theta and phi (write them down as
-    ## vectors), because the converted grid is not rectilinear anymore.
-    ## Therefore, we have to interpolate gain values onto rectilinear grid.
-    ## Otherwise, scipy functionality will be very slow and limited later on,
-    ## when we are dealing with conversion from satellite reference fram to
-    ## Earth reference frame (i.e., projection).    
-    #theta_grid, phi_grid = uv_to_tp(u_grid, v_grid) 
-    #
-    #end_time_recen = time.time() - start_time_recen
-    #print(f"| Finished Recentering in: {end_time_recen:.2f}s") 
-
-    # TODO: Write it into a separate method 
-    # 
-    # Interpolating to get the rectilinear grid 
-    #print(f"| ------------------------------") 
-    #print(f"| Interpolating")
-    #print(f"| ------------------------------") 
-    #
-    #start_time_interpn = time.time()  
-    #
-    #phi_grid   = phi_grid.flatten()
-    #theta_grid = theta_grid.flatten()
-    #Ghh        = Ghh.flatten()  
-    #Ghv        = Ghv.flatten()  
-    #Gvv        = Gvv.flatten() 
-    #Gvh        = Gvh.flatten()  
-
-    ## Removing NaN values from the data (it is the same as to do: 
-    ## arr = arr[~np.isnan(arr)])
-    #mask_phi   = np.logical_not(np.isnan(phi_grid))
-    #mask_theta = np.logical_not(np.isnan(theta_grid))
-    #mask_Ghh   = np.logical_not(np.isnan(Ghh))
-    #mask_Ghv   = np.logical_not(np.isnan(Ghv))
-    #mask_Gvv   = np.logical_not(np.isnan(Gvv))
-    #mask_Gvh   = np.logical_not(np.isnan(Gvh))
-
-    ## Logical AND (intersection of non-NaN values in all arrays) 
-    #mask       = mask_theta * mask_phi * mask_Ghh * mask_Gvv * mask_Gvh * mask_Ghv 
-
-    #phi_grid   = phi_grid[mask]
-    #theta_grid = theta_grid[mask]
-    #Ghh        = Ghh[mask]  
-    #Ghv        = Ghv[mask]  
-    #Gvv        = Gvv[mask]  
-    #Gvh        = Gvh[mask]  
-
-    ## TODO: Add programmatic way to do this. Technically, we can do this by
-    ## using max and min values of phi and theta grids. 
-    #
-    #phi_max    = np.max(phi_grid)
-    #phi_min    = np.min(phi_grid)
-
-    #buffermask = phi_grid > phi_max * 0.975 #6.2
-    #phi_grid   = np.concatenate((phi_grid, phi_grid[buffermask] - 2. * np.pi))
-    #theta_grid = np.concatenate((theta_grid, theta_grid[buffermask]))
-    #Ghh        = np.concatenate((Ghh, Ghh[buffermask]))  
-    #Ghv        = np.concatenate((Ghv, Ghv[buffermask]))   
-    #Gvv        = np.concatenate((Gvv, Gvv[buffermask]))  
-    #Gvh        = np.concatenate((Gvh, Gvh[buffermask]))   
-
-    #buffermask = phi_grid < 0.1
-    #phi_grid   = np.concatenate((phi_grid, phi_grid[buffermask] + 2. * np.pi))
-    #theta_grid = np.concatenate((theta_grid, theta_grid[buffermask]))
-    #Ghh        = np.concatenate((Ghh, Ghh[buffermask]))  
-    #Ghv        = np.concatenate((Ghv, Ghv[buffermask]))   
-    #Gvv        = np.concatenate((Gvv, Gvv[buffermask]))  
-    #Gvh        = np.concatenate((Gvh, Gvh[buffermask]))   
-
-    ## Adding buffer for theta 
-    ## 
-    ## [Note]: This is done because we are getting several (exactly 1 in the
-    ## begginning and 3 in the end) NaN values in the grids after interpolation,
-    ## which happens due to the fact that interpolator does have enough
-    ## neighboring points on edges. Therefore, we are adding more points to the
-    ## left, while the right values are simply put to 0 (see explanation below). 
-    #buffermask = theta_grid < 0.1
-    #phi_grid   = np.concatenate((phi_grid, phi_grid[buffermask]))
-    #theta_grid = np.concatenate((theta_grid, -theta_grid[buffermask]))
-    #Ghh        = np.concatenate((Ghh, Ghh[buffermask]))  
-    #Ghv        = np.concatenate((Ghv, Ghv[buffermask]))   
-    #Gvv        = np.concatenate((Gvv, Gvv[buffermask]))  
-    #Gvh        = np.concatenate((Gvh, Gvh[buffermask]))   
-
-    ## Should be smaller than the buffer zone defined above
-    #res = 0.01 
-    #
-    ##def interpolate_gain(theta, phi, gain): 
-    ##    return sp.interpolate.LinearNDInterpolator(list(zip(phi, theta)), gain)
-    #
-    ## This line is from online tutorial. Just leave it be. 
-    #fhh        = sp.interpolate.LinearNDInterpolator(list(zip(phi_grid, theta_grid)), Ghh) #, fill_value=0)
-    #fhv        = sp.interpolate.LinearNDInterpolator(list(zip(phi_grid, theta_grid)), Ghv) #, fill_value=0)
-    #fvv        = sp.interpolate.LinearNDInterpolator(list(zip(phi_grid, theta_grid)), Gvv) #, fill_value=0)
-    #fvh        = sp.interpolate.LinearNDInterpolator(list(zip(phi_grid, theta_grid)), Gvh) #, fill_value=0)
-    #
-    ## Creating rectilinear grid 
-    #phi        = np.arange(0, 2. * np.pi + res, res)
-    #theta      = np.arange(0, np.max(theta_grid), res)
-    #phi, theta = np.meshgrid(phi, theta)  
-    #
-    ## Interpolating the function and substituting the last NaN values in the
-    ## arrays with zeros, because they are not intersecting the Earth (once you
-    ## do the projection) 
-    #
-    #Ghh        = np.nan_to_num(fhh(phi, theta).T, nan=0.0)  
-    #Gvv        = np.nan_to_num(fvv(phi, theta).T, nan=0.0) 
-    #Gvh        = np.nan_to_num(fvh(phi, theta).T, nan=0.0) 
-    #Ghv        = np.nan_to_num(fhv(phi, theta).T, nan=0.0)
-
-    #phi, theta = phi.T, theta.T 
-
-    ## Getting back initial vectors and converting them into degrees 
-    #phi        = np.rad2deg(np.unique(phi[:, 0])) 
-    #theta      = np.rad2deg(np.unique(theta[0, :])) 
-    #
-    ## Splitting the arrays into real and imaginary parts 
-    #G1h, G2h   = np.real(Ghh), np.imag(Ghh)  
-    #G3h, G4h   = np.real(Ghv), np.imag(Ghv)  
-    #G1v, G2v   = np.real(Gvv), np.imag(Gvv) 
-    #G3v, G4v   = np.real(Gvh), np.imag(Gvh)  
+    #Ghh = cimr["Gain"]['G1h'] + 1j * cimr["Gain"]['G2h']
+    #Ghv = cimr["Gain"]['G3h'] + 1j * cimr["Gain"]['G4h']
+    #Gvv = cimr["Gain"]['G1v'] + 1j * cimr["Gain"]['G2v']
+    #Gvh = cimr["Gain"]['G3v'] + 1j * cimr["Gain"]['G4v']
     
+    Ghh_max_index = get_max_index(cimr["temp"]['Ghh']) 
+    Ghv_max_index = get_max_index(cimr["temp"]['Ghv']) 
+    Gvv_max_index = get_max_index(cimr["temp"]['Gvv']) 
+    Gvh_max_index = get_max_index(cimr["temp"]['Gvh']) 
 
-    #end_time_interpn = time.time() - start_time_interpn
-    #print(f"| Finished Interpolation in: {end_time_interpn:.2f}s") 
-
-    ## Getting the resulting dictionary  
-    #
-    #cimr["Gain"]['G1h']   = G1h 
-    #cimr["Gain"]['G2h']   = G2h 
-    #cimr["Gain"]['G3h']   = G3h 
-    #cimr["Gain"]['G4h']   = G4h 
-
-    #cimr["Gain"]['G1v']   = G1v 
-    #cimr["Gain"]['G2v']   = G2v 
-    #cimr["Gain"]['G3v']   = G3v 
-    #cimr["Gain"]['G4v']   = G4v 
-    #
-    ##cimr["Grid"]['u']     = u_grid #u_values #u0  
-    ##cimr["Grid"]['v']     = v_grid #v_values #v0   
-    ##cimr["Grid"]['u_cen'] = xcen #u_coordinate  
-    ##cimr["Grid"]['v_cen'] = ycen #v_coordinate   
-    #cimr["Grid"]['theta'] = theta #_grid  
-    #cimr["Grid"]['phi']   = phi #_grid   
-
-    #    
-    #return cimr    
-
-def recenter_beamdata(cimr): 
-    """
-    Method to recenter original beam.  
-    """
-    
-    # The beam center in the (u,v) grid is dictated by xcen and ycen
-    # variables calculated above. However, as it runed out, the maximum
-    # beam value is not located in the center, but instead shifted in
-    # space. Therefore, we need to find where the maximum value is located
-    # on the u,v grid and offset u,v values to recenter the beam grid on
-    # beam's maximum value.  
-
-    # Building the complex array and getting the index that corresponds to its
-    # maximum value. 
-    Ghh = cimr["Gain"]['G1h'] + 1j * cimr["Gain"]['G2h']
-    Ghv = cimr["Gain"]['G3h'] + 1j * cimr["Gain"]['G4h']
-    Gvv = cimr["Gain"]['G1v'] + 1j * cimr["Gain"]['G2v']
-    Gvh = cimr["Gain"]['G3v'] + 1j * cimr["Gain"]['G4v']
-    
-    Ghh_max_index = get_max_index(Ghh) 
-    Ghv_max_index = get_max_index(Ghv) 
-    Gvv_max_index = get_max_index(Gvv) 
-    Gvh_max_index = get_max_index(Gvh) 
+    #print(f"Ghh_max_index is of type {type(Ghh_max_index[0])}") 
 
     print(f"| Ghh_max_index = {Ghh_max_index}")  
     print(f"| Ghv_max_index = {Ghv_max_index}")  
     print(f"| Gvv_max_index = {Gvv_max_index}")  
     print(f"| Gvh_max_index = {Gvh_max_index}")  
+
+    #exit() 
     
     # Get the maximum value
-    Ghh_max_value = Ghh[Ghh_max_index]
-    Ghv_max_value = Ghv[Ghv_max_index]
-    Gvv_max_value = Gvv[Gvv_max_index]
-    Gvh_max_value = Gvh[Gvh_max_index]
+    Ghh_max_value = cimr["temp"]['Ghh'][Ghh_max_index]
+    Ghv_max_value = cimr["temp"]['Ghv'][Ghv_max_index]
+    Gvv_max_value = cimr["temp"]['Gvv'][Gvv_max_index]
+    Gvh_max_value = cimr["temp"]['Gvh'][Gvh_max_index]
 
     print(f"| Ghh_max_value = {Ghh_max_value}")
     print(f"| Ghv_max_value = {Ghh_max_value}")
     print(f"| Gvv_max_value = {Ghh_max_value}")
     print(f"| Gvh_max_value = {Ghh_max_value}")
     
-    u_grid, v_grid = np.meshgrid(cimr["Grid"]['u'], cimr["Grid"]['v']) #np.mgrid[u0:(u1 + dx):dx, v0:(v1 + dy):dy]  
-    u_grid, v_grid = u_grid.T, v_grid.T 
+    #u_grid, v_grid = np.meshgrid(cimr["Grid"]['u'], cimr["Grid"]['v']) #np.mgrid[u0:(u1 + dx):dx, v0:(v1 + dy):dy]  
+    #u_grid, v_grid = u_grid.T, v_grid.T 
+    #u_grid, v_grid = utils.generate_uv_grid(xcen = cimr["Grid"]['xcen'], 
+    #                                  ycen = cimr["Grid"]['ycen'], 
+    #                                  xs   = cimr["Grid"]['xs'], 
+    #                                  ys   = cimr["Grid"]['ys'], 
+    #                                  nx   = cimr["Grid"]['nx'], 
+    #                                  ny   = cimr["Grid"]['ny'], 
+    #                                  dx   = cimr["Grid"]['dx'], 
+    #                                  dy   = cimr["Grid"]['dy']
+    #                                  )  
     #print(u_grid)
     #print() 
     #print(v_grid)
@@ -665,8 +388,8 @@ def recenter_beamdata(cimr):
     
     # Get the coordinates corresponding to maximum gain inside the mesh grids
     # (u, v). This is our new central value.  
-    u_coordinate = u_grid[Ghh_max_index]
-    v_coordinate = v_grid[Ghh_max_index] 
+    u_coordinate = cimr['temp']['u_grid'][Ghh_max_index]
+    v_coordinate = cimr['temp']['v_grid'][Ghh_max_index] 
     print(f"| u_coordinate = {u_coordinate}")
     print(f"| v_coordinate = {v_coordinate}")
     
@@ -685,14 +408,17 @@ def recenter_beamdata(cimr):
     # If the maximum gain coordinate is negative then we add the shift value
     # (go right to reach zero), else --- we subtract (go left).  
     if u_coordinate < 0: 
-        u_grid = u_grid + u_shift 
+        cimr['temp']['u_grid']  = cimr['temp']['u_grid'] + u_shift 
     else: 
-        u_grid = u_grid - u_shift 
+        cimr['temp']['u_grid']  = cimr['temp']['u_grid'] - u_shift 
+        #u_grid = u_grid - u_shift 
         
     if v_coordinate < 0: 
-        v_grid = v_grid + v_shift 
+        cimr['temp']['v_grid']  = cimr['temp']['v_grid'] + v_shift 
+        #v_grid = v_grid + v_shift 
     else: 
-        v_grid = v_grid - v_shift 
+        cimr['temp']['v_grid']  = cimr['temp']['v_grid'] - v_shift 
+        #v_grid = v_grid - v_shift 
     
     # Converting (u,v) into (theta,phi)
     # 
@@ -702,20 +428,23 @@ def recenter_beamdata(cimr):
     # Otherwise, scipy functionality will be very slow and limited later on,
     # when we are dealing with conversion from satellite reference fram to
     # Earth reference frame (i.e., projection).    
-    theta_grid, phi_grid = uv_to_tp(u_grid, v_grid) 
+    #theta_grid, phi_grid = utils.uv_to_tp(u_grid, v_grid) 
 
     # Updating resulting dictionary  
     # (to use these values later on)
-    cimr["Grid"]['u_grid']     = u_grid 
-    cimr["Grid"]['v_grid']     = v_grid 
+    #cimr["Grid"]['u_grid']     = u_grid 
+    #cimr["Grid"]['v_grid']     = v_grid 
+
+    # TODO: Put this statement somewhere else because we do not convert the
+    # original grid to theta phi, but convert the new theta, into the u, v to
+    # enable proper chunking of data later on. 
+    #cimr["Grid"]['theta_grid'] = theta_grid 
+    #cimr["Grid"]['phi_grid']   = phi_grid 
     
-    cimr["Grid"]['theta_grid'] = theta_grid 
-    cimr["Grid"]['phi_grid']   = phi_grid 
-    
-    cimr["Gain"]['Ghh']        = Ghh
-    cimr["Gain"]['Ghv']        = Ghv
-    cimr["Gain"]['Gvv']        = Gvv
-    cimr["Gain"]['Gvh']        = Gvh
+    #cimr["Gain"]['Ghh']        = Ghh
+    #cimr["Gain"]['Ghv']        = Ghv
+    #cimr["Gain"]['Gvv']        = Gvv
+    #cimr["Gain"]['Gvh']        = Gvh
 
     #print(cimr["Gain"].keys())
     #print(cimr["Grid"].keys())
@@ -732,10 +461,10 @@ def interpolate_beamdata(cimr):
     cimr["Grid"]['phi_grid']   = cimr["Grid"]['phi_grid'].flatten()
     cimr["Grid"]['theta_grid'] = cimr["Grid"]['theta_grid'].flatten()
     
-    cimr["Gain"]['Ghh']        = cimr["Gain"]['Ghh'].flatten()  
-    cimr["Gain"]['Ghv']        = cimr["Gain"]['Ghv'].flatten()  
-    cimr["Gain"]['Gvv']        = cimr["Gain"]['Gvv'].flatten() 
-    cimr["Gain"]['Gvh']        = cimr["Gain"]['Gvh'].flatten()  
+    cimr["temp"]['Ghh']        = cimr["temp"]['Ghh'].flatten()  
+    cimr["temp"]['Ghv']        = cimr["temp"]['Ghv'].flatten()  
+    cimr["temp"]['Gvv']        = cimr["temp"]['Gvv'].flatten() 
+    cimr["temp"]['Gvh']        = cimr["temp"]['Gvh'].flatten()  
 
     # Removing NaN values from the data (it is the same as to do: 
     # arr = arr[~np.isnan(arr)])
@@ -856,17 +585,17 @@ def interpolate_beamdata(cimr):
     #client = Client() 
     #client = Client(threads_per_worker=1, n_workers=2) 
     # Setup Dask cluster with a specified number of threads or processes
-    cluster = LocalCluster(n_workers=4, threads_per_worker=2)
-    client = Client(cluster) 
-        
-    if False: #True: #cimr['Grid']['nx'] > 1000: 
-        start_time_inter = time.time() 
-        points = list(zip(cimr["Grid"]['phi_grid'], cimr["Grid"]['theta_grid'])) 
-        triangulation = sp.spatial.Delaunay(points)  
-        end_time_inter = time.time() - start_time_inter 
-        print(f"| Finished with Delaunay in: {end_time_inter:.2f}s")
-    else: 
-        triangulation = list(zip(cimr["Grid"]['phi_grid'], cimr["Grid"]['theta_grid'])) 
+    #cluster = LocalCluster(n_workers=4, threads_per_worker=2)
+    #client = Client(cluster) 
+    #    
+    #if False: #True: #cimr['Grid']['nx'] > 1000: 
+    #    start_time_inter = time.time() 
+    #    points = list(zip(cimr["Grid"]['phi_grid'], cimr["Grid"]['theta_grid'])) 
+    #    triangulation = sp.spatial.Delaunay(points)  
+    #    end_time_inter = time.time() - start_time_inter 
+    #    print(f"| Finished with Delaunay in: {end_time_inter:.2f}s")
+    #else: 
+    #    triangulation = list(zip(cimr["Grid"]['phi_grid'], cimr["Grid"]['theta_grid'])) 
 
     #start_time_inter = time.time() 
     #points = list(zip(cimr["Grid"]['phi_grid'], cimr["Grid"]['theta_grid'])) 
@@ -880,40 +609,56 @@ def interpolate_beamdata(cimr):
     #end_time_inter = time.time() - start_time_inter 
 
     # Use delayed to parallelize the interpolation process
-    @dask.delayed
-    def interpolate_and_meshgrid(x, y, z, X, Y):
-        interp = sp.interpolate.LinearNDInterpolator(list(zip(x, y)), z)
-        Z = interp(X, Y)
+    #@dask.delayed
+
+
+    def interpolate_temperature(x, y, z, X, Y, interp_method = "linear"):
+
+        grid_points = np.vstack([X.ravel(), Y.ravel()]).T 
+
+        Z = sp.interpolate.griddata(grid_points, z, (x, y), method=interp_method) 
+
+        #interp = sp.interpolate.LinearNDInterpolator(list(zip(x, y)), z)
+        #Z = interp(X, Y)
+
         return Z
 
-    phi        = da.arange(0, 2. * np.pi + res, res)
-    theta      = da.arange(0, theta_max, res)
-    phi, theta = da.meshgrid(phi, theta)  
+    start_time_inter = time.time() 
 
-    # Measure the time of the delayed task creation
-    start_task_creation_time = time.time()
+    cimr["Gain"]['Ghh'] = da.nan_to_num(interpolate_temperature().T, nan=0.0)  
 
-    # Call the delayed function for interpolation
-    Z_delayed = interpolate_and_meshgrid(cimr['Grid']['phi_grid'],
-                                 cimr['Grid']['theta_grid'],
-                                 cimr['Gain']['Ghh'], phi.compute(),
-                                 theta.compute())
+    end_time_inter = time.time() - start_time_inter 
+    print(f"| Finished with Ghh in: {end_time_inter:.2f}s")
 
-    task_creation_time = time.time() - start_task_creation_time 
 
-    # Trigger the computation
-    start_computation_time = time.time()
+    #phi        = da.arange(0, 2. * np.pi + res, res)
+    #theta      = da.arange(0, theta_max, res)
+    #phi, theta = da.meshgrid(phi, theta)  
 
-    with ProgressBar():
-        Z = Z_delayed.compute()
+    ## Measure the time of the delayed task creation
+    #start_task_creation_time = time.time()
 
-    computation_time = time.time() - start_computation_time 
+    ## Call the delayed function for interpolation
+    #Z_delayed = interpolate_and_meshgrid(cimr['Grid']['phi_grid'],
+    #                             cimr['Grid']['theta_grid'],
+    #                             cimr['Gain']['Ghh'], phi.compute(),
+    #                             theta.compute())
 
-    print(f"Time to create delayed task: {task_creation_time:.4f} seconds")
-    print(f"Time to compute task: {computation_time:.4f} seconds") 
+    #task_creation_time = time.time() - start_task_creation_time 
 
-    print(Z.shape)
-    print(Z[0,0])
+    ## Trigger the computation
+    #start_computation_time = time.time()
+
+    #with ProgressBar():
+    #    Z = Z_delayed.compute()
+
+    #computation_time = time.time() - start_computation_time 
+
+    #print(f"Time to create delayed task: {task_creation_time:.4f} seconds")
+    #print(f"Time to compute task: {computation_time:.4f} seconds") 
+
+    #print(Z.shape)
+    #print(Z[0,0])
     #exit() 
 
     start_time_inter = time.time() 
@@ -1114,7 +859,7 @@ def is_nested_dict_empty(d):
 
 
 #def main(datadir, outdir, ref_tilt_ang_deg, downscale_factor, vsign, nu, nv, file_version, save_tp=True, save_uv=True):     
-def main(datadir, outdir, file_version):     
+def main(datadir, outdir, file_version, recenter_beam = True) -> None:     
     """
     Main method (entry point to the program)
     
@@ -1127,7 +872,9 @@ def main(datadir, outdir, file_version):
         The path to the output directory where to store all results of execution. 
 
     file_version: float  
-        Version of the parsed files to be prodiced. 
+        Version of the parsed files to be produced. 
+    recenter_beam: bool 
+        Parameter that defines whether to recenter beam or not 
     """
 
     # List of all beam files 
@@ -1167,29 +914,14 @@ def main(datadir, outdir, file_version):
     print(f"| {Fore.BLUE}Parsing the Antenna Patterns{Style.RESET_ALL}") 
     print(f"| {Fore.YELLOW}=============================={Style.RESET_ALL}") 
     
-    def rec_create_dir(path): 
-        """
-        Recursively create directories. 
-        """
-        # Convert the path to a Path object
-        path = pathlib.Path(path)
-        
-        # Create the directories if they do not exist
-        if not path.exists():
-            path.mkdir(parents=True, exist_ok=True)
-            print(f"Directories created: {path}")
-        else:
-            print(f"Path already exists: {path}")
 
     # Creating directory to store parsed files  
     parsed_dir = outdir.joinpath("parsed", f"v{file_version}")
-    rec_create_dir(parsed_dir)
-    #if not parsed_dir.exists(): 
-    #    print(f"| Creating 'parsed' directory:\n{parsed_dir}")
-    #    pathlib.Path(parsed_dir).mkdir()
-    #    
+    io.rec_create_dir(parsed_dir)
+
     preprocessed_dir = outdir.joinpath("preprocessed", f"v{file_version}")
-    rec_create_dir(preprocessed_dir)
+    io.rec_create_dir(preprocessed_dir)
+
     #if not preprocessed_dir.exists(): 
     #    print(f"| Creating 'preprocessed' directory:\n{preprocessed_dir}")
     #    pathlib.Path(preprocessed_dir).mkdir()
@@ -1250,7 +982,7 @@ def main(datadir, outdir, file_version):
                 else: 
                     infile = band + str(horn) + "-" + freq + "-" + pol + "-" + half_space + ".grd" 
                 
-                infile = pathlib.Path(str(datadir) + "/" + band + "/" + infile)  
+                infile = pb.Path(str(datadir) + "/" + band + "/" + infile)  
                 print(f"| {Fore.YELLOW}------------------------------{Style.RESET_ALL}") 
                 print(f"| {Fore.GREEN}Working with Input File: {infile.name}{Style.RESET_ALL}") 
 
@@ -1258,7 +990,7 @@ def main(datadir, outdir, file_version):
                 # Output filename 
                 parsedfile_prefix = f"CIMR-OAP-{half_space}" 
                 parsedfile_suffix = "UV"
-                outfile_oap = pathlib.Path(str(parsed_dir) + f"/{parsedfile_prefix}-" + band + horn + f"-{parsedfile_suffix}v{file_version}.h5")   
+                outfile_oap = pb.Path(str(parsed_dir) + f"/{parsedfile_prefix}-" + band + horn + f"-{parsedfile_suffix}v{file_version}.h5")   
                 
                 if io.check_outfile_existance(outfile_oap) == True: 
                 #    continue 
@@ -1290,7 +1022,7 @@ def main(datadir, outdir, file_version):
                 # Performing Beam Recentering and Interpolation on rectilinear grid  
                 preprocfile_prefix = f"CIMR-PAP-{half_space}" 
                 preprocfile_suffix = "TP"
-                outfile_pap = pathlib.Path(str(preprocessed_dir) + f"/{preprocfile_prefix}-" + band + horn + f"-{preprocfile_suffix}v{file_version}.h5")   
+                outfile_pap = pb.Path(str(preprocessed_dir) + f"/{preprocfile_prefix}-" + band + horn + f"-{preprocfile_suffix}v{file_version}.h5")   
                 
                 if io.check_outfile_existance(outfile_pap) == True: 
                     continue 
@@ -1307,18 +1039,41 @@ def main(datadir, outdir, file_version):
 
                     print(cimr['Grid'].keys()) 
                     print(cimr['Gain'].keys()) 
-                    exit() 
 
-                    print(f"| ------------------------------") 
-                    print(f"| ReCentering")
-                    print(f"| ------------------------------") 
-                    
-                    start_time_recen = time.time() 
-                    
-                    cimr = recenter_beamdata(cimr)
-                    
-                    end_time_recen = time.time() - start_time_recen
-                    print(f"| Finished Recentering in: {end_time_recen:.2f}s") 
+                    # Creating a set of temporary values to be removed from memory 
+                    cimr["temp"] = {} 
+                    cimr = utils.construct_complete_gains(cimr) 
+                    print(cimr['Grid'].keys()) 
+                    print(cimr['Gain'].keys()) 
+                    print(cimr['temp'].keys()) 
+                    cimr["temp"]["u_grid"], cimr["temp"]["v_grid"] = utils.generate_uv_grid(
+                                                              xcen = cimr["Grid"]['xcen'], 
+                                                              ycen = cimr["Grid"]['ycen'], 
+                                                              xs   = cimr["Grid"]['xs'], 
+                                                              ys   = cimr["Grid"]['ys'], 
+                                                              nx   = cimr["Grid"]['nx'], 
+                                                              ny   = cimr["Grid"]['ny'], 
+                                                              dx   = cimr["Grid"]['dx'], 
+                                                              dy   = cimr["Grid"]['dy']
+                                                            )  
+                    print(cimr['temp'].keys()) 
+                    #exit() 
+
+                    # If no recentering, then just create a temporary grid to
+                    # pass those values further and then delete them once we
+                    # are done 
+                    if recenter_beam: 
+                        print(f"| ------------------------------") 
+                        print(f"| ReCentering")
+                        print(f"| ------------------------------") 
+                        
+                        start_time_recen = time.time() 
+                        
+                        cimr = recenter_beamdata(cimr)
+                        
+                        end_time_recen = time.time() - start_time_recen
+                        print(f"| Finished Recentering in: {end_time_recen:.2f}s") 
+
                     
                     print(f"| ------------------------------") 
                     print(f"| Interpolating")
@@ -1326,7 +1081,9 @@ def main(datadir, outdir, file_version):
                     
                     start_time_interpn = time.time()  
                     
-                    cimr = interpolate_beamdata(cimr)
+                    #cimr = interpolate_beamdata(cimr)
+                    cimr = utils.interp_beamdata_into_uv(cimr) 
+                    #exit() 
 
                     # Deleting redundant fields  
                     del cimr["Grid"]['dx'] 
@@ -1335,14 +1092,14 @@ def main(datadir, outdir, file_version):
                     del cimr["Grid"]['ny'] 
                     del cimr["Grid"]['xs'] 
                     del cimr["Grid"]['ys']    
-                    del cimr["Grid"]['u'] 
-                    del cimr["Grid"]['v'] 
+                    #del cimr["Grid"]['u'] 
+                    #del cimr["Grid"]['v'] 
                     del cimr["Grid"]['xcen'] 
                     del cimr["Grid"]['ycen'] 
-                    del cimr["Grid"]['u_grid'] 
-                    del cimr["Grid"]['v_grid'] 
-                    del cimr["Grid"]['phi_grid'] 
-                    del cimr["Grid"]['theta_grid'] 
+                    #del cimr["Grid"]['u_grid'] 
+                    #del cimr["Grid"]['v_grid'] 
+                    #del cimr["Grid"]['phi_grid'] 
+                    #del cimr["Grid"]['theta_grid'] 
                     
                     #del cimr["Gain"]['Ghh'] 
                     #del cimr["Gain"]['Ghv'] 
@@ -1356,7 +1113,6 @@ def main(datadir, outdir, file_version):
                     print(f"| Finished Interpolation in: {end_time_interpn:.2f}s") 
 
                     print(f"| {Fore.BLUE}Saving Output File: {outfile_pap.name}{Style.RESET_ALL}") 
-
                     with h5py.File(outfile_pap, 'w') as hdf5_file:
                         io.save_dict_to_hdf5(hdf5_file, cimr)
                     
@@ -1383,15 +1139,15 @@ if __name__ == '__main__':
     # Getting the root of the repo 
     root_dir = io.find_repo_root() 
 
-    file_version = 0.4 
+    file_version = 0.5 
 
     # Params to be put inside parameter file 
-    outdir  = pathlib.Path(f"{root_dir}/output").resolve()
-    datadir = pathlib.Path(f"{root_dir}/dpr/AP").resolve() 
+    outdir  = pb.Path(f"{root_dir}/output").resolve()
+    datadir = pb.Path(f"{root_dir}/dpr/AP").resolve() 
 
-    if not pathlib.Path(outdir).exists(): 
+    if not pb.Path(outdir).exists(): 
         print(f"Creating output directory:\n{outdir}")
-        pathlib.Path(outdir).mkdir()
+        pb.Path(outdir).mkdir()
 
     if not datadir.is_dir():
         raise FileNotFoundError(f"The directory '{datadir}' does not exist.")

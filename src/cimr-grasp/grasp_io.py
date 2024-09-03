@@ -1,4 +1,4 @@
-import pathlib 
+import pathlib  
 import re 
 
 import numpy as np 
@@ -112,22 +112,41 @@ def parse_file_name(file_name):
     ValueError 
         If the aformentioned file format was not uphold. 
     """
-    
-    parts = file_name.split('-')
-    band = parts[0]
-    freq = parts[1]
-    pol  = parts[2]
-    
-    if len(band) == 1: 
-        horn = "1" 
-    elif len(band) == 2: 
-        horn = band[1] 
-    else: 
-        raise ValueError("Invalid filename format: " + file_name) 
-        
-    band = band[0]
 
-    half_space = parts[-1].split('.')[0]
+    # Regex to match the expected patterns of the filename
+    pattern = r"([A-Za-z]+\d*)-(\d+)-([A-Z]+)-([A-Z]+)"
+    match = re.match(pattern, file_name)
+    
+    if not match:
+        raise ValueError("Invalid filename format: " + file_name)
+
+    # Extract matched groups
+    band = match.group(1)
+    freq = match.group(2)
+    pol  = match.group(3)
+    half_space = match.group(4) 
+    # Check for horn based on whether there's a number in the band name
+    horn = ''.join(filter(str.isdigit, band)) if any(char.isdigit() for char in band) else "1"
+    band = ''.join(filter(str.isalpha, band)) 
+    #print(band, horn, freq, pol) 
+    
+    #parts = file_name.split('-')
+    #print(parts) 
+    ##exit() 
+    #band = parts[0]
+    #freq = parts[1]
+    #pol  = parts[2]
+    #
+    #if len(band) == 1: 
+    #    horn = "1" 
+    #elif len(band) == 2: 
+    #    horn = band[1] 
+    #else: 
+    #    raise ValueError("Invalid filename format: " + file_name) 
+    #    
+    #band = band[0]
+
+    #half_space = parts[-1].split('.')[0]
         
     return band, horn, freq, pol, half_space 
 
@@ -226,3 +245,18 @@ def find_repo_root(start_path: pathlib.Path = None) -> pathlib.Path:
             return parent
     
     raise FileNotFoundError("No .git directory found in any parent directories") 
+
+def rec_create_dir(path) -> None: 
+    """
+    Recursively create directories. 
+    """
+
+    # Convert the path to a Path object
+    path = pathlib.Path(path)
+    
+    # Create the directories if they do not exist
+    if not path.exists():
+        path.mkdir(parents=True, exist_ok=True)
+        print(f"Directories created: {path}")
+    else:
+        print(f"Path already exists: {path}")
