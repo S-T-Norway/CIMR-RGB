@@ -273,7 +273,7 @@ def get_beamdata(beamfile, half_space, file_version, cimr): #cimr, apat_hdf5):
                     #u0[ic] = xcen + xs + dx * (ic - 1) 
 
                     ## Converting the cartesian (u,v) grid into (theta, phi)   
-                    #theta[ic, j_], phi[ic, j_] = uv_to_tp(u0[ic, j_], v0[ic, j_])
+                    etheta[ic, j_], phi[ic, j_] = convert_uv_to_tp(u0[ic, j_], v0[ic, j_])
                 
                 # To go to the next block of points within the file we need to
                 # increase the line counter 
@@ -388,8 +388,8 @@ def recenter_beamdata(cimr: dict()) -> dict():
     
     # Get the coordinates corresponding to maximum gain inside the mesh grids
     # (u, v). This is our new central value.  
-    u_coordinate = cimr['temp']['u_grid'][Ghh_max_index]
-    v_coordinate = cimr['temp']['v_grid'][Ghh_max_index] 
+    u_coordinate = cimr['Grid']['u_grid'][Ghh_max_index]
+    v_coordinate = cimr['Grid']['v_grid'][Ghh_max_index] 
     print(f"| u_coordinate = {u_coordinate}")
     print(f"| v_coordinate = {v_coordinate}")
     
@@ -408,16 +408,16 @@ def recenter_beamdata(cimr: dict()) -> dict():
     # If the maximum gain coordinate is negative then we add the shift value
     # (go right to reach zero), else --- we subtract (go left).  
     if u_coordinate < 0: 
-        cimr['temp']['u_grid']  = cimr['temp']['u_grid'] + u_shift 
+        cimr['Grid']['u_grid']  = cimr['Grid']['u_grid'] + u_shift 
     else: 
-        cimr['temp']['u_grid']  = cimr['temp']['u_grid'] - u_shift 
+        cimr['Grid']['u_grid']  = cimr['Grid']['u_grid'] - u_shift 
         #u_grid = u_grid - u_shift 
         
     if v_coordinate < 0: 
-        cimr['temp']['v_grid']  = cimr['temp']['v_grid'] + v_shift 
+        cimr['Grid']['v_grid']  = cimr['Grid']['v_grid'] + v_shift 
         #v_grid = v_grid + v_shift 
     else: 
-        cimr['temp']['v_grid']  = cimr['temp']['v_grid'] - v_shift 
+        cimr['Grid']['v_grid']  = cimr['Grid']['v_grid'] - v_shift 
         #v_grid = v_grid - v_shift 
     
     # Converting (u,v) into (theta,phi)
@@ -428,7 +428,7 @@ def recenter_beamdata(cimr: dict()) -> dict():
     # Otherwise, scipy functionality will be very slow and limited later on,
     # when we are dealing with conversion from satellite reference fram to
     # Earth reference frame (i.e., projection).    
-    #theta_grid, phi_grid = utils.uv_to_tp(u_grid, v_grid) 
+    #theta_grid, phi_grid = utils.convert_uv_to_tp(u_grid, v_grid) 
 
     # Updating resulting dictionary  
     # (to use these values later on)
@@ -456,7 +456,7 @@ def interpolate_beamdata(cimr):
     Method to interpolate beamdata into rectilinear grid. 
     """
     
-    #theta_grid, phi_grid = uv_to_tp(u_grid, v_grid) 
+    #theta_grid, phi_grid = convert_uv_to_tp(u_grid, v_grid) 
     
     cimr["Grid"]['phi_grid']   = cimr["Grid"]['phi_grid'].flatten()
     cimr["Grid"]['theta_grid'] = cimr["Grid"]['theta_grid'].flatten()
@@ -1046,7 +1046,7 @@ def main(datadir, outdir, file_version, recenter_beam = True) -> None:
                     print(cimr['Grid'].keys()) 
                     print(cimr['Gain'].keys()) 
                     print(cimr['temp'].keys()) 
-                    cimr["temp"]["u_grid"], cimr["temp"]["v_grid"] = utils.generate_uv_grid(
+                    cimr["Grid"]["u_grid"], cimr["Grid"]["v_grid"] = utils.generate_uv_grid(
                                                               xcen = cimr["Grid"]['xcen'], 
                                                               ycen = cimr["Grid"]['ycen'], 
                                                               xs   = cimr["Grid"]['xs'], 
@@ -1062,17 +1062,17 @@ def main(datadir, outdir, file_version, recenter_beam = True) -> None:
                     # If no recentering, then just create a temporary grid to
                     # pass those values further and then delete them once we
                     # are done 
-                    if recenter_beam: 
-                        print(f"| ------------------------------") 
-                        print(f"| ReCentering")
-                        print(f"| ------------------------------") 
-                        
-                        start_time_recen = time.time() 
-                        
-                        cimr = recenter_beamdata(cimr)
-                        
-                        end_time_recen = time.time() - start_time_recen
-                        print(f"| Finished Recentering in: {end_time_recen:.2f}s") 
+                    #if recenter_beam: 
+                    #    print(f"| ------------------------------") 
+                    #    print(f"| ReCentering")
+                    #    print(f"| ------------------------------") 
+                    #    
+                    #    start_time_recen = time.time() 
+                    #    
+                    #    cimr = recenter_beamdata(cimr)
+                    #    
+                    #    end_time_recen = time.time() - start_time_recen
+                    #    print(f"| Finished Recentering in: {end_time_recen:.2f}s") 
 
                     
                     print(f"| ------------------------------") 
