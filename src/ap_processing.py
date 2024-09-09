@@ -9,6 +9,7 @@ class AntennaPattern:
         self.band=band
 
         if self.config.antenna_method == 'real':
+            # Does this need to be saved to self? Or just the scalar/mueller gain?
             self.ap_dict = self.load_antenna_patterns()
 
             if self.config.polarisation_method == 'scalar':
@@ -60,7 +61,6 @@ class AntennaPattern:
             )
 
         elif self.config.input_data_type == "CIMR":
-            test =0
             num_horns = self.config.num_horns[self.band]
             horn_dict = {}
             ap_dict = {}
@@ -74,7 +74,6 @@ class AntennaPattern:
                         ap_dict[horn] = self.extract_gain_dict(
                             file_path=os.path.join(path, file)
                         )
-
         return ap_dict
 
     def generate_antenna_patterns(self):
