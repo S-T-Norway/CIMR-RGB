@@ -1,0 +1,196 @@
+import numpy as np
+from numpy import meshgrid, isinf, where, full, nan, unravel_index, all, sqrt
+
+from nn import NNInterp
+from ids import IDSInterp
+from dib import DIBInterp
+from bg import BGInterp
+from rsir import rSIRInterp
+from grid_generator import GridGenerator, GRIDS
+from pyresample import kd_tree, geometry
+
+import matplotlib
+tkagg = matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+
+
+class ReGridder:
+    def __init__(self, config):
+        self.config = config
+        self.algos = {
+            'NN': NNInterp(self.config),
+            'DIB': DIBInterp(self.config),
+            'IDS': IDSInterp(self.config),
+            'BG': BGInterp(self.config),
+            'rSIR': rSIRInterp(self.config)
+        }
+
+    # Check if you need the full data dict once the function is complete
+    def get_grid(self, data_dict):
+        # Get target grid
+        target_x, target_y, res = GridGenerator(self.config).generate_grid_xy(
+            return_resolution=True
+        )
+        target_lon, target_lat = GridGenerator(self.config).xy_to_lonlat(
+            x=target_x,
+            y=target_y
+        )
+
+        target_lon, target_lat = meshgrid(target_lon, target_lat)
+        return [target_lon, target_lat]
+
+    def get_neighbours(self, source_lon, source_lat, target_lon, target_lat, search_radius, neighbours):
+
+        source_def = geometry.SwathDefinition(
+            lons=source_lon,
+            lats=source_lat
+        )
+
+        target_def = geometry.GridDefinition(
+            lons=target_lon,
+            lats=target_lat)
+
+        valid_input_index, valid_output_index, index_array, distance_array = kd_tree.get_neighbour_info(
+            source_geo_def=source_def,
+            target_geo_def=target_def,
+            neighbours=neighbours,
+            radius_of_influence=search_radius
+        )
+
+        if distance_array.ndim == 1:
+            inf_mask = ~isinf(distance_array)
+            reduced_distance = distance_array[inf_mask]
+            reduced_index = index_array[inf_mask]
+            # Original indices is the original 1D location of the point in the EASE grid
+            original_indices = where(inf_mask)[0]
+
+        elif distance_array.ndim == 2:
+            inf_mask = ~all(np.isinf(distance_array), axis=1)
+            reduced_distance = distance_array[inf_mask]
+            reduced_index = index_array[inf_mask]
+            original_indices = where(inf_mask)[0]
+
+        # Remember that valid_output_index could be necessary for something in the future
+        return reduced_distance, reduced_index, original_indices, valid_input_index
+
+    # We need data dict or just pass specific variables?
+    def get_l1c_samples(self, variable_dict, target_grid):
+        target_lon = target_grid[0]
+        target_lat = target_grid[1]
+        samples_dict = {}
+
+        search_radius = self.config.search_radius
+        neighbours = self.config.max_neighbours
+
+        samples_dict = {}
+        if self.config.split_fore_aft:
+
+            for scan_direction in ['fore', 'aft']:
+
+                source_lon = variable_dict[f"longitude_{scan_direction}"]
+                source_lat = variable_dict[f"latitude_{scan_direction}"]
+
+                reduced_distance, reduced_index, original_indices, valid_input_index = self.get_neighbours(
+                    source_lon=source_lon,
+                    source_lat=source_lat,
+                    target_lon=target_lon,
+                    target_lat=target_lat,
+                    search_radius=search_radius,
+                    neighbours=neighbours
+                )
+                samples_dict_temp = {}
+                samples_dict_temp['distances'] = reduced_distance
+                samples_dict_temp['indexes'] = reduced_index
+                samples_dict_temp['grid_1d_index'] = original_indices
+                samples_dict_temp['valid_input_index'] = valid_input_index
+                samples_dict[scan_direction] = samples_dict_temp
+
+        else:
+            # Dont split fore/aft
+            source_lon = variable_dict["longitude"]
+            source_lat = variable_dict["latitude"]
+
+            reduced_distance, reduced_index, original_indices, valid_input_index = self.get_neighbours(
+                source_lon=source_lon,
+                source_lat=source_lat,
+                target_lon=target_lon,
+                target_lat=target_lat,
+                search_radius=search_radius,
+                neighbours=neighbours
+            )
+
+            samples_dict = {}
+            samples_dict['distances'] = reduced_distance
+            samples_dict['indexes'] = reduced_index
+            samples_dict['grid_1d_index'] = original_indices
+            samples_dict['valid_input_index'] = valid_input_index
+
+        return samples_dict
+
+    def sample_selection(self, variable_dict, target_grid=None):
+
+        if self.config.grid_type == 'L1C':
+            samples_dict = self.get_l1c_samples(variable_dict, target_grid)
+        elif self.config.grid_type == 'L1R':
+            pass
+
+        return samples_dict
+
+    def create_output_grid_inds(self, ease_1d_index):
+        grid_shape = GRIDS[self.config.grid_definition]['n_rows'], GRIDS[self.config.grid_definition]['n_cols']
+        row, col = unravel_index(ease_1d_index, grid_shape)
+        return row, col
+
+    def regrid_l1c(self, data_dict):
+
+        # Get target grid
+        target_grid = self.get_grid(data_dict)
+
+        data_dict_out = {}
+        for band in data_dict:
+            variable_dict = data_dict[band]
+            samples_dict = self.sample_selection(variable_dict, target_grid)
+
+            if self.config.split_fore_aft:
+                variable_dict_out = {}
+                for scan_direction in ['fore', 'aft']:
+                    print(scan_direction)
+
+                    # Regrid Variables
+                    variable_dict_out[scan_direction] = self.algos.get(self.config.regridding_algorithm).interp_variable_dict(
+                        samples_dict=samples_dict[scan_direction],
+                        variable_dict=variable_dict,
+                        scan_direction=scan_direction,
+                        band = band)
+
+                    # Add cell_row and cell_col indexes
+                    cell_row, cell_col = self.create_output_grid_inds(samples_dict[scan_direction]['grid_1d_index'])
+                    variable_dict_out[scan_direction][f'cell_row_{scan_direction}'] = cell_row
+                    variable_dict_out[scan_direction][f'cell_col_{scan_direction}'] = cell_col
+
+                # Combine fore and aft variables into single dictionary
+                combined_dict = {**variable_dict_out['fore'], **variable_dict_out['aft']}
+                variable_dict_out = combined_dict
+            else:
+                # Don't split fore/aft
+                variable_dict_out = self.algos.get(self.config.regridding_algorithm).interp_variable_dict(
+                    samples_dict=samples_dict,
+                    variable_dict=variable_dict
+                )
+
+                # Add cell_row and cell_col indexes
+                cell_row, cell_col = self.create_output_grid_inds(samples_dict['grid_1d_index'])
+                variable_dict_out['cell_row'] = cell_row
+                variable_dict_out['cell_col'] = cell_col
+
+            data_dict_out[band] = variable_dict_out
+
+        return data_dict_out
+
+
+
+
+
+
+
+
