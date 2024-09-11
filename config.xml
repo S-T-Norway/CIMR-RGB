@@ -4,10 +4,11 @@
         <type>CIMR</type>
 <!--        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>-->
         <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
+<!--        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/AMSR2/GW1AM2_202308301033_051D_L1SGBTBR_2220220.h5</path>-->
         <splitForeAft>True</splitForeAft>
         <!-- AMSR2 Specific Configuration Parameters -->
-        <sourceBand>23</sourceBand>
-        <targetBand>KA</targetBand> <!-- For CIMR, you can choose a target band/s or all of them -->
+        <sourceBand></sourceBand>
+        <targetBand>L</targetBand> <!-- For CIMR, you can choose a target band/s or all of them -->
         <LMT>2200</LMT>
     </inputData>
     <GridParams>
@@ -16,11 +17,11 @@
             <projectionDefinition>G</projectionDefinition>
     </GridParams>
     <ReGridderParams>
-        <regriddingAlgorithm>BG</regriddingAlgorithm>
+        <regriddingAlgorithm>IDS</regriddingAlgorithm>
         <nnDistancecalc>GreatCircle</nnDistancecalc> <!-- Need to add configuration validation, can be euclidian or great circle-->
         <kernelSize>9</kernelSize>
         <searchRadius></searchRadius>
-        <max_neighbours></max_neighbours>
+        <max_neighbours>10</max_neighbours>
         <variables_to_regrid>bt_h bt_v bt_3</variables_to_regrid>
         <antenna_method>real</antenna_method>
         <polarisation_method>mueller</polarisation_method>

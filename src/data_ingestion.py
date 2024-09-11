@@ -137,7 +137,7 @@ class DataIngestion:
 
         data_dict = {}
         with h5.File(self.config.input_data_path, 'r') as data:
-            variable_dict = {}
+
             # Not using qc_dict at the moment need to add functionality for "qc remap".
             qc_dict = {}
 
@@ -158,6 +158,7 @@ class DataIngestion:
                     )
 
                 # Extract Data used for all re-grids
+                # lats and lons of 89A are used to extrac the lats and lons for all other bands
                 lats_89a = remove_overlap(
                     array=data['Latitude of Observation Point for 89A'][:],
                     overlap=overlap
@@ -183,18 +184,23 @@ class DataIngestion:
                     lats_89b = None
                     lons_89b = None
 
-                # Extract BTs of Source Band
-                key = self.config.key_mappings[self.config.source_band][1]
-                bt_h_source, bt_v_source = data[key + 'H)'], data[key + 'V)']
-                bt_h_source_scale = bt_h_source.attrs['SCALE FACTOR']
-                bt_v_source_scale = bt_v_source.attrs['SCALE FACTOR']
+                # Extract BTs of all relevant bands
+                bands_to_open = set(self.config.target_band + self.config.source_band)
 
-                data_dict['bt_v_source'] = remove_overlap(bt_v_source, overlap) * bt_v_source_scale
-                data_dict['bt_h_source'] = remove_overlap(bt_h_source, overlap) * bt_h_source_scale
+                for band in bands_to_open:
+                    variable_dict = {}
+                    key = self.config.key_mappings[band][1]
+                    bt_h, bt_v = data[key + 'H)'], data[key + 'V)']
+                    bt_h_scale= bt_h.attrs['SCALE FACTOR']
+                    bt_v_scale = bt_v.attrs['SCALE FACTOR']
+                    variable_dict['bt_v'] = remove_overlap(bt_v, overlap) * bt_v_scale
+                    variable_dict['bt_h'] = remove_overlap(bt_h, overlap) * bt_h_scale
+                    data_dict[band] = variable_dict
 
                 return data_dict, coreg_a, coreg_b, lats_89a, lons_89a, lats_89b, lons_89b
 
             if self.config.input_data_type == "SMAP":
+                variable_dict = {}
                 bt_data = data['Brightness_Temperature']
                 spacecraft_data = data['Spacecraft_Data']
 
@@ -291,7 +297,7 @@ class DataIngestion:
                     single_row = tile(arange(num_samples), num_feed_horns)
                     variable_dict['sample_number'] = float32(tile(single_row, (num_scans, 1)).flatten('C'))
 
-                    # Remove out of bounds here?
+                    # Remove out of bounds here
                     variable_dict = self.remove_out_of_bounds(variable_dict)
 
                     # Split Fore/Aft
@@ -310,6 +316,9 @@ class DataIngestion:
 
         if self.config.grid_type == 'L1R':
             # Need to concatenate the target and source bands.
+            # Actually I don't think that you need a separate statement here, we can just create a
+            # "set" from target and source bands of all band data that needs to be opened.
+            # then again, we only need the lats and lons of the source data.
             pass
 
         return data_dict
@@ -562,21 +571,21 @@ class DataIngestion:
 
         data_dict, coreg_a, coreg_b, lats_89a, lons_89a, lats_89b, lons_89b = self.read_hdf5()
 
-        if self.config.grid_type == "L1R":
-            required_locations = ['source', 'target']
-        else:
-            required_locations = ['source']
+        # if self.config.grid_type == "L1R":
+        #     required_locations = ['source', 'target']
+        # else:
+        #     required_locations = ['source']
 
-        for band in required_locations:
-            if getattr(self.config, f"{band}_band") == '89a':
-                data_dict[f"lats_{band}"] = lats_89a
-                data_dict[f"lons_{band}"] = lons_89a
-            elif getattr(self.config, f"{band}_band") == '89b':
-                data_dict[f"lats_{band}"] = lats_89b
-                data_dict[f"lons_{band}"] = lons_89b
+        for band in data_dict:
+            if band == '89a':
+                data_dict[band]['longitude'] = lons_89a
+                data_dict[band]['latitude'] = lats_89a
+            elif band == '89b':
+                data_dict[band]['longitude'] = lons_89b
+                data_dict[band]['latitude'] = lats_89b
             else:
                 # Extract BTs of Target Band using conversion algorithm from 89a channel.
-                coreg_index = self.config.key_mappings[getattr(self.config, f"{band}_band")][0]
+                coreg_index = self.config.key_mappings[band][0]
                 lats, lons = self.amsr2_latlon_conversion(
                     coreg_a=coreg_a[coreg_index],
                     coreg_b=coreg_b[coreg_index],
@@ -584,11 +593,19 @@ class DataIngestion:
                     lats_hi=lats_89a
                 )
 
-                data_dict[f"lats_{band}"] = lats
-                data_dict[f"lons_{band}"] = lons
+                data_dict[band]['longitude'] = lons
+                data_dict[band]['latitude'] = lats
 
-        for variable in data_dict:
-            data_dict[variable] = data_dict[variable].flatten('C')
+        # Create map between scan number and earth sample number
+        for band in data_dict:
+            num_scans, num_samples = data_dict[band]['longitude'].shape
+            data_dict[band]['scan_number'] = float32(repeat(arange(num_scans), num_samples).reshape(num_scans, num_samples))
+            data_dict[band]['sample_number'] = float32(tile(arange(num_samples), (num_scans, 1)))
+
+        # Remove out of bounds inds
+        for band in data_dict:
+            data_dict[band] = self.remove_out_of_bounds(data_dict[band])
+
         return data_dict
 
     def ingest_smap(self):

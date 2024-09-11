@@ -63,11 +63,15 @@ class ConfigFile:
             grid_type=self.grid_type
         )
 
-        self.source_band = self.validate_source_band(
-            config_object=config_object,
-            source_band='inputData/sourceBand',
-            input_data_type=self.input_data_type
-        )
+
+        if self.grid_type == "L1C":
+            self.source_band=[]
+        else:
+            self.source_band = self.validate_source_band(
+                config_object=config_object,
+                source_band='inputData/sourceBand',
+                input_data_type=self.input_data_type
+            )
 
         self.grid_definition = self.validate_grid_definition(
             config_object=config_object,
@@ -211,11 +215,6 @@ class ConfigFile:
                 relative_path = '../dpr/antenna_patterns/CIMR'
                 self.antenna_pattern_path = path.normpath(path.join(getcwd(), relative_path))
 
-
-
-
-
-
     @staticmethod
     def read_config(config_file_path):
         """
@@ -328,15 +327,17 @@ class ConfigFile:
         """
 
         if input_data_type == "AMSR2":
-            if grid_type == "L1C":
-                return None
-            valid_input = ['6', '7', '10', '18', '23', '36', '89a', '89b']
-            if config_object.find(target_band).text in valid_input:
-                return config_object.find(target_band).text
-            raise ValueError(
-                f"Invalid Target Band, check configuration file. "
-                f"Valid target bands are: {valid_input}"
-            )
+            valid_input = ['6', '7', '10', '18', '23', '36', '89a', '89b', 'All']
+            config_input = config_object.find(target_band).text.split()
+            if config_input == ['All']:
+                return ['6', '7', '10', '18', '23', '36', '89a', '89b']
+            else:
+                for i in config_input:
+                    if i not in valid_input:
+                        raise ValueError(
+                            f"Invalid target bands for AMSR2 L1C remap."
+                            f" Valid target bands are: {valid_input} or any combination of individual bands.")
+                return config_object.find(target_band).text.split()
 
         if input_data_type == "CIMR":
             if grid_type == "L1C":
@@ -567,7 +568,7 @@ class ConfigFile:
                             'processing_scan_angle', 'longitude', 'latitude']
 
         elif input_data_type == 'AMSR2':
-            pass
+            return None
 
         elif input_data_type == 'CIMR':
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
