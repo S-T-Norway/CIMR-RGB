@@ -9,7 +9,8 @@ process.
 """
 
 import re
-from numpy import array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile, repeat, arange, isnan, delete, where, concatenate, full, newaxis, float32
+from numpy import (array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile, repeat, arange,
+                   isnan, delete, where, concatenate, full, newaxis, float32, asarray, any)
 from config_file import ConfigFile
 from utils import remove_overlap
 from grid_generator import GRIDS, GridGenerator
@@ -207,7 +208,8 @@ class DataIngestion:
                 # Extract variables
                 required_variables = ['longitude', 'latitude', 'processing_scan_angle',
                                       'x_position', 'y_position', 'z_position',
-                                      'sub_satellite_lat', 'sub_satellite_lon']
+                                      'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
+                                      'y_velocity', 'z_velocity']
 
                 variables_to_open = set(required_variables + self.config.variables_to_regrid)
 
@@ -218,17 +220,18 @@ class DataIngestion:
                     elif variable_key in spacecraft_data:
                         variable_dict[variable] = spacecraft_data[variable_key][:]
 
-                # Create a map between scan number and earth sample number
+                # Create a map between scan number, earth sample number and feed_horn number
                 num_scans, num_samples = variable_dict['longitude'].shape
                 variable_dict['scan_number'] = float32(repeat(arange(num_scans), num_samples).reshape(num_scans, num_samples))
                 variable_dict['sample_number'] = float32(tile(arange(num_samples), (num_scans, 1)))
+                variable_dict['feed_horn_number'] = float32(zeros((num_scans, num_samples)))
 
                 # Turn the 1D (once per scan) variables into 2D variables
                 for variable in variable_dict:
                     if len(variable_dict[variable].shape) == 1:
                         variable_dict[variable] = tile(variable_dict[variable], (num_samples, 1)).T
 
-                # Remove out of bounds here?
+                # Remove out of bounds
                 variable_dict = self.remove_out_of_bounds(variable_dict)
 
                 # Split Fore/Aft and Flatten
@@ -268,10 +271,11 @@ class DataIngestion:
                     band_data = data[band + '_BAND']
                     variable_dict = {}
 
-                    # Extract variables
+                    # Extract variables (This can be tweaked to remove variables for Non-AP algorithms)
                     required_variables = ['longitude', 'latitude', 'processing_scan_angle',
                                       'x_position', 'y_position', 'z_position',
-                                      'sub_satellite_lat', 'sub_satellite_lon']
+                                      'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
+                                      'y_velocity', 'z_velocity', 'attitude' ]
 
                     variables_to_open = set(required_variables + self.config.variables_to_regrid)
 
@@ -283,6 +287,12 @@ class DataIngestion:
                         elif variable == 'y_position':
                             variable_dict[variable] = data[:,:,1]
                         elif variable == 'z_position':
+                            variable_dict[variable] = data[:,:,2]
+                        elif variable == 'x_velocity':
+                            variable_dict[variable] = data[:,:,0]
+                        elif variable == 'y_velocity':
+                            variable_dict[variable] = data[:,:,1]
+                        elif variable == 'z_velocity':
                             variable_dict[variable] = data[:,:,2]
                         else:
                             variable_dict[variable] = data
@@ -309,7 +319,7 @@ class DataIngestion:
                         for variable in variable_dict:
                             for scan_direction in ['fore', 'aft']:
                                 mask = mask_dict[scan_direction].flatten('C')
-                                variable_dict_out[f"{variable}_{scan_direction}"] = variable_dict[variable].flatten('C')[mask]
+                                variable_dict_out[f"{variable}_{scan_direction}"] = variable_dict[variable][mask]
                         variable_dict = variable_dict_out
                         del variable_dict_out
                     data_dict[band] = variable_dict
@@ -419,7 +429,13 @@ class DataIngestion:
                                     # Include CIMR specific fil values
                                     # Currently non nans as simulated data
                                     pass
-                                nan_map |= isnan(variable_dict[variable])
+                                if variable_dict[variable].ndim == 1:
+                                    nan_map |= isnan(variable_dict[variable])
+                                # Deadling with the attitude array
+                                elif variable_dict[variable].ndim == 3:
+                                    # Needs testing when nans in cimr data
+                                    nan_map |= any(isnan(variable_dict[variable]), axis=(1, 2))
+
                         for variable in variable_dict:
                             if scan_direction not in variable:
                                 continue
@@ -533,7 +549,7 @@ class DataIngestion:
         # new variables: feed_horn_number, sample_number, scan_number
         for variable in variable_dict:
             data = variable_dict[variable]
-            test = 0
+
             if len(data.shape) == 3:
                 try:
                     feed_horn_number
@@ -542,11 +558,16 @@ class DataIngestion:
                     single_row = concatenate([full(data.shape[1], dim) for dim in range(data.shape[2])])
                     feed_horn_number = tile(single_row, (data.shape[0], 1))
 
-                data_out = zeros((data.shape[0], data.shape[1] * num_feed_horns))
-                for scan in range(data.shape[0]):
-                        data_out[scan, :] = data[scan, :, :].flatten('F')
+                if variable != 'attitude':
+                    data_out = zeros((data.shape[0], data.shape[1] * num_feed_horns))
+                    for scan in range(data.shape[0]):
+                            data_out[scan, :] = data[scan, :, :].flatten('F')
 
-                variable_dict[variable] = data_out.flatten('C')
+                    variable_dict[variable] = data_out.flatten('C')
+                else:
+                    # Need to preserve the 3rd dimension (matrix) for attitude data
+                    data_out = repeat(data, num_feed_horns, axis=1)
+                    variable_dict[variable] = asarray(data_out.reshape(data_out.shape[0]*data_out.shape[1], 1, data_out.shape[2]))
 
             elif len(data.shape) == 2:
                     data_out = zeros((data.shape[0], data.shape[1] * num_feed_horns))
