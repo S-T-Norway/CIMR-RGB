@@ -92,7 +92,8 @@ class ConfigFile:
 
         self.split_fore_aft = self.validate_split_fore_aft(
             config_object=config_object,
-            split_fore_aft='inputData/splitForeAft'
+            split_fore_aft='inputData/splitForeAft',
+            input_data_type=self.input_data_type
         )
 
         self.save_to_disk = self.validate_save_to_disk(
@@ -134,6 +135,9 @@ class ConfigFile:
                 'x_position': 'x_pos',
                 'y_position': 'y_pos',
                 'z_position': 'z_pos',
+                'x_velocity': 'x_vel',
+                'y_velocity': 'y_vel',
+                'z_velocity': 'z_vel',
                 'sub_satellite_lon': 'sc_nadir_lon',
                 'sub_satellite_lat': 'sc_nadir_lat'
             }
@@ -167,8 +171,12 @@ class ConfigFile:
                 'x_position': 'satellite_position',
                 'y_position': 'satellite_position',
                 'z_position': 'satellite_position',
+                'x_velocity': 'satellite_velocity',
+                'y_velocity': 'satellite_velocity',
+                'z_velocity': 'satellite_velocity',
                 'sub_satellite_lon': 'sub_satellite_lon',
-                'sub_satellite_lat': 'sub_satellite_lat'
+                'sub_satellite_lat': 'sub_satellite_lat',
+                'attitude': 'SatelliteBody2EarthCenteredInertialFrame'
             }
             self.aft_angle_min = 180
             self.aft_angle_max = 360
@@ -186,7 +194,7 @@ class ConfigFile:
             variables_to_regrid = 'ReGridderParams/variables_to_regrid'
         )
 
-        if self.regridding_algorithm == 'BG' or self.regridding_algorithm=='BG':
+        if self.regridding_algorithm == 'BG' or self.regridding_algorithm=='RSIR':
 
             self.antenna_method = self.validate_antenna_method(
                 config_object = config_object,
@@ -203,7 +211,9 @@ class ConfigFile:
                 polarisation_method='ReGridderParams/polarisation_method'
             )
 
+
             if self.input_data_type == 'SMAP':
+                # Antenna Pattern Path
                 # Try and load a file, raise an error if its not there
                 try:
                     relative_path = '../dpr/antenna_patterns/SMAP/RadiometerAntPattern_170830_v011.h5'
@@ -211,10 +221,13 @@ class ConfigFile:
                 except AttributeError as e:
                     raise ValueError(f"Error: SMAP Antenna Pattern not found in dpr") from e
 
+                self.antenna_tilt_angle = 144.54
+
             elif self.input_data_type == 'CIMR':
                 relative_path = '../dpr/antenna_patterns/CIMR'
                 self.antenna_pattern_path = path.normpath(path.join(getcwd(), relative_path))
 
+                self.antenna_tilt_angle = 46.886 # update to read from file
     @staticmethod
     def read_config(config_file_path):
         """
@@ -475,7 +488,7 @@ class ConfigFile:
             )
 
     @staticmethod
-    def validate_split_fore_aft(config_object, split_fore_aft):
+    def validate_split_fore_aft(config_object, split_fore_aft, input_data_type):
         """
         Validates the split fore aft and returns the value if valid
 
@@ -491,6 +504,8 @@ class ConfigFile:
         str
             Validated split fore aft
         """
+        if input_data_type == 'AMSR2':
+            return False
         valid_input = ['True', 'False']
         if config_object.find(split_fore_aft).text in valid_input:
             if config_object.find(split_fore_aft).text == 'True':
@@ -568,7 +583,7 @@ class ConfigFile:
                             'processing_scan_angle', 'longitude', 'latitude']
 
         elif input_data_type == 'AMSR2':
-            return None
+            valid_input = ['bt_h, bt_v, longitude, latitude']
 
         elif input_data_type == 'CIMR':
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
