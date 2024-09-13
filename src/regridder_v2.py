@@ -131,10 +131,20 @@ class ReGridder:
 
         if self.config.grid_type == 'L1C':
             samples_dict = self.get_l1c_samples(variable_dict, target_grid)
+
+            # Apply valid indices to variable_dict
+            for variable in variable_dict:
+                if 'fore' in variable:
+                    variable_dict[variable] = variable_dict[variable][samples_dict['fore']['valid_input_index']]
+                elif 'aft' in variable:
+                    variable_dict[variable] = variable_dict[variable][samples_dict['aft']['valid_input_index']]
+                else:
+                    variable_dict[variable] = variable_dict[variable][samples_dict['valid_input_index']]
+
         elif self.config.grid_type == 'L1R':
             pass
 
-        return samples_dict
+        return samples_dict, variable_dict
 
     def create_output_grid_inds(self, ease_1d_index):
         grid_shape = GRIDS[self.config.grid_definition]['n_rows'], GRIDS[self.config.grid_definition]['n_cols']
@@ -149,7 +159,7 @@ class ReGridder:
         data_dict_out = {}
         for band in data_dict:
             variable_dict = data_dict[band]
-            samples_dict = self.sample_selection(variable_dict, target_grid)
+            samples_dict, variable_dict = self.sample_selection(variable_dict, target_grid)
 
             if self.config.split_fore_aft:
                 variable_dict_out = {}
