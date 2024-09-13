@@ -437,7 +437,6 @@ def main(datadir, outdir, file_version,
 
     recenter_beam: bool 
         Parameter that defines whether to recenter beam or not 
-
     use_bhs: bool 
         Parameter that defines whether to parse and preprocess BHS files or not. 
     """
@@ -491,23 +490,6 @@ def main(datadir, outdir, file_version,
     print(f"| {Fore.GREEN}Parsed Directory:{Fore.RESET}\n| {Fore.BLUE}{parsed_dir}{Style.RESET_ALL}") 
     print(f"| {Fore.GREEN}Preprocessed Directory:{Fore.RESET}\n| {Fore.BLUE}{preprocessed_dir}{Style.RESET_ALL}") 
 
-    #grid_res_theta = 0.11
-    #grid_res_phi = 0.1  
-    #grid_points_theta = int(90 / grid_res_theta) 
-    ##print(90/ grid_res_theta)
-    ##print(type(90/ grid_res_theta)) 
-    #print(grid_points_theta)
-    #print(int(grid_points_theta)) 
-    #print(type(grid_points_theta)) 
-
-    #theta = np.linspace(0, 90, int(90 // grid_res_theta) + 1)
-    #phi   = np.linspace(0, 360, int(360 // grid_res_phi) + 1)
-    #print( theta, phi )
-    #theta = np.arange(0, 91, grid_res_theta)
-    #phi   = np.arange(0, 361, grid_res_phi)
-    #print( theta, phi )
-    #
-    #exit() 
     
     # Main parsing loop 
     for band in apat_name_info.keys(): 
@@ -517,20 +499,10 @@ def main(datadir, outdir, file_version,
             freq = apat_name_info[band][0] 
             pol  = apat_name_info[band][1] 
             
-            # In principle, we do not need BHS for the analysis, so I am putting this 
-            #if not use_bhs:  
-            #    half_spaces = ["FR"]
-            #    #print("Debug")
-            #    #exit() 
-
-            #use_bhs = True 
             for half_space in half_spaces: 
 
-                if not use_bhs and half_space == "BK": 
-                    print(half_space)
-                    continue 
-
-                #print(half_space)
+                print(half_space)
+                exit() 
                 cimr = {"Gain": {}, "Grid": {}} 
                 cimr_is_empty = False  
 
@@ -699,7 +671,7 @@ if __name__ == '__main__':
     # Getting the root of the repo 
     root_dir = io.find_repo_root() 
 
-    file_version = '0.6.0' 
+    file_version = '0.5.1' 
 
     # Params to be put inside parameter file 
     outdir  = pb.Path(f"{root_dir}/output").resolve()

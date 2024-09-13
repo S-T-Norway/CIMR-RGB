@@ -16,17 +16,24 @@
         pyver = pkgs.python310; 
         pypkgs = with pkgs; [
           (pyver.withPackages (ppkgs: with ppkgs; [
+            ipython 
+	    python-magic 
             jupyter 
             numpy 
             scipy 
+            xarray 
             matplotlib 
             #requests 
             pyproj 
             h5py 
+	    h5netcdf
             netcdf4 
             colorama 
-            xarray 
             tqdm 
+            cython 
+	    joblib 
+	    dask 
+	    distributed 
             
             # Building cartopy from source 
             (python3Packages.buildPythonPackage rec {

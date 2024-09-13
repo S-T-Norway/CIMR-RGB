@@ -58,7 +58,7 @@ def get_header(beamfile):
 #    return number, letter
 
 
-def check_outfile_existance(outfile): 
+def check_outfile_existance(outfile: pathlib.Path) -> bool: 
     """
     Checks for the existence of a given (e.g., antenna pattern) file and
     returns boolean value.   
@@ -181,7 +181,7 @@ def save_dict_to_hdf5(hdf5_group, data_dict):
 
             
 # Function to recursively load HDF5 file into a dictionary
-def load_hdf5_to_dict(hdf5_group):
+def load_hdf5_to_dict(hdf5_group) -> dict():
     """
     Loads (e.g, parsed beam) information from the HDF5 file in a form of a
     dictionary. 
@@ -246,7 +246,8 @@ def find_repo_root(start_path: pathlib.Path = None) -> pathlib.Path:
     
     raise FileNotFoundError("No .git directory found in any parent directories") 
 
-def rec_create_dir(path) -> None: 
+
+def rec_create_dir(path: pathlib.Path) -> None: 
     """
     Recursively create directories. 
     """
