@@ -218,7 +218,8 @@ class AntennaPattern:
         # - Once this is done, davide/joseph can update the functionality here to reflect the change.
 
         tilt_angle = self.config.antenna_tilt_angle
-        satellite_altitude = 700000. #m
+        satellite_altitude = self.config.max_altitude
+
 
         max_radius = {}
 
