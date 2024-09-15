@@ -31,12 +31,21 @@ class ReGridder:
         target_x, target_y, res = GridGenerator(self.config).generate_grid_xy(
             return_resolution=True
         )
+        x_shape = len(target_x)
+        y_shape = len(target_y)
+        target_x, target_y = meshgrid(target_x, target_y)
+        target_x = target_x.flatten()
+        target_y = target_y.flatten()
+
         target_lon, target_lat = GridGenerator(self.config).xy_to_lonlat(
             x=target_x,
             y=target_y
         )
 
-        target_lon, target_lat = meshgrid(target_lon, target_lat)
+        # Rehshape to original matrix
+        target_lon = target_lon.reshape(y_shape, x_shape)
+        target_lat = target_lat.reshape(y_shape, x_shape)
+
         return [target_lon, target_lat]
 
     def get_neighbours(self, source_lon, source_lat, target_lon, target_lat, search_radius, neighbours):
@@ -45,6 +54,8 @@ class ReGridder:
             lons=source_lon,
             lats=source_lat
         )
+        # Need to make the grid two dimensional for GridDefinition
+
 
         target_def = geometry.GridDefinition(
             lons=target_lon,
@@ -86,7 +97,6 @@ class ReGridder:
         if self.config.split_fore_aft:
 
             for scan_direction in ['fore', 'aft']:
-
                 source_lon = variable_dict[f"longitude_{scan_direction}"]
                 source_lat = variable_dict[f"latitude_{scan_direction}"]
 
@@ -133,6 +143,7 @@ class ReGridder:
             samples_dict = self.get_l1c_samples(variable_dict, target_grid)
 
             # Apply valid indices to variable_dict
+            # Check this works properly for CIMR Attitude
             for variable in variable_dict:
                 if 'fore' in variable:
                     variable_dict[variable] = variable_dict[variable][samples_dict['fore']['valid_input_index']]

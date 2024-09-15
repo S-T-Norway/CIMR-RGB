@@ -6,9 +6,7 @@ class NNInterp:
 
     @staticmethod
     def NN(samples_dict, variable):
-        valid_input_index = samples_dict['valid_input_index']
-        variable_new = variable[valid_input_index]
-        values = take(variable_new, samples_dict['indexes'])
+        values = take(variable, samples_dict['indexes'])
         return values
 
     def interp_variable_dict(self, samples_dict, variable_dict, scan_direction=None, band=None):

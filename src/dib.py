@@ -7,14 +7,12 @@ class DIBInterp:
 
     @staticmethod
     def DIB(samples_dict, variable):
-        valid_input_index = samples_dict['valid_input_index']
-        variable_new = variable[valid_input_index]
         indexes_out = samples_dict['indexes']
 
         # Extract values from variable using indexes and masking
-        max_index = len(variable_new)-1
+        max_index = len(variable)-1
         valid_indices_mask = indexes_out < max_index
-        extracted_values = take(variable_new, clip(indexes_out, 0, max_index))
+        extracted_values = take(variable, clip(indexes_out, 0, max_index))
         extracted_values = where(valid_indices_mask, extracted_values, nan)
 
         # DIB takes the average of all samples considered
