@@ -139,7 +139,8 @@ class ConfigFile:
                 'y_velocity': 'y_vel',
                 'z_velocity': 'z_vel',
                 'sub_satellite_lon': 'sc_nadir_lon',
-                'sub_satellite_lat': 'sc_nadir_lat'
+                'sub_satellite_lat': 'sc_nadir_lat',
+                'altitude': 'sc_geodetic_alt_ellipsoid'
             }
 
         # AMSR2 specific parameters
@@ -176,7 +177,7 @@ class ConfigFile:
                 'z_velocity': 'satellite_velocity',
                 'sub_satellite_lon': 'sub_satellite_lon',
                 'sub_satellite_lat': 'sub_satellite_lat',
-                'attitude': 'SatelliteBody2EarthCenteredInertialFrame'
+                'attitude': 'SatelliteBody2EarthCenteredInertialFrame',
             }
             self.aft_angle_min = 180
             self.aft_angle_max = 360
@@ -187,6 +188,10 @@ class ConfigFile:
                 'KA': 8,
                 'KU': 8,
             }
+            self.scan_angle_feed_offsets = {}
+            self.u0 = {}
+            self.v0 = {}
+
 
         self.variables_to_regrid = self.validate_variables_to_regrid(
             config_object = config_object,
@@ -583,7 +588,7 @@ class ConfigFile:
                             'processing_scan_angle', 'longitude', 'latitude']
 
         elif input_data_type == 'AMSR2':
-            valid_input = ['bt_h, bt_v, longitude, latitude']
+            valid_input = ['bt_h', 'bt_v', 'longitude', 'latitude']
 
         elif input_data_type == 'CIMR':
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
