@@ -171,7 +171,7 @@ class DataIngestion:
                 )
 
                 # Extract 89b data if required
-                if self.config.target_band == '89b' or self.config.source_band == '89b':
+                if '89b' in self.config.target_band or '89b' in self.config.source_band:
                     lats_89b = remove_overlap(
                         array=data['Latitude of Observation Point for 89B'][:],
                         overlap=overlap
@@ -209,7 +209,7 @@ class DataIngestion:
                 required_variables = ['longitude', 'latitude', 'processing_scan_angle',
                                       'x_position', 'y_position', 'z_position',
                                       'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
-                                      'y_velocity', 'z_velocity']
+                                      'y_velocity', 'z_velocity', 'altitude']
 
                 variables_to_open = set(required_variables + self.config.variables_to_regrid)
 
@@ -218,6 +218,10 @@ class DataIngestion:
                     if variable_key in bt_data:
                         variable_dict[variable] = bt_data[variable_key][:]
                     elif variable_key in spacecraft_data:
+                        if variable == 'altitude':
+                            # Only need the maximum altitude for ap_max_radius calculation
+                            self.config.max_altitude = spacecraft_data[variable_key][:].max()
+                            continue
                         variable_dict[variable] = spacecraft_data[variable_key][:]
 
                 # Create a map between scan number, earth sample number and feed_horn number
@@ -225,6 +229,8 @@ class DataIngestion:
                 variable_dict['scan_number'] = float32(repeat(arange(num_scans), num_samples).reshape(num_scans, num_samples))
                 variable_dict['sample_number'] = float32(tile(arange(num_samples), (num_scans, 1)))
                 variable_dict['feed_horn_number'] = float32(zeros((num_scans, num_samples)))
+
+                # Add attitude variable
 
                 # Turn the 1D (once per scan) variables into 2D variables
                 for variable in variable_dict:
@@ -271,11 +277,16 @@ class DataIngestion:
                     band_data = data[band + '_BAND']
                     variable_dict = {}
 
+                    # Extract Feed offsets and u, v to add to config
+                    scan_angle_feeds_offsets = band_data['scan_angle_feeds_offsets'][:]
+                    self.config.scan_angle_feed_offsets[band]=scan_angle_feeds_offsets
+                    self.config.u0[band], self.config.v0[band] = getattr(band_data, 'uo'), getattr(band_data, 'vo')
+
                     # Extract variables (This can be tweaked to remove variables for Non-AP algorithms)
                     required_variables = ['longitude', 'latitude', 'processing_scan_angle',
                                       'x_position', 'y_position', 'z_position',
                                       'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
-                                      'y_velocity', 'z_velocity', 'attitude' ]
+                                      'y_velocity', 'z_velocity', 'attitude']
 
                     variables_to_open = set(required_variables + self.config.variables_to_regrid)
 
@@ -296,6 +307,12 @@ class DataIngestion:
                             variable_dict[variable] = data[:,:,2]
                         else:
                             variable_dict[variable] = data
+
+                    # Calculate max altitude for ap_radius calculation (same for all bands)
+                    if not hasattr(self.config, 'max_altitude'):
+                        altitude = sqrt(variable_dict['x_position']**2 + variable_dict['y_position']**2 + variable_dict['z_position']**2)
+                        altitude -= 6371000
+                        self.config.max_altitude = altitude.max()
 
                     # Create map between scan number and earth sample number
                     num_feed_horns = self.config.num_horns[band]
@@ -397,66 +414,70 @@ class DataIngestion:
             Dictionary containing the data extracted from the HDF5 file with NaNs applied.
 
         """
-        if self.config.input_data_type == "SMAP" or self.config.input_data_type == "CIMR":
-            for band in data_dict:
-                variable_dict = data_dict[band]
-                if self.config.split_fore_aft:
-                    # Get fore and aft array shapes
-                    fore_shape, aft_shape = None, None
+        for band in data_dict:
+            variable_dict = data_dict[band]
+            if self.config.split_fore_aft:
+                # Get fore and aft array shapes
+                fore_shape, aft_shape = None, None
+                for variable in variable_dict:
+                    if fore_shape is None and 'fore' in variable:
+                        fore_shape = variable_dict[variable].shape
+                    if aft_shape is None and 'aft' in variable:
+                        aft_shape = variable_dict[variable].shape
+
+                    if fore_shape is not None and aft_shape is not None:
+                        break
+
+                for scan_direction in ['fore', 'aft']:
+                    if scan_direction == 'fore':
+                        nan_map = zeros(fore_shape, dtype=bool)
+                    else:
+                        nan_map = zeros(aft_shape, dtype=bool)
                     for variable in variable_dict:
-                        if fore_shape is None and 'fore' in variable:
-                            fore_shape = variable_dict[variable].shape
-                        if aft_shape is None and 'aft' in variable:
-                            aft_shape = variable_dict[variable].shape
-
-                        if fore_shape is not None and aft_shape is not None:
-                            break
-
-                    for scan_direction in ['fore', 'aft']:
-                        if scan_direction == 'fore':
-                            nan_map = zeros(fore_shape, dtype=bool)
+                        if scan_direction not in variable:
+                            continue
                         else:
-                            nan_map = zeros(aft_shape, dtype=bool)
-                        for variable in variable_dict:
-                            if scan_direction not in variable:
-                                continue
-                            else:
-                                if self.config.input_data_type == 'SMAP':
-                                    # Include SMAP specific fill values
-                                    if variable_dict[variable].dtype == 'float32':
-                                        variable_dict[variable][variable_dict[variable] == SMAP_FILL_FLOAT_32] = nan
-                                elif self.config.input_data_type == 'CIMR':
-                                    # Include CIMR specific fil values
-                                    # Currently non nans as simulated data
-                                    pass
-                                if variable_dict[variable].ndim == 1:
-                                    nan_map |= isnan(variable_dict[variable])
-                                # Deadling with the attitude array
-                                elif variable_dict[variable].ndim == 3:
-                                    # Needs testing when nans in cimr data
-                                    nan_map |= any(isnan(variable_dict[variable]), axis=(1, 2))
+                            if self.config.input_data_type == 'SMAP':
+                                # Include SMAP specific fill values
+                                if variable_dict[variable].dtype == 'float32':
+                                    variable_dict[variable][variable_dict[variable] == SMAP_FILL_FLOAT_32] = nan
+                            elif self.config.input_data_type == 'CIMR':
+                                # Include CIMR specific fil values
+                                # Currently non nans as simulated data
+                                pass
+                            if variable_dict[variable].ndim == 1:
+                                nan_map |= isnan(variable_dict[variable])
+                            # Deadling with the attitude array
+                            elif variable_dict[variable].ndim == 3:
+                                # Needs testing when nans in cimr data
+                                nan_map |= any(isnan(variable_dict[variable]), axis=(1, 2))
 
-                        for variable in variable_dict:
-                            if scan_direction not in variable:
-                                continue
-                            else:
-                                variable_dict[variable] = delete(variable_dict[variable], where(nan_map)[0], axis=0)
-                        data_dict[band] = variable_dict
-                else:
-                    nan_map = zeros(next(iter(variable_dict.values())).shape, dtype=bool).flatten('C')
                     for variable in variable_dict:
-                        if self.config.input_data_type == 'SMAP':
-                            if variable_dict[variable].dtype == 'float32':
-                                variable_dict[variable][variable_dict[variable] == SMAP_FILL_FLOAT_32] = nan
-                        elif self.config.input_data_type == 'CIMR':
-                            # Include CIMR specific fil values
-                            # Currently non nans as simulated data
-                            pass
-                        nan_map |= isnan(variable_dict[variable])
-                    for variable in variable_dict:
-                        variable_dict[variable] = delete(variable_dict[variable], where(nan_map)[0], axis=0)
+                        if scan_direction not in variable:
+                            continue
+                        else:
+                            variable_dict[variable] = delete(variable_dict[variable], where(nan_map)[0], axis=0)
                     data_dict[band] = variable_dict
-            return data_dict
+            else:
+                nan_map = zeros(next(iter(variable_dict.values())).shape, dtype=bool).flatten('C')
+                for variable in variable_dict:
+                    if self.config.input_data_type == 'SMAP':
+                        if variable_dict[variable].dtype == 'float32':
+                            variable_dict[variable][variable_dict[variable] == SMAP_FILL_FLOAT_32] = nan
+                    elif self.config.input_data_type == 'CIMR':
+                        # Include CIMR specific fil values
+                        # Currently non nans as simulated data
+                        pass
+                    elif self.config.input_data_type == 'AMSR2':
+                        # Include AMSR2 specific fill values
+                        pass
+                    nan_map |= isnan(variable_dict[variable])
+                for variable in variable_dict:
+                    variable_dict[variable] = delete(variable_dict[variable], where(nan_map)[0], axis=0)
+                data_dict[band] = variable_dict
+        return data_dict
+
+
 
     def amsr2_latlon_conversion(self, coreg_a, coreg_b, lons_hi, lats_hi):
         """
@@ -627,6 +648,13 @@ class DataIngestion:
         for band in data_dict:
             data_dict[band] = self.remove_out_of_bounds(data_dict[band])
 
+        # Flatten data
+        for band in data_dict:
+            for variable in data_dict[band]:
+                data_dict[band][variable] = data_dict[band][variable].flatten('C')
+
+        # Clean Data
+        data_dict = self.clean_data(data_dict)
         return data_dict
 
     def ingest_smap(self):
