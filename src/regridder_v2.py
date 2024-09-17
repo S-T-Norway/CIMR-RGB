@@ -28,23 +28,29 @@ class ReGridder:
     # Check if you need the full data dict once the function is complete
     def get_grid(self, data_dict):
         # Get target grid
-        target_x, target_y, res = GridGenerator(self.config).generate_grid_xy(
-            return_resolution=True
-        )
-        x_shape = len(target_x)
-        y_shape = len(target_y)
-        target_x, target_y = meshgrid(target_x, target_y)
-        target_x = target_x.flatten()
-        target_y = target_y.flatten()
+        if self.config.grid_type == 'L1C':
+            target_x, target_y, res = GridGenerator(self.config).generate_grid_xy(
+                return_resolution=True
+            )
+            x_shape = len(target_x)
+            y_shape = len(target_y)
+            target_x, target_y = meshgrid(target_x, target_y)
+            target_x = target_x.flatten()
+            target_y = target_y.flatten()
 
-        target_lon, target_lat = GridGenerator(self.config).xy_to_lonlat(
-            x=target_x,
-            y=target_y
-        )
+            target_lon, target_lat = GridGenerator(self.config).xy_to_lonlat(
+                x=target_x,
+                y=target_y
+            )
 
-        # Rehshape to original matrix
-        target_lon = target_lon.reshape(y_shape, x_shape)
-        target_lat = target_lat.reshape(y_shape, x_shape)
+            # Rehshape to original matrix
+            target_lon = target_lon.reshape(y_shape, x_shape)
+            target_lat = target_lat.reshape(y_shape, x_shape)
+
+        elif self.config.input == 'L1R':
+            # For the generation of a target grid in L1r, we just needs the lats and lons of
+            # the target band.
+            pass
 
         return [target_lon, target_lat]
 

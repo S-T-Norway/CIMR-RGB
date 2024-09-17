@@ -104,7 +104,9 @@ class ConfigFile:
         self.search_radius = self.validate_search_radius(
             config_object=config_object,
             search_radius='ReGridderParams/searchRadius',
-            grid_definition=self.grid_definition
+            grid_definition=self.grid_definition,
+            grid_type=self.grid_type,
+            input_data_type=self.input_data_type
         )
 
         self.max_neighbours = self.validate_max_neighbours(
@@ -428,7 +430,8 @@ class ConfigFile:
             return None
 
         valid_input = ['EASE2_G9km', 'EASE2_N9km', 'EASE2_S9km',
-                       'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km']
+                       'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km',
+                       'STEREO_N25km', 'STEREO_S25km']
         if config_object.find(grid_definition).text in valid_input:
             return config_object.find(grid_definition).text
         raise ValueError(
@@ -458,12 +461,16 @@ class ConfigFile:
         if grid_definition:
             if 'EASE2' in grid_definition:
                 valid_input = ['G', 'N', 'S']
-                if config_object.find(projection_definition).text in valid_input:
-                    return config_object.find(projection_definition).text
-                raise ValueError(
-                    f"Invalid Projection Definition, check configuration file."
-                    f" Valid projection definitions are: {valid_input}"
-                )
+
+            elif 'STEREO' in grid_definition:
+                valid_input = ['SN', 'SS']
+
+            if config_object.find(projection_definition).text in valid_input:
+                return config_object.find(projection_definition).text
+            raise ValueError(
+                f"Invalid Projection Definition, check configuration file."
+                f" Valid projection definitions are: {valid_input}"
+            )
         else:
             return None
 
@@ -532,7 +539,7 @@ class ConfigFile:
         return value
 
     @staticmethod
-    def validate_search_radius(config_object, search_radius, grid_definition):
+    def validate_search_radius(config_object, search_radius, grid_definition, grid_type, input_data_type):
         """
         Validates the search radius and returns the value if valid
 
@@ -552,7 +559,14 @@ class ConfigFile:
         if value is not None:
             value = float(value)*1000
         else:
-            value = sqrt(2 * (GRIDS[grid_definition]['res'] / 2) ** 2)
+            if grid_type == 'L1C':
+                value = sqrt(2 * (GRIDS[grid_definition]['res'] / 2) ** 2)
+            elif grid_type == 'L1R':
+                if input_data_type == 'CIMR':
+                    return 73000/2 # Largets CIMR footprint radius, maybe needs tailoring
+                elif input_data_type == 'AMSR2':
+                    return 62000/2 # Largest AMSR2 footprint radius, maybe needs tailoring
+
         return value
 
     @staticmethod

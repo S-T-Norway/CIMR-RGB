@@ -68,7 +68,7 @@ class DataIngestion:
         Initiates ingestion of user specified data type.
     """
 
-    def __init__(self, config_file_path):
+    def __init__(self, config_object):
         """
         Initializes the DataIngestion class with the user specified configuration file.
 
@@ -77,7 +77,7 @@ class DataIngestion:
         config_file_path: str
             The path to the configuration file that contains the user specified parameters.
         """
-        self.config = ConfigFile(config_file_path)
+        self.config = config_object
 
     def remove_out_of_bounds(self, data_dict):
         grid = GRIDS[self.config.grid_definition]
@@ -337,6 +337,7 @@ class DataIngestion:
                             for scan_direction in ['fore', 'aft']:
                                 mask = mask_dict[scan_direction].flatten('C')
                                 variable_dict_out[f"{variable}_{scan_direction}"] = variable_dict[variable][mask]
+
                         variable_dict = variable_dict_out
                         del variable_dict_out
                     data_dict[band] = variable_dict
@@ -572,14 +573,14 @@ class DataIngestion:
             data = variable_dict[variable]
 
             if len(data.shape) == 3:
-                try:
-                    feed_horn_number
-                except NameError:
-                    # Create Feed Horn number map
-                    single_row = concatenate([full(data.shape[1], dim) for dim in range(data.shape[2])])
-                    feed_horn_number = tile(single_row, (data.shape[0], 1))
-
                 if variable != 'attitude':
+                    try:
+                        feed_horn_number
+                    except NameError:
+                        # Create Feed Horn number map
+                        single_row = concatenate([full(data.shape[1], dim) for dim in range(data.shape[2])])
+                        feed_horn_number = tile(single_row, (data.shape[0], 1))
+
                     data_out = zeros((data.shape[0], data.shape[1] * num_feed_horns))
                     for scan in range(data.shape[0]):
                             data_out[scan, :] = data[scan, :, :].flatten('F')
@@ -589,6 +590,7 @@ class DataIngestion:
                     # Need to preserve the 3rd dimension (matrix) for attitude data
                     data_out = repeat(data, num_feed_horns, axis=1)
                     variable_dict[variable] = asarray(data_out.reshape(data_out.shape[0]*data_out.shape[1], 1, data_out.shape[2]))
+                    test =0
 
             elif len(data.shape) == 2:
                     data_out = zeros((data.shape[0], data.shape[1] * num_feed_horns))
