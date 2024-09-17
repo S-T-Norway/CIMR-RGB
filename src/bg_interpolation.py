@@ -6,7 +6,6 @@ import numpy as np
 from numpy import nanmin, nanmax, where, nan, arange, meshgrid, array, isnan, unique, column_stack, ravel_multi_index, \
     unravel_index
 from scipy.spatial import KDTree
-from utils import interleave_bits, deinterleave_bits
 import time
 from collections import defaultdict
 from regridder import ReGridder
@@ -15,6 +14,7 @@ from process_antenna_pattern import AntennaPattern
 import matplotlib
 tkagg = matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+from config_file import ConfigFile
 
 # Make a smaller output grid for testing
 def reduce_grid(row_start, row_end, col_start, col_end, num_rows, num_cols):
@@ -25,21 +25,18 @@ def reduce_grid(row_start, row_end, col_start, col_end, num_rows, num_cols):
 
 
 class BGInterpolation():
-    def __init__(self, config_object, antenna_pattern_object):
+    def __init__(self, config_object, antenna_pattern_object, band_to_remap = None):
         self.config = config_object
         self.antenna_pattern = antenna_pattern_object
+        self.num_scans, self.num_earth_samples = ConfigFile.get_scan_geometry(self.config, band_to_remap)
+        self.band_to_remap = band_to_remap
 
     def get_grid(self, data_dict):
         # Get target grid
-        source_x, source_y, target_x, target_y = ReGridder(self.config).initiate_grid(
-            target_lon=data_dict['lons_target'],
-            target_lat=data_dict['lats_target'],
+        source_x, source_y, target_x, target_y, data_dict = ReGridder(self.config, self.band_to_remap).initiate_grid(
+            data_dict = data_dict,
         )
-        # remove nans from source points
-        non_nan_mask = ~np.isnan(source_x)
-        self.config.non_nan_mask = non_nan_mask
-        source_x = source_x[non_nan_mask]
-        source_y = source_y[non_nan_mask]
+
         target_x, target_y = meshgrid(target_x, target_y)
         target_grid = np.column_stack((target_x.flatten(), target_y.flatten()))
         source_points = column_stack((source_x, source_y))
@@ -75,7 +72,7 @@ class BGInterpolation():
         return array(dists)
 
     @staticmethod
-    def filter_samples(samples, distances, max_samples=6):
+    def filter_samples(samples, distances, num_scans, num_earth_samples, max_samples=10):
         # Convert samples to numpy array for easier indexing
         samples = np.array(samples)
         distances = np.array(distances)
@@ -83,7 +80,7 @@ class BGInterpolation():
         # Create a dictionary to store scan lines and their samples
         scan_lines = defaultdict(list)
         for i, sample in enumerate(samples):
-            scan_line = unravel_index(sample, (779, 241))[0]  # Assuming scan line is the first coordinate
+            scan_line = unravel_index(sample, (num_scans, num_earth_samples))[0]  # Assuming scan line is the first coordinate
             scan_lines[scan_line].append((distances[i], sample))
 
         # Sort each scan line's samples by distance
@@ -144,7 +141,7 @@ class BGInterpolation():
             dists = self.get_distances(source_coordinates, original_results, q_x, q_y,wrap_value)
 
             # Filter samples to obtain a max of 6 samples (ideally 3 on two revolutions)
-            filtered_samples = self.filter_samples(original_results, dists)
+            filtered_samples = self.filter_samples(original_results, dists, self.num_scans, self.num_earth_samples)
             results_dict[count] = list(filtered_samples)
 
         return results_dict
@@ -158,7 +155,7 @@ class BGInterpolation():
         samples_dict = self.wrapped_search(search_tree,source_points, target_grid, search_radius, original_indices, min_x, max_x)
         return samples_dict
 
-    def bg_interpolation(self, target_cell_lon, target_cell_lat, l1b_inds, variable, 
+    def bg_interpolation(self, data_dict, target_cell_lon, target_cell_lat, l1b_inds, variable,
                          approx_integrals=False,        #if true, next 2 options are ignored. Not implemented yet. 
                          source_antenna_pattern_approx=None, 
                          target_antenna_pattern_approx='gaussian',
@@ -175,12 +172,17 @@ class BGInterpolation():
         else:
             if source_antenna_pattern_approx == 'gaussian' or target_antenna_pattern_approx == 'gaussian':
                 assert np.isin(['sigma_lat', 'sigma_lon',  'rotation'], list(parameters.keys())).all()
-            
-        int_dom_lons, int_dom_lats = AP.make_integration_grid(
-            lon_target=target_cell_lon,
-            lat_target=target_cell_lat
-        )
 
+        longitudes = [target_cell_lon]
+        latitudes  = [target_cell_lat]
+
+        for i in l1b_inds:
+            scan_ind = data_dict['scan_number'][i]
+            earth_sample_ind = i
+            longitudes.append(AP.get_l1b_data(data_dict, 'lons_target', scan_ind, earth_sample_ind ))
+            latitudes.append(AP.get_l1b_data(data_dict, 'lats_target', scan_ind, earth_sample_ind ))
+
+        int_dom_lons, int_dom_lats = AP.make_integration_grid(longitudes, latitudes)
 
         if approx_integrals:
             pass
@@ -205,14 +207,17 @@ class BGInterpolation():
                     earth_sample_ind=earth_sample_ind,
                     int_dom_lons=int_dom_lons,
                     int_dom_lats=int_dom_lats,
-                )          
+                )
+
             elif target_antenna_pattern_approx == 'boresight_inferred':
                 target_ant_pattern = AP.antenna_pattern_from_boresight(
-                    scan_ind=l1b_inds[0]//241,              #the scan_index will determine satellite position and nadir point! I choose the first one.. to be discussed
+                    data_dict = data_dict,
                     boresight_lon=target_cell_lon,
                     boresight_lat=target_cell_lat,
                     int_dom_lons=int_dom_lons,
                     int_dom_lats=int_dom_lats,
+                    scan_ind=data_dict['scan_number'][l1b_inds[0]],
+                    earth_sample_ind=earth_sample_ind
                 )
 
             target_ant_pattern /= np.sum(target_ant_pattern)
@@ -225,12 +230,12 @@ class BGInterpolation():
             # Extract patterns for input l1b points, maybe make this loop a function
             for i in l1b_inds:
 
-                scan_ind = i // 241  # remember the dimensions should come from configuration/self
-                earth_sample_ind = i % 241
+                scan_ind = data_dict['scan_number'][i]
+                earth_sample_ind = i
 
                 # Get the antenna pattern
                 if source_antenna_pattern_approx == 'gaussian':
-                    source_cell_lon, source_cell_lat = AP.boresight_to_earth(scan_ind, earth_sample_ind)
+                    source_cell_lon, source_cell_lat = AP.boresight_to_earth(data_dict, scan_ind, earth_sample_ind)
                     ant_pattern = AP.make_gaussian(
                         grid_lons = int_dom_lons, 
                         grid_lats = int_dom_lats, 
@@ -242,6 +247,7 @@ class BGInterpolation():
 
                 elif source_antenna_pattern_approx == 'axisymmetric':
                     ant_pattern = AP.antenna_pattern_to_earth_simplified(
+                        data_dict = data_dict,
                         scan_ind=scan_ind,
                         earth_sample_ind=earth_sample_ind,
                         int_dom_lons=int_dom_lons,
@@ -249,21 +255,25 @@ class BGInterpolation():
                     )
                 
                 elif source_antenna_pattern_approx == 'boresight_inferred':
-                    boresight_lon = AP.get_l1b_data('tb_lon', scan_ind, earth_sample_ind)
-                    boresight_lat = AP.get_l1b_data('tb_lat', scan_ind, earth_sample_ind)
+                    boresight_lon = AP.get_l1b_data(data_dict, 'lons_target', scan_ind, earth_sample_ind)
+                    boresight_lat = AP.get_l1b_data(data_dict, 'lats_target', scan_ind, earth_sample_ind)
+
                     if boresight_lon < -1000 or boresight_lat < -1000:
-                        print(boresight_lon,boresight_lat )
+                        print('data point with invalid coordinates', boresight_lon, boresight_lat)
                         continue
                     ant_pattern = AP.antenna_pattern_from_boresight(
-                        scan_ind=scan_ind,
+                        data_dict = data_dict,
                         boresight_lon=boresight_lon,
                         boresight_lat=boresight_lat,
                         int_dom_lons=int_dom_lons,
                         int_dom_lats=int_dom_lats,
+                        scan_ind=scan_ind,
+                        earth_sample_ind=earth_sample_ind
                     )                    
 
                 else:
                     ant_pattern = AP.antenna_pattern_to_earth(
+                        data_dict = data_dict,
                         scan_ind=scan_ind,
                         earth_sample_ind=earth_sample_ind,
                         int_dom_lons=int_dom_lons,
@@ -274,6 +284,7 @@ class BGInterpolation():
                 ant_patterns.append(ant_pattern)
 
                 earth_samples.append(AP.get_l1b_data(
+                    data_dict = data_dict,
                     var=variable,
                     scan_ind=scan_ind,
                     earth_sample_ind=earth_sample_ind
@@ -292,19 +303,22 @@ class BGInterpolation():
                     g[i, j] = np.sum(ant_patterns[i] * ant_patterns[j])
         
         k = 0. #regularization factor
-        g = g + k*np.ones((count,count))
+        g = g + k*np.identity(count)
         ginv = np.linalg.inv(g)
 
         a = ginv @ (v + (1 - u.T @ (ginv @ v)) / (u.T @ (ginv @ u)) * u)
-        
+        print(f"Earth samples = {earth_samples}")
         return np.dot(a, earth_samples)
 
 
     def regrid_l1c(self, data_dict):
+        if self.config.input_data_type == 'CIMR':
+            data_dict = data_dict[self.config.target_band]
+
         target_grid, source_points = self.get_grid(data_dict)
 
         # Make a smaller grid for testing
-        reduced_grid_inds = reduce_grid(520, 540, 3290, 3310, 1624, 3856)    #ocean
+        reduced_grid_inds = reduce_grid(510, 520, 875, 985, 1624, 3856)    #ocean
         #reduced_grid_inds = reduce_grid(1110, 1440, 3080, 3170, 1624, 3856)  #
 
 
@@ -316,15 +330,15 @@ class BGInterpolation():
         # --------------  POINTS SELECTION -----------------#
         # Define parameters for points selection, these should be dealt
         # with in the config file eventually.
-        bg_search_radius = 4 # Pixels
+        bg_search_radius = 12 # Pixels
         grid_resolution = 9 # km
         search_radius = (bg_search_radius/2 * grid_resolution)*1000 # m
         min_x, max_x = -17367530.44, -17367530.44 + 3856*9008.05 # From grid generator
         # start_time = time.time()
         print('starting point selection')
         samples_dict = self.points_selection(source_points, target_grid, min_x, max_x, search_radius)
-        with open('samples_dict.pkl', 'wb') as file:
-            pickle.dump(samples_dict, file)
+        # with open('samples_dict.pkl', 'wb') as file:
+        #     pickle.dump(samples_dict, file)
         # print(f"Samples Selection took {time.time() - start_time} seconds")
         # Open precalculated samples dict
         # with open('samples_dict.pkl', 'rb') as f:
@@ -338,7 +352,7 @@ class BGInterpolation():
         samples_processed = 0
         for scan_direction in ['fore', 'aft']:
             bg_out_temp = {}
-            # Temporary solution to split fore and aft
+            # Temporary solution to split fore and aft start
             mask_dict = mask_dict[scan_direction]
             for sample in samples_dict:
                 if sample not in reduced_grid_inds:
@@ -355,7 +369,7 @@ class BGInterpolation():
                     fore_sample_frequency[sample] = len(l1b_inds)
                 elif scan_direction == 'aft':
                     aft_sample_frequency[sample] = len(l1b_inds)
-                # Temporary solution to split fore and aft
+                # Temporary solution to split fore and aft end
 
                 target_cell_x, target_cell_y = target_grid[sample]
                 target_cell_lon, target_cell_lat = GridGenerator(config).xy_to_lonlat(target_cell_x, target_cell_y)
@@ -367,10 +381,11 @@ class BGInterpolation():
                 print(f"processing sample = {sample}")
                 if np.isnan(target_cell_lon) or np.isnan(target_cell_lat):
                     continue
-                print(f"Target Cell: {target_cell_lon, target_cell_lat}")
+                # print(f"Target Cell: {target_cell_lon, target_cell_lat}")
 
-                variable = 'tb_v'
-                t_interp = self.bg_interpolation(target_cell_lon, target_cell_lat, l1b_inds, variable, False, 'boresight_inferred', 'boresight_inferred')
+                variable = 'bt_h_target'
+                t_interp = self.bg_interpolation(data_dict, target_cell_lon, target_cell_lat, l1b_inds, variable, False, 'boresight_inferred', 'boresight_inferred')
+
                 print(f"BG Interpolated Value = {t_interp}")
                 samples_processed+=1
                 print(f"samples processed = {samples_processed}")
@@ -419,7 +434,10 @@ if __name__ == '__main__':
     
     # t_interp = BGInterpolation(config, ap).bg_interpolation(lon, lat, indexes, 'tb_v', False, 'boresight_inferred', 'boresight_inferred')
     
-    bg_out, target_grid, fore_sample_frequency, aft_sample_frequency  = BGInterpolation(config, ap).regrid_l1c(data_dict)
+    bg_out, target_grid, fore_sample_frequency, aft_sample_frequency  = BGInterpolation(config, ap, config.target_band).regrid_l1c(data_dict)
+    with open('bg_out.pkl', 'wb') as file:
+        pickle.dump(bg_out, file)
+    
     
     print(time.time() - start_time)
     # print(t_interp)

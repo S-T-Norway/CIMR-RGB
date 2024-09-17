@@ -1,9 +1,12 @@
 """
 This script reads the configuration file and validates the chosen parameters.
 """
+from operator import truediv
 from os import path, getcwd
 import sys
 from xml.etree.ElementTree import ParseError, parse
+from grid_generator import GRIDS
+from numpy import sqrt
 
 
 class ConfigFile:
@@ -60,11 +63,15 @@ class ConfigFile:
             grid_type=self.grid_type
         )
 
-        self.source_band = self.validate_source_band(
-            config_object=config_object,
-            source_band='inputData/sourceBand',
-            input_data_type=self.input_data_type
-        )
+
+        if self.grid_type == "L1C":
+            self.source_band=[]
+        else:
+            self.source_band = self.validate_source_band(
+                config_object=config_object,
+                source_band='inputData/sourceBand',
+                input_data_type=self.input_data_type
+            )
 
         self.grid_definition = self.validate_grid_definition(
             config_object=config_object,
@@ -85,13 +92,27 @@ class ConfigFile:
 
         self.split_fore_aft = self.validate_split_fore_aft(
             config_object=config_object,
-            split_fore_aft='inputData/splitForeAft'
+            split_fore_aft='inputData/splitForeAft',
+            input_data_type=self.input_data_type
         )
 
         self.save_to_disk = self.validate_save_to_disk(
             config_object=config_object,
             save_to_disk='outputData/saveTodisk'
         )
+
+        self.search_radius = self.validate_search_radius(
+            config_object=config_object,
+            search_radius='ReGridderParams/searchRadius',
+            grid_definition=self.grid_definition,
+            grid_type=self.grid_type,
+            input_data_type=self.input_data_type
+        )
+
+        self.max_neighbours = self.validate_max_neighbours(
+            config_object = config_object,
+            max_neighbours = 'ReGridderParams/max_neighbours',
+            regridding_algorithm = self.regridding_algorithm)
 
         if self.grid_type == "L1R":
             try:
@@ -105,6 +126,24 @@ class ConfigFile:
         if self.input_data_type == "SMAP":
             self.aft_angle_min = 90
             self.aft_angle_max = 270
+            self.variable_key_map = {
+                'bt_h': 'tb_h',
+                'bt_v': 'tb_v',
+                'bt_3': 'tb_3',
+                'bt_4': 'tb_4',
+                'processing_scan_angle': 'antenna_scan_angle',
+                'longitude': 'tb_lon',
+                'latitude': 'tb_lat',
+                'x_position': 'x_pos',
+                'y_position': 'y_pos',
+                'z_position': 'z_pos',
+                'x_velocity': 'x_vel',
+                'y_velocity': 'y_vel',
+                'z_velocity': 'z_vel',
+                'sub_satellite_lon': 'sc_nadir_lon',
+                'sub_satellite_lat': 'sc_nadir_lat',
+                'altitude': 'sc_geodetic_alt_ellipsoid'
+            }
 
         # AMSR2 specific parameters
         if self.input_data_type == "AMSR2":
@@ -125,10 +164,22 @@ class ConfigFile:
         # CIMR Specific Parameters
         if self.input_data_type == "CIMR":
             self.variable_key_map = {
-                'lon': 'lons',
-                'lat': 'lats',
-                'brightness_temperature_h': 'bt_h',
-                'scan_angle': 'antenna_scan_angle'
+                'longitude': 'lon',
+                'latitude': 'lat',
+                'bt_h': 'brightness_temperature_h',
+                'bt_v': 'brightness_temperature_v',
+                'bt_3': 'brightness_temperature_t3',
+                'bt_4': 'brightness_temperature_t4',
+                'processing_scan_angle': 'scan_angle',
+                'x_position': 'satellite_position',
+                'y_position': 'satellite_position',
+                'z_position': 'satellite_position',
+                'x_velocity': 'satellite_velocity',
+                'y_velocity': 'satellite_velocity',
+                'z_velocity': 'satellite_velocity',
+                'sub_satellite_lon': 'sub_satellite_lon',
+                'sub_satellite_lat': 'sub_satellite_lat',
+                'attitude': 'SatelliteBody2EarthCenteredInertialFrame',
             }
             self.aft_angle_min = 180
             self.aft_angle_max = 360
@@ -139,8 +190,51 @@ class ConfigFile:
                 'KA': 8,
                 'KU': 8,
             }
+            self.scan_angle_feed_offsets = {}
+            self.u0 = {}
+            self.v0 = {}
 
 
+        self.variables_to_regrid = self.validate_variables_to_regrid(
+            config_object = config_object,
+            input_data_type = self.input_data_type,
+            variables_to_regrid = 'ReGridderParams/variables_to_regrid'
+        )
+
+        if self.regridding_algorithm == 'BG' or self.regridding_algorithm=='RSIR':
+
+            self.antenna_method = self.validate_antenna_method(
+                config_object = config_object,
+                antenna_method = 'ReGridderParams/antenna_method'
+            )
+
+            self.antenna_threshold = self.validate_antenna_threshold(
+                config_object=config_object,
+                antenna_threshold = 'ReGridderParams/antenna_threshold'
+            )
+
+            self.polarisation_method = self.validate_polarisation_method(
+                config_object=config_object,
+                polarisation_method='ReGridderParams/polarisation_method'
+            )
+
+
+            if self.input_data_type == 'SMAP':
+                # Antenna Pattern Path
+                # Try and load a file, raise an error if its not there
+                try:
+                    relative_path = '../dpr/antenna_patterns/SMAP/RadiometerAntPattern_170830_v011.h5'
+                    self.antenna_pattern_path = path.normpath(path.join(getcwd(), relative_path))
+                except AttributeError as e:
+                    raise ValueError(f"Error: SMAP Antenna Pattern not found in dpr") from e
+
+                self.antenna_tilt_angle = 144.54
+
+            elif self.input_data_type == 'CIMR':
+                relative_path = '../dpr/antenna_patterns/CIMR'
+                self.antenna_pattern_path = path.normpath(path.join(getcwd(), relative_path))
+
+                self.antenna_tilt_angle = 46.886 # update to read from file
     @staticmethod
     def read_config(config_file_path):
         """
@@ -253,29 +347,31 @@ class ConfigFile:
         """
 
         if input_data_type == "AMSR2":
-            if grid_type == "L1C":
-                return None
-            valid_input = ['6', '7', '10', '18', '23', '36', '89a', '89b']
-            if config_object.find(target_band).text in valid_input:
-                return config_object.find(target_band).text
-            raise ValueError(
-                f"Invalid Target Band, check configuration file. "
-                f"Valid target bands are: {valid_input}"
-            )
-
-        if input_data_type == "SMAP":
-            pass
+            valid_input = ['6', '7', '10', '18', '23', '36', '89a', '89b', 'All']
+            config_input = config_object.find(target_band).text.split()
+            if config_input == ['All']:
+                return ['6', '7', '10', '18', '23', '36', '89a', '89b']
+            else:
+                for i in config_input:
+                    if i not in valid_input:
+                        raise ValueError(
+                            f"Invalid target bands for AMSR2 L1C remap."
+                            f" Valid target bands are: {valid_input} or any combination of individual bands.")
+                return config_object.find(target_band).text.split()
 
         if input_data_type == "CIMR":
             if grid_type == "L1C":
                 valid_input = ['L', 'C', 'X', 'KA', 'KU', 'All']
-                config_input = config_object.find(target_band).text.replace(" ", "").split(',')
-                for i in config_input:
-                    if i not in valid_input:
-                        raise ValueError(
-                            f"Invalid target bands for CIMR L1C remap."
-                            f" Valid target bands are: {valid_input} or any combination of individual bands.")
-                return config_object.find(target_band).text
+                config_input = config_object.find(target_band).text.split()
+                if config_input == ['All']:
+                    return ['L', 'C', 'X', 'KA', 'KU']
+                else:
+                    for i in config_input:
+                        if i not in valid_input:
+                            raise ValueError(
+                                f"Invalid target bands for CIMR L1C remap."
+                                f" Valid target bands are: {valid_input} or any combination of individual bands.")
+                    return config_object.find(target_band).text.split()
 
     @staticmethod
     def validate_source_band(config_object, source_band, input_data_type):
@@ -334,7 +430,8 @@ class ConfigFile:
             return None
 
         valid_input = ['EASE2_G9km', 'EASE2_N9km', 'EASE2_S9km',
-                       'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km']
+                       'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km',
+                       'STEREO_N25km', 'STEREO_S25km']
         if config_object.find(grid_definition).text in valid_input:
             return config_object.find(grid_definition).text
         raise ValueError(
@@ -364,12 +461,16 @@ class ConfigFile:
         if grid_definition:
             if 'EASE2' in grid_definition:
                 valid_input = ['G', 'N', 'S']
-                if config_object.find(projection_definition).text in valid_input:
-                    return config_object.find(projection_definition).text
-                raise ValueError(
-                    f"Invalid Projection Definition, check configuration file."
-                    f" Valid projection definitions are: {valid_input}"
-                )
+
+            elif 'STEREO' in grid_definition:
+                valid_input = ['SN', 'SS']
+
+            if config_object.find(projection_definition).text in valid_input:
+                return config_object.find(projection_definition).text
+            raise ValueError(
+                f"Invalid Projection Definition, check configuration file."
+                f" Valid projection definitions are: {valid_input}"
+            )
         else:
             return None
 
@@ -390,7 +491,7 @@ class ConfigFile:
         str
             Validated regridding algorithm
         """
-        valid_input = ['NN', 'DIB', 'IDS']
+        valid_input = ['NN', 'DIB', 'IDS', 'BG', 'RSIR']
         if config_object.find(regridding_algorithm).text in valid_input:
             return config_object.find(regridding_algorithm).text
         raise ValueError(
@@ -399,7 +500,7 @@ class ConfigFile:
             )
 
     @staticmethod
-    def validate_split_fore_aft(config_object, split_fore_aft):
+    def validate_split_fore_aft(config_object, split_fore_aft, input_data_type):
         """
         Validates the split fore aft and returns the value if valid
 
@@ -415,9 +516,14 @@ class ConfigFile:
         str
             Validated split fore aft
         """
+        if input_data_type == 'AMSR2':
+            return False
         valid_input = ['True', 'False']
         if config_object.find(split_fore_aft).text in valid_input:
-            return config_object.find(split_fore_aft).text
+            if config_object.find(split_fore_aft).text == 'True':
+                return True
+            else:
+                return False
         raise ValueError(
             f"Invalid split fore aft. Check Configuration File."
             f" Valid split fore aft are: {valid_input}"
@@ -431,3 +537,149 @@ class ConfigFile:
                 f"Invalid saveToDisk. Check Configuration File."
                 f" SaveToDisk must be either True or False")
         return value
+
+    @staticmethod
+    def validate_search_radius(config_object, search_radius, grid_definition, grid_type, input_data_type):
+        """
+        Validates the search radius and returns the value if valid
+
+        Parameters
+        ----------
+        config_object: xml.etree.ElementTree.Element
+            Root element of the configuration file
+        search_radius: str
+            Path to the search radius in the configuration file
+
+        Returns
+        -------
+        int
+            Validated search radius
+        """
+        value = config_object.find(search_radius).text
+        if value is not None:
+            value = float(value)*1000
+        else:
+            if grid_type == 'L1C':
+                value = sqrt(2 * (GRIDS[grid_definition]['res'] / 2) ** 2)
+            elif grid_type == 'L1R':
+                if input_data_type == 'CIMR':
+                    return 73000/2 # Largets CIMR footprint radius, maybe needs tailoring
+                elif input_data_type == 'AMSR2':
+                    return 62000/2 # Largest AMSR2 footprint radius, maybe needs tailoring
+
+        return value
+
+    @staticmethod
+    def get_scan_geometry(config, band_to_remap=None):
+        if config.input_data_type == 'SMAP':
+            num_scans = 779
+            num_earth_samples = 241
+        elif config.input_data_type == 'CIMR':
+            if band_to_remap == 'L':
+                num_scans = 74
+                num_earth_samples = 691
+            elif band_to_remap == 'C':
+                num_scans = 74
+                num_earth_samples = 2747*4
+            elif band_to_remap == 'X':
+                num_scans = 74
+                num_earth_samples = 2807*4
+            elif band_to_remap == 'KA':
+                num_scans = 74
+                num_earth_samples = 10395*8
+            elif band_to_remap == 'KU':
+                num_scans = 74
+                num_earth_samples = 7692*8
+        return num_scans, num_earth_samples
+
+    @staticmethod
+    def validate_variables_to_regrid(config_object, input_data_type, variables_to_regrid):
+        value = config_object.find(variables_to_regrid).text
+        if input_data_type == 'SMAP':
+            valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
+                         'processing_scan_angle', 'longitude', 'latitude']
+            default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
+                            'processing_scan_angle', 'longitude', 'latitude']
+
+        elif input_data_type == 'AMSR2':
+            valid_input = ['bt_h', 'bt_v', 'longitude', 'latitude']
+
+        elif input_data_type == 'CIMR':
+            valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
+                           'processing_scan_angle', 'longitude', 'latitude']
+            default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
+                            'processing_scan_angle', 'longitude', 'latitude']
+
+        if value is not None:
+            for variable in value.split():
+                if variable not in valid_input:
+                    raise ValueError(
+                        f"Invalid variable_to_regrid. Check Configuration File."
+                        f" Valid variables_to_regrid: {valid_input}"
+                    )
+            return value.split()
+        else:
+            # Return default variables
+            return default_vars
+
+    @staticmethod
+    def validate_max_neighbours(config_object, max_neighbours, regridding_algorithm):
+        # The default values here can be tweeked for input data type and Band
+        if regridding_algorithm == 'NN':
+            return 1
+        else:
+            value = config_object.find(max_neighbours).text
+            if value is not None:
+                value = int(value)
+            else:
+                value = 1000
+            return value
+
+    @staticmethod
+    def validate_antenna_method(config_object, antenna_method):
+        valid_input = ['gaussian', 'real']
+        value = config_object.find(antenna_method)
+        if value is None:
+            return 'real'
+        elif value.text in valid_input:
+            return value.text
+        else:
+            raise ValueError(
+                f"Invalid antenna method. Check Configuration File."
+                f" Valid antenna methods are: {valid_input}"
+            )
+
+    @staticmethod
+    def validate_antenna_threshold(config_object, antenna_threshold):
+        if config_object.find(antenna_threshold).text is None:
+            # We should have a default set of values for each Antenna Pattern
+            # For now, I will just choose 9dB
+            return 9.
+
+        try:
+            return float(config_object.find(antenna_threshold).text)
+        except:
+            raise ValueError(
+                f"Invalid antenna threshold. Check Configuration File."
+                f" Antenna threshold must be a float or integer"
+            )
+
+    @staticmethod
+    def validate_polarisation_method(config_object, polarisation_method):
+        valid_input = ['scalar', 'mueller']
+        if config_object.find(polarisation_method).text is None:
+            return 'scalar'
+        if config_object.find(polarisation_method).text not in valid_input:
+            raise ValueError(
+                f"Invalid polarisation method. Check Configuration File."
+                f" Valid polarisation methods are: {valid_input}"
+            )
+        else:
+            return config_object.find(polarisation_method).text
+
+
+
+
+
+
+

@@ -1,27 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <config>
     <inputData>
-        <type>CIMR</type>
-         <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_polar_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>!
+        <type>SMAP</type>
+        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>
+<!--        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>-->
+<!--        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/AMSR2/GW1AM2_202308301033_051D_L1SGBTBR_2220220.h5</path>-->
         <splitForeAft>True</splitForeAft>
         <!-- AMSR2 Specific Configuration Parameters -->
-        <sourceBand>23</sourceBand>
-        <targetBand>C</targetBand> <!-- For CIMR, you can choose a target band/s or all of them -->
+        <sourceBand>89a</sourceBand>
+        <targetBand>10</targetBand> <!-- For CIMR, you can choose a target band/s or all of them -->
         <LMT>2200</LMT>
     </inputData>
     <GridParams>
             <gridType>L1C</gridType>
-            <gridDefinition>EASE2_N9km</gridDefinition>
-            <projectionDefinition>N</projectionDefinition>
+            <gridDefinition>EASE2_G36km</gridDefinition>
+            <projectionDefinition>G</projectionDefinition>
     </GridParams>
     <ReGridderParams>
-        <regriddingAlgorithm>IDS</regriddingAlgorithm>
+        <regriddingAlgorithm>NN</regriddingAlgorithm>
         <nnDistancecalc>GreatCircle</nnDistancecalc> <!-- Need to add configuration validation, can be euclidian or great circle-->
         <kernelSize>9</kernelSize>
+        <searchRadius></searchRadius>
+        <max_neighbours>10</max_neighbours>
+        <variables_to_regrid>bt_h bt_v</variables_to_regrid>
+        <antenna_method>real</antenna_method>
+        <polarisation_method>scalar</polarisation_method>
+        <antenna_threshold>10.98</antenna_threshold>
     </ReGridderParams>
     <outputData>
         <saveTodisk>True</saveTodisk>
-<!--For now, gonna put an output path as user input, but I actually think this should be automatically set-->
         <outputPath>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1cProducts/SMAP/RGB/</outputPath>
     </outputData>
 </config>

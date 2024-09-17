@@ -5,14 +5,17 @@ the configuration file.
 
 The output of the ReGridder class is a dictionary containing the regridded data.
 """
+import numpy as np
 from numpy import (sin, cos, deg2rad, unique, full, isnan, where, clip, nansum, nanmin, nan, zeros,
-                   count_nonzero, arccos, nanmean, pad, array, float32)
+                   count_nonzero, arccos, nanmean, pad, array, float32, delete, column_stack, meshgrid, ndarray,
+                   ravel_multi_index)
+from scipy.spatial import KDTree
 from os import path
 import pickle
 import sys
-
+from tqdm import tqdm
 from grid_generator import GridGenerator
-from utils import interleave_bits, deinterleave_bits
+from config_file import ConfigFile
 
 MAP_EQUATORIAL_RADIUS = 6378137.0
 
@@ -51,13 +54,14 @@ class ReGridder:
         Todo
     """
 
-    def __init__(self, config_object):
+    def __init__(self, config_object, band_to_remap=None):
         self.config = config_object
         self.regridding_algorithm = self.config.regridding_algorithm
-        self.calculate_frequency = False
+        self.num_scans, self.num_earth_samples = ConfigFile.get_scan_geometry(self.config, band_to_remap)
 
-    def initiate_grid(self, source_lon=None, source_lat=None, target_lon=None, target_lat=None):  #
+    def initiate_grid(self, data_dict):
         """
+        FUNCTION HAS BEEN EDITED, NEED TO CHANGE DESCRIPTION
         This function creates the target grid for the data to be regridded to.
 
         Parameters
@@ -83,26 +87,39 @@ class ReGridder:
         target_y: (np.ndarray of float)
             Y-coordinates of the center of a grid cell in the target grid defined from a given grid
             definition.
+        out_of_bounds_inds: (np.ndarray of int)
+            Indices of source_x and source_y that are out of bounds of the target grid.
         """
         if self.config.grid_type == 'L1C':
+            target_lon = data_dict['lons_target']
+            target_lat = data_dict['lats_target']
+
             source_x, source_y = GridGenerator(self.config).lonlat_to_xy(
                 lon=target_lon,
                 lat=target_lat
             )
+
             target_x, target_y, res = GridGenerator(self.config).generate_grid_xy(
-                return_resolution=True)
+                return_resolution=True
+            )
+
             y_bound_min = nanmin(target_y) - res / 2
             y_bound_max = nanmin(target_y.max() + res / 2)
             out_of_bounds_inds = where((source_y < y_bound_min) | (source_y > y_bound_max))
-            source_y[out_of_bounds_inds] = nan
-            source_x[out_of_bounds_inds] = nan
-            return source_x, source_y, target_x, target_y
+            source_y = np.delete(source_y, out_of_bounds_inds)
+            source_x = np.delete(source_x, out_of_bounds_inds)
 
-        if self.config.grid_type == 'L1R':
-            return source_lon, source_lat, target_lon, target_lat
+            # Remove out of bounds variables from data_dict
+            for variable in data_dict:
+                if variable in getattr(self.config, 'variables_1d', []):
+                    continue
+                else:
+                    data_dict[variable] = delete(data_dict[variable], out_of_bounds_inds, axis=0)
+
+            return source_x, source_y, target_x, target_y, data_dict
 
     @staticmethod
-    def assign_to_pixels(source_x, source_y, target_x, target_y):
+    def assign_to_pixels(source_x, source_y, target_x, target_y, search_radius=None):
         """
         This function assigns each input Earth sample (from source_x and source_y) to a pixel in
         the target grid.
@@ -129,16 +146,24 @@ class ReGridder:
             in the utils module.
         """
 
-        pixel_map = zeros(source_x.shape)
-        for count, source_measurement in enumerate(source_x):
-            if isnan(source_measurement):
-                pixel_map[count] = nan
-                continue
-            x_distances = abs(target_x - source_measurement)
-            y_distances = abs(target_y - source_y[count])
-            x_index = where(x_distances == nanmin(x_distances))[0][0]
-            y_index = where(y_distances == nanmin(y_distances))[0][0]
-            pixel_map[count] = interleave_bits(int(x_index), int(y_index))
+        if search_radius is None:
+            pixel_map = zeros(source_x.shape)
+            for count, source_measurement in enumerate(source_x):
+                if isnan(source_measurement):
+                    pixel_map[count] = nan
+                    continue
+                x_distances = abs(target_x - source_measurement)
+                y_distances = abs(target_y - source_y[count])
+                x_index = where(x_distances == nanmin(x_distances))[0][0]
+                y_index = where(y_distances == nanmin(y_distances))[0][0]
+                pixel_map[count] = ravel_multi_index((y_index, x_index), (1624, 3856))
+        else:
+            target_x, target_y = meshgrid(target_x, target_y)
+            target_points = column_stack((target_x.flatten(), target_y.flatten()))
+            source_points = column_stack((source_x, source_y))
+            tree = KDTree(target_points)
+            pixel_map = tree.query_ball_point(x=source_points, r=search_radius*1000)
+            pixel_map = [list(arr) for arr in pixel_map]
         return pixel_map
 
     @staticmethod
@@ -168,12 +193,18 @@ class ReGridder:
             Earth samples measured for the output grid.
         """
         frequency_out = full((y_shape, x_shape), nan)
+
+        if isinstance(pixel_map, ndarray) is False:
+            max_length = max(len(sublist) for sublist in pixel_map)
+            padded_pixel_map = [sublist + [0] * (max_length - len(sublist)) for sublist in pixel_map]
+            pixel_map = array(padded_pixel_map)
+
         unique_key = unique(pixel_map)
-        for unique_target_pixel in unique_key:
+        for unique_target_pixel in tqdm(unique_key):
             if isnan(unique_target_pixel):
                 continue
-            x_target_ind, y_target_ind = deinterleave_bits(int(unique_target_pixel))
-            frequency = where(pixel_map == unique_target_pixel)
+            y_target_ind, x_target_ind = np.unravel_index(int(unique_target_pixel), (1624, 3856))
+            frequency = where(pixel_map == unique_target_pixel)[0]
             measurements = measurement_variable[frequency]
             frequency_out[y_target_ind, x_target_ind] = count_nonzero(~isnan(measurements))
         return frequency_out
@@ -210,8 +241,17 @@ class ReGridder:
             target grid (see description of pixel map variable, and the values are ndarrays of the
             weights for each Earth sample in that grid cell.
         """
+
         ids_weights = {}
-        unique_key = unique(pixel_map)
+        if isinstance(pixel_map, ndarray):
+            unique_key = unique(pixel_map)
+        else:
+            flattened_list = [item for sublist in pixel_map for item in sublist]
+            unique_key = unique(flattened_list)
+            max_length = max(len(sublist) for sublist in pixel_map)
+            padded_pixel_map = [sublist + [0] * (max_length - len(sublist)) for sublist in pixel_map]
+            pixel_map = array(padded_pixel_map)
+
         lam_target, phi_target = GridGenerator(self.config).xy_to_lonlat(
             x=target_x,
             y=target_y
@@ -221,13 +261,28 @@ class ReGridder:
             y=source_y
         )
 
-        for unique_target_pixel in unique_key:
-            if isnan(unique_target_pixel):
-                continue
+        frequency_out = full((target_y.shape[0], target_x.shape[0]), nan)
+        for count, unique_target_pixel in enumerate(tqdm(unique_key)):
             frequency = where(pixel_map == unique_target_pixel)[0]
-            x_target_ind, y_target_ind = deinterleave_bits(int(unique_target_pixel))
-            target_lam, target_phi = lam_target[x_target_ind], phi_target[y_target_ind]
             source_lam, source_phi = lam_source[frequency], phi_source[frequency]
+
+            non_nans = ~isnan(source_lam)
+            source_lam = source_lam[non_nans]
+            source_phi = source_phi[non_nans]
+            frequency = frequency[non_nans]
+
+            if source_lam.size == 0:
+                continue
+            y_target_ind, x_target_ind = np.unravel_index(int(unique_target_pixel), (
+            1624, 3856))  # Need to base this shape parameter on the chosen grid.
+
+            if len(frequency) == 1:
+                ids_weights[unique_target_pixel] = 1
+                frequency_out[y_target_ind, x_target_ind ] = 1
+                continue
+
+
+            target_lam, target_phi = lam_target[x_target_ind], phi_target[y_target_ind]
             rad_phi_source, rad_phi_target = deg2rad(source_phi), deg2rad(target_phi)
             rad_lam_diff = deg2rad(source_lam - target_lam)
             inner_calc = sin(rad_phi_source) * sin(rad_phi_target) + \
@@ -238,7 +293,9 @@ class ReGridder:
             inner_calc[inner_calc == 1] -= epsilon
             alphas = 1 / (MAP_EQUATORIAL_RADIUS * arccos(inner_calc)) ** 2
             ids_weights[unique_target_pixel] = alphas
-        return ids_weights
+            # This is the cell_frequency variable
+            frequency_out[y_target_ind, x_target_ind ] = len(alphas)
+        return ids_weights, frequency_out
 
     @staticmethod
     def ids_interpolation(measurements, weights):
@@ -259,12 +316,13 @@ class ReGridder:
         measure_out: (float)
             The interpolated measurement for the grid cell.
         """
-        measure_out = 0
-        for count, measurement in enumerate(measurements):
-            if isnan(weights[count]):
-                continue
-            measure_out += weights[count] * measurement
-        measure_out = measure_out / nansum(weights)
+        if len(measurements) == 1:
+            measure_out = measurements[0]
+        else:
+            measure_out = 0
+            for count, measurement in enumerate(measurements): # Can skip this line if there is only one weight
+                measure_out += weights[count] * measurement
+            measure_out = measure_out / nansum(weights)
         return measure_out
 
     def regrid_l1c(self, data_dict):
@@ -292,65 +350,78 @@ class ReGridder:
 
         data_dict_out = {}
         symetric_diff = None
-        mask_dict = {'aft': (data_dict['antenna_scan_angle'] >= self.config.aft_angle_min) & (
-                data_dict['antenna_scan_angle'] <= self.config.aft_angle_max)}
-        mask_dict['fore'] = ~mask_dict['aft']
 
-        source_x, source_y, target_x, target_y = self.initiate_grid(
-            target_lon=data_dict['lons_target'],
-            target_lat=data_dict['lats_target']
+        source_x, source_y, target_x, target_y, data_dict = self.initiate_grid(
+            data_dict = data_dict
         )
 
         pixel_map = self.assign_to_pixels(
             source_x=source_x,
             source_y=source_y,
             target_x=target_x,
-            target_y=target_y
+            target_y=target_y,
+            search_radius=self.config.search_radius
         )
 
+        mask_dict = {'aft': (data_dict['antenna_scan_angle'] >= self.config.aft_angle_min) & (
+                data_dict['antenna_scan_angle'] <= self.config.aft_angle_max)}
+        mask_dict['fore'] = ~mask_dict['aft']
+
         if self.regridding_algorithm == 'IDS':
-            # Make below a function
+
             ids_weights = {}
+
             for scan_direction in ['fore', 'aft']:
                 mask = mask_dict[scan_direction]
                 source_x_mask = where(mask, source_x, nan)
                 source_y_mask = where(mask, source_y, nan)
-                ids_weights[scan_direction] = self.get_ids_weights(
+                print(f"Calculating IDS Weights {scan_direction}")
+                ids_weights[scan_direction], frequency_out = self.get_ids_weights(
                     pixel_map=pixel_map,
                     target_x=target_x,
                     target_y=target_y,
                     source_x=source_x_mask,
                     source_y=source_y_mask
                 )
+                data_dict_out['cell_frequency_' + scan_direction] = frequency_out
+                print(f"Calculated IDS Weights {scan_direction}")
+                break
+
 
         for var in data_dict:
-            print(f"Regridding {var}")
+            if hasattr(self.config, 'variables_1d'):
+                # Do something if variables_1d exists
+                if var in self.config.variables_1d:
+                    continue
+            else:
+                if var in ['x_pos', 'y_pos', 'z_pos', 'sc_nadir_lon', 'sc_nadir_lat']:
+                    continue
+            if var == 'scan_number':
+                continue
             for scan_direction in ['fore', 'aft']:
+                print(f"Regridding {var} {scan_direction}")
                 measurement_out = full((target_y.shape[0], target_x.shape[0]), nan)
                 mask = mask_dict[scan_direction]
-                measurement_variable = where(mask, data_dict[var], nan)
 
                 if self.regridding_algorithm == 'IDS':
-                    if 'bt' in var and 'nedt' not in var:
-                        try:
-                            data_dict_out['cell_frequency_' + scan_direction]
 
-                        except KeyError:
-                            data_dict_out['cell_frequency_' + scan_direction] = self.get_frequency(
-                                pixel_map=pixel_map,
-                                measurement_variable=where(mask, data_dict[var], nan),
-                                x_shape=target_x.shape[0],
-                                y_shape=target_y.shape[0])
+                    if isinstance(pixel_map, ndarray) is False: # I do this a few times, maybe I only need to do it once
+                        max_length = max(len(sublist) for sublist in pixel_map)
+                        padded_pixel_map = [sublist + [0] * (max_length - len(sublist)) for sublist in pixel_map]
+                        pixel_map = array(padded_pixel_map)
 
                     weights = ids_weights[scan_direction]
-                    for weight in weights:
-                        if all(isnan(weights[weight])):
-                            continue
+                    print(f"Applying interpolation weights to {var}_{scan_direction}")
+                    for weight in tqdm(weights):
                         measurement_inds = where(pixel_map == weight)[0]
-                        measurements = data_dict[var][measurement_inds]
+                        measurements = where(mask, data_dict[var], nan)[measurement_inds]
+                        measurements = measurements[~np.isnan(measurements)]
                         remapped_measurement = self.ids_interpolation(measurements, weights[weight])
-                        x_out, y_out = deinterleave_bits(int(weight))
+                        y_out, x_out = np.unravel_index(int(weight), (1624, 3856))
                         measurement_out[y_out, x_out] = remapped_measurement
+                    print(f"{var}_{scan_direction} re-gridded")
+
+
 
                 elif self.regridding_algorithm == 'NN':
                     if 'bt' in var and 'nedt' not in var:
@@ -430,16 +501,20 @@ class ReGridder:
                         measurement_out[y_target_ind, x_target_ind] = remapped_measurement
 
                 data_dict_out[var + '_' + scan_direction] = measurement_out
+                break
 
-            if symetric_diff is None:
-                fore_nan = isnan(data_dict_out[var + '_fore'])
-                aft_nan = isnan(data_dict_out[var + '_aft'])
-                unique_fore = (~fore_nan) & aft_nan
-                unique_aft = fore_nan & (~aft_nan)
-                symetric_diff = ~(unique_fore | unique_aft)
 
-        for var in data_dict_out:
-            data_dict_out[var] = where(symetric_diff, data_dict_out[var], nan)
+
+
+        #     if symetric_diff is None:
+        #         fore_nan = isnan(data_dict_out[var + '_fore'])
+        #         aft_nan = isnan(data_dict_out[var + '_aft'])
+        #         unique_fore = (~fore_nan) & aft_nan
+        #         unique_aft = fore_nan & (~aft_nan)
+        #         symetric_diff = ~(unique_fore | unique_aft)
+        #
+        # for var in data_dict_out:
+        #     data_dict_out[var] = where(symetric_diff, data_dict_out[var], nan)
 
         return data_dict_out
 

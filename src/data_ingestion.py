@@ -9,13 +9,11 @@ process.
 """
 
 import re
-from numpy import array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile
-import numpy as np
-import h5py as h5
-from netCDF4 import Dataset
-
+from numpy import (array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile, repeat, arange,
+                   isnan, delete, where, concatenate, full, newaxis, float32, asarray, any)
 from config_file import ConfigFile
 from utils import remove_overlap
+from grid_generator import GRIDS, GridGenerator
 
 # SMAP Constants
 SMAP_FILL_FLOAT_32 = -9999.0
@@ -70,7 +68,7 @@ class DataIngestion:
         Initiates ingestion of user specified data type.
     """
 
-    def __init__(self, config_file_path):
+    def __init__(self, config_object):
         """
         Initializes the DataIngestion class with the user specified configuration file.
 
@@ -79,7 +77,25 @@ class DataIngestion:
         config_file_path: str
             The path to the configuration file that contains the user specified parameters.
         """
-        self.config = ConfigFile(config_file_path)
+        self.config = config_object
+
+    def remove_out_of_bounds(self, data_dict):
+        grid = GRIDS[self.config.grid_definition]
+        x_bound_min = grid['x_min'] - 0.5 * grid['res']
+        x_bound_max = grid['x_min'] + grid['n_cols']*grid['res'] + 0.5 * grid['res']
+        y_bound_max = grid['y_max'] + 0.5 * grid['res']
+        y_bound_min = grid['y_max'] - grid['n_rows']*grid['res'] - 0.5 * grid['res']
+
+        source_x, source_y = GridGenerator(self.config).lonlat_to_xy(
+            lon=data_dict['longitude'],
+            lat=data_dict['latitude']
+        )
+
+        out_of_bound_inds = where((source_y < y_bound_min) | (source_y > y_bound_max))
+        for variable in data_dict:
+            data_dict[variable][out_of_bound_inds] = nan
+
+        return data_dict
 
     @staticmethod
     def amsr2_coreg_extraction(coreg_parameters):
@@ -118,9 +134,11 @@ class DataIngestion:
             Dictionary containing the data extracted from the HDF5 file.
         """
 
+        import h5py as h5
+
+        data_dict = {}
         with h5.File(self.config.input_data_path, 'r') as data:
 
-            data_dict = {}
             # Not using qc_dict at the moment need to add functionality for "qc remap".
             qc_dict = {}
 
@@ -141,6 +159,7 @@ class DataIngestion:
                     )
 
                 # Extract Data used for all re-grids
+                # lats and lons of 89A are used to extrac the lats and lons for all other bands
                 lats_89a = remove_overlap(
                     array=data['Latitude of Observation Point for 89A'][:],
                     overlap=overlap
@@ -152,7 +171,7 @@ class DataIngestion:
                 )
 
                 # Extract 89b data if required
-                if self.config.target_band == '89b' or self.config.source_band == '89b':
+                if '89b' in self.config.target_band or '89b' in self.config.source_band:
                     lats_89b = remove_overlap(
                         array=data['Latitude of Observation Point for 89B'][:],
                         overlap=overlap
@@ -166,70 +185,170 @@ class DataIngestion:
                     lats_89b = None
                     lons_89b = None
 
-                # Extract BTs of Source Band
-                key = self.config.key_mappings[self.config.source_band][1]
-                bt_h_source, bt_v_source = data[key + 'H)'], data[key + 'V)']
-                bt_h_source_scale = bt_h_source.attrs['SCALE FACTOR']
-                bt_v_source_scale = bt_v_source.attrs['SCALE FACTOR']
+                # Extract BTs of all relevant bands
+                bands_to_open = set(self.config.target_band + self.config.source_band)
 
-                data_dict['bt_v_source'] = remove_overlap(bt_v_source, overlap) * bt_v_source_scale
-                data_dict['bt_h_source'] = remove_overlap(bt_h_source, overlap) * bt_h_source_scale
+                for band in bands_to_open:
+                    variable_dict = {}
+                    key = self.config.key_mappings[band][1]
+                    bt_h, bt_v = data[key + 'H)'], data[key + 'V)']
+                    bt_h_scale= bt_h.attrs['SCALE FACTOR']
+                    bt_v_scale = bt_v.attrs['SCALE FACTOR']
+                    variable_dict['bt_v'] = remove_overlap(bt_v, overlap) * bt_v_scale
+                    variable_dict['bt_h'] = remove_overlap(bt_h, overlap) * bt_h_scale
+                    data_dict[band] = variable_dict
 
                 return data_dict, coreg_a, coreg_b, lats_89a, lons_89a, lats_89b, lons_89b
 
             if self.config.input_data_type == "SMAP":
+                variable_dict = {}
                 bt_data = data['Brightness_Temperature']
+                spacecraft_data = data['Spacecraft_Data']
 
-                # Uncomment all the variables you want to remap.
-                data_dict['bt_h_target'] = bt_data['tb_h'][:]
-                # data_dict['bt_v_target'] = bt_data['tb_v'][:]
-                # data_dict['bt_3_target'] = bt_data['tb_3'][:]
-                # data_dict['bt_4_target'] = bt_data['tb_4'][:]
-                data_dict['lats_target'] = bt_data['tb_lat'][:]
-                data_dict['lons_target'] = bt_data['tb_lon'][:]
-                data_dict["antenna_scan_angle"] = bt_data["antenna_scan_angle"][:]
-                # data_dict['bt_h_target_nedt'] = bt_data['nedt_h'][:]
-                # data_dict['bt_v_target_nedt'] = bt_data['nedt_v'][:]
-                # data_dict['bt_3_target_nedt'] = bt_data['nedt_3'][:]
-                # data_dict['bt_4_target_nedt'] = bt_data['nedt_4'][:]
-                # qc_dict['bt_h_qc'] = bt_data['tb_qual_flag_h'][:]
-                # qc_dict['bt_v_qc'] = bt_data['tb_qual_flag_v'][:]
-                # qc_dict['bt_3_qc'] = bt_data['tb_qual_flag_3'][:]
-                # qc_dict['bt_4_qc'] = bt_data['tb_qual_flag_4'][:]
-                # data_dict['boresight_angle'] = bt_data['earth_boresight_incidence'][:]
-                # data_dict['sol_specular_theta'] = bt_data['solar_specular_theta'][:]
-                # data_dict['sol_specular_phi'] = bt_data['solar_specular_phi'][:]
+                # Extract variables
+                required_variables = ['longitude', 'latitude', 'processing_scan_angle',
+                                      'x_position', 'y_position', 'z_position',
+                                      'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
+                                      'y_velocity', 'z_velocity', 'altitude']
 
-                for variable in data_dict:
-                    data_dict[variable] = data_dict[variable].flatten('C')
+                variables_to_open = set(required_variables + self.config.variables_to_regrid)
+
+                for variable in variables_to_open:
+                    variable_key = self.config.variable_key_map[variable]
+                    if variable_key in bt_data:
+                        variable_dict[variable] = bt_data[variable_key][:]
+                    elif variable_key in spacecraft_data:
+                        if variable == 'altitude':
+                            # Only need the maximum altitude for ap_max_radius calculation
+                            self.config.max_altitude = spacecraft_data[variable_key][:].max()
+                            continue
+                        variable_dict[variable] = spacecraft_data[variable_key][:]
+
+                # Create a map between scan number, earth sample number and feed_horn number
+                num_scans, num_samples = variable_dict['longitude'].shape
+                variable_dict['scan_number'] = float32(repeat(arange(num_scans), num_samples).reshape(num_scans, num_samples))
+                variable_dict['sample_number'] = float32(tile(arange(num_samples), (num_scans, 1)))
+                variable_dict['feed_horn_number'] = float32(zeros((num_scans, num_samples)))
+
+                # Add attitude variable
+
+                # Turn the 1D (once per scan) variables into 2D variables
+                for variable in variable_dict:
+                    if len(variable_dict[variable].shape) == 1:
+                        variable_dict[variable] = tile(variable_dict[variable], (num_samples, 1)).T
+
+                # Remove out of bounds
+                variable_dict = self.remove_out_of_bounds(variable_dict)
+
+                # Split Fore/Aft and Flatten
+                if self.config.split_fore_aft == True:
+                    variable_dict_out = {}
+                    mask_dict = {'aft': (variable_dict['processing_scan_angle'] >= self.config.aft_angle_min) & (
+                            variable_dict['processing_scan_angle'] <= self.config.aft_angle_max)}
+                    mask_dict['fore'] = ~mask_dict['aft']
+
+                    for variable in variable_dict:
+                        for scan_direction in ['fore', 'aft']:
+                            mask = mask_dict[scan_direction].flatten('C')
+                            variable_dict_out[f"{variable}_{scan_direction}"] = variable_dict[variable].flatten('C')[mask]
+                    variable_dict = variable_dict_out
+                    del variable_dict_out
+                    data_dict['L'] = variable_dict
+                else:
+                    for variable in variable_dict:
+                        variable_dict[variable] = variable_dict[variable].flatten('C')
+                    data_dict['L'] = variable_dict
+
                 return data_dict
 
-            if self.config.input_data_type == "CIMR":
-                return data_dict
+    @property
     def read_netcdf(self):
         """
 
         :return:
         """
+
+        from netCDF4 import Dataset
+
         data_dict = {}
-        with Dataset(self.config.input_data_path, 'r') as data:
-            if self.config.grid_type == "L1C":
-                target_bands = self.config.target_band.replace(" ", "").split(",")
-                for band in target_bands:
+        if self.config.grid_type == "L1C":
+            for band in self.config.target_band:
+                with Dataset(self.config.input_data_path, 'r') as data:
                     band_data = data[band + '_BAND']
                     variable_dict = {}
-                    # Eventually "variables" should be defined in the config file.
-                    variables = ['lon', 'lat', 'brightness_temperature_h', 'scan_angle']
-                    for variable in variables:
-                        variable_dict[self.config.variable_key_map[variable]] = array(band_data[variable][:])
-                    # L1C only has "target" designator
-                    variable_dict['lons_target'] = variable_dict.pop('lons')
-                    variable_dict['lats_target'] = variable_dict.pop('lats')
+
+                    # Extract Feed offsets and u, v to add to config
+                    scan_angle_feeds_offsets = band_data['scan_angle_feeds_offsets'][:]
+                    self.config.scan_angle_feed_offsets[band]=scan_angle_feeds_offsets
+                    self.config.u0[band], self.config.v0[band] = getattr(band_data, 'uo'), getattr(band_data, 'vo')
+
+                    # Extract variables (This can be tweaked to remove variables for Non-AP algorithms)
+                    required_variables = ['longitude', 'latitude', 'processing_scan_angle',
+                                      'x_position', 'y_position', 'z_position',
+                                      'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
+                                      'y_velocity', 'z_velocity', 'attitude']
+
+                    variables_to_open = set(required_variables + self.config.variables_to_regrid)
+
+                    for variable in variables_to_open:
+                        variable_key = self.config.variable_key_map[variable]
+                        data = band_data[variable_key][:]
+                        if variable == 'x_position':
+                            variable_dict[variable] = data[:,:,0]
+                        elif variable == 'y_position':
+                            variable_dict[variable] = data[:,:,1]
+                        elif variable == 'z_position':
+                            variable_dict[variable] = data[:,:,2]
+                        elif variable == 'x_velocity':
+                            variable_dict[variable] = data[:,:,0]
+                        elif variable == 'y_velocity':
+                            variable_dict[variable] = data[:,:,1]
+                        elif variable == 'z_velocity':
+                            variable_dict[variable] = data[:,:,2]
+                        else:
+                            variable_dict[variable] = data
+
+                    # Calculate max altitude for ap_radius calculation (same for all bands)
+                    if not hasattr(self.config, 'max_altitude'):
+                        altitude = sqrt(variable_dict['x_position']**2 + variable_dict['y_position']**2 + variable_dict['z_position']**2)
+                        altitude -= 6371000
+                        self.config.max_altitude = altitude.max()
+
+                    # Create map between scan number and earth sample number
+                    num_feed_horns = self.config.num_horns[band]
+                    num_scans, num_samples = variable_dict['processing_scan_angle'].shape
+
+                    # Combine Feed horns and Flatten
+                    variable_dict = self.combine_cimr_feeds(variable_dict, num_feed_horns)
+                    variable_dict['scan_number'] = float32(repeat(arange(num_scans)[:, newaxis], num_samples * num_feed_horns,axis=1).flatten('C'))
+                    single_row = tile(arange(num_samples), num_feed_horns)
+                    variable_dict['sample_number'] = float32(tile(single_row, (num_scans, 1)).flatten('C'))
+
+                    # Remove out of bounds here
+                    variable_dict = self.remove_out_of_bounds(variable_dict)
+
+                    # Split Fore/Aft
+                    if self.config.split_fore_aft == True:
+                        mask_dict = {'aft': (variable_dict['processing_scan_angle'] >= self.config.aft_angle_min) & (
+                                variable_dict['processing_scan_angle'] <= self.config.aft_angle_max)}
+                        mask_dict['fore'] = ~mask_dict['aft']
+                        variable_dict_out = {}
+                        for variable in variable_dict:
+                            for scan_direction in ['fore', 'aft']:
+                                mask = mask_dict[scan_direction].flatten('C')
+                                variable_dict_out[f"{variable}_{scan_direction}"] = variable_dict[variable][mask]
+
+                        variable_dict = variable_dict_out
+                        del variable_dict_out
                     data_dict[band] = variable_dict
 
-            if self.config.grid_type == 'L1R':
-                # Need to concatenate the target and source bands.
-                pass
+        if self.config.grid_type == 'L1R':
+            # Need to concatenate the target and source bands.
+            # Actually I don't think that you need a separate statement here, we can just create a
+            # "set" from target and source bands of all band data that needs to be opened.
+            # then again, we only need the lats and lons of the source data.
+            pass
+
         return data_dict
 
     @staticmethod
@@ -252,7 +371,7 @@ class DataIngestion:
 
         """
         for qc in qc_dict:
-            qc_dict[qc] = np.where(qc_dict[qc] == 0, 1, np.nan)
+            qc_dict[qc] = where(qc_dict[qc] == 0, 1, nan)
         return qc_dict
 
     @staticmethod
@@ -296,18 +415,70 @@ class DataIngestion:
             Dictionary containing the data extracted from the HDF5 file with NaNs applied.
 
         """
-        if self.config.input_data_type == "SMAP":
-            nan_map = np.zeros(next(iter(data_dict.values())).shape, dtype=bool)
+        for band in data_dict:
+            variable_dict = data_dict[band]
+            if self.config.split_fore_aft:
+                # Get fore and aft array shapes
+                fore_shape, aft_shape = None, None
+                for variable in variable_dict:
+                    if fore_shape is None and 'fore' in variable:
+                        fore_shape = variable_dict[variable].shape
+                    if aft_shape is None and 'aft' in variable:
+                        aft_shape = variable_dict[variable].shape
 
-            for variable in data_dict:
-                if data_dict[variable].dtype == 'float32':
-                    data_dict[variable][data_dict[variable] == SMAP_FILL_FLOAT_32] = nan
-                nan_map |= np.isnan(data_dict[variable])
+                    if fore_shape is not None and aft_shape is not None:
+                        break
 
-            for variable in data_dict:
-                data_dict[variable] = np.where(nan_map, np.nan, data_dict[variable])
+                for scan_direction in ['fore', 'aft']:
+                    if scan_direction == 'fore':
+                        nan_map = zeros(fore_shape, dtype=bool)
+                    else:
+                        nan_map = zeros(aft_shape, dtype=bool)
+                    for variable in variable_dict:
+                        if scan_direction not in variable:
+                            continue
+                        else:
+                            if self.config.input_data_type == 'SMAP':
+                                # Include SMAP specific fill values
+                                if variable_dict[variable].dtype == 'float32':
+                                    variable_dict[variable][variable_dict[variable] == SMAP_FILL_FLOAT_32] = nan
+                            elif self.config.input_data_type == 'CIMR':
+                                # Include CIMR specific fil values
+                                # Currently non nans as simulated data
+                                pass
+                            if variable_dict[variable].ndim == 1:
+                                nan_map |= isnan(variable_dict[variable])
+                            # Deadling with the attitude array
+                            elif variable_dict[variable].ndim == 3:
+                                # Needs testing when nans in cimr data
+                                nan_map |= any(isnan(variable_dict[variable]), axis=(1, 2))
 
+                    for variable in variable_dict:
+                        if scan_direction not in variable:
+                            continue
+                        else:
+                            variable_dict[variable] = delete(variable_dict[variable], where(nan_map)[0], axis=0)
+                    data_dict[band] = variable_dict
+            else:
+                nan_map = zeros(next(iter(variable_dict.values())).shape, dtype=bool).flatten('C')
+                for variable in variable_dict:
+                    if self.config.input_data_type == 'SMAP':
+                        if variable_dict[variable].dtype == 'float32':
+                            variable_dict[variable][variable_dict[variable] == SMAP_FILL_FLOAT_32] = nan
+                    elif self.config.input_data_type == 'CIMR':
+                        # Include CIMR specific fil values
+                        # Currently non nans as simulated data
+                        pass
+                    elif self.config.input_data_type == 'AMSR2':
+                        # Include AMSR2 specific fill values
+                        pass
+                    nan_map |= isnan(variable_dict[variable])
+                for variable in variable_dict:
+                    variable_dict[variable] = delete(variable_dict[variable], where(nan_map)[0], axis=0)
+                data_dict[band] = variable_dict
         return data_dict
+
+
 
     def amsr2_latlon_conversion(self, coreg_a, coreg_b, lons_hi, lats_hi):
         """
@@ -391,28 +562,45 @@ class DataIngestion:
 
         return lats_lo, lons_lo
 
-    def combine_cimr_feeds(self, data_dict):
+    def combine_cimr_feeds(self, variable_dict, num_feed_horns):
         """
         :param data_dict:
         :return:
         """
-        for band in data_dict:
-            num_horns = self.config.num_horns[band]
-            for variable in data_dict[band]:
-                var = data_dict[band][variable]
-                if len(var.shape) == 3:
-                    var_out = np.zeros((var.shape[0], var.shape[1] * num_horns))
-                    # Horn involvement
-                    for scan in range(var.shape[0]):
-                        var_out[scan, :] = var[scan, :, :].flatten('F')
-                    data_dict[band][variable] = var_out.flatten('C')
 
-                elif len(data_dict[band][variable].shape) == 2:
-                    var_out = np.zeros((var.shape[0], var.shape[1] * num_horns))
-                    for scan in range(var.shape[0]):
-                        var_out[scan, :] = tile(var[scan, :], num_horns)
-                    data_dict[band][variable] = var_out.flatten('C')
-        return data_dict
+        # new variables: feed_horn_number, sample_number, scan_number
+        for variable in variable_dict:
+            data = variable_dict[variable]
+
+            if len(data.shape) == 3:
+                if variable != 'attitude':
+                    try:
+                        feed_horn_number
+                    except NameError:
+                        # Create Feed Horn number map
+                        single_row = concatenate([full(data.shape[1], dim) for dim in range(data.shape[2])])
+                        feed_horn_number = tile(single_row, (data.shape[0], 1))
+
+                    data_out = zeros((data.shape[0], data.shape[1] * num_feed_horns))
+                    for scan in range(data.shape[0]):
+                            data_out[scan, :] = data[scan, :, :].flatten('F')
+
+                    variable_dict[variable] = data_out.flatten('C')
+                else:
+                    # Need to preserve the 3rd dimension (matrix) for attitude data
+                    data_out = repeat(data, num_feed_horns, axis=1)
+                    variable_dict[variable] = asarray(data_out.reshape(data_out.shape[0]*data_out.shape[1], 1, data_out.shape[2]))
+                    test =0
+
+            elif len(data.shape) == 2:
+                    data_out = zeros((data.shape[0], data.shape[1] * num_feed_horns))
+                    for scan in range(data.shape[0]):
+                        data_out[scan, :] = tile(data[scan, :], num_feed_horns)
+                    variable_dict[variable] = data_out.flatten('C')
+
+        variable_dict['feed_horn_number'] = float32(feed_horn_number.flatten('C'))
+
+        return variable_dict
 
     def ingest_amsr2(self):
         """
@@ -427,21 +615,21 @@ class DataIngestion:
 
         data_dict, coreg_a, coreg_b, lats_89a, lons_89a, lats_89b, lons_89b = self.read_hdf5()
 
-        if self.config.grid_type == "L1R":
-            required_locations = ['source', 'target']
-        else:
-            required_locations = ['source']
+        # if self.config.grid_type == "L1R":
+        #     required_locations = ['source', 'target']
+        # else:
+        #     required_locations = ['source']
 
-        for band in required_locations:
-            if getattr(self.config, f"{band}_band") == '89a':
-                data_dict[f"lats_{band}"] = lats_89a
-                data_dict[f"lons_{band}"] = lons_89a
-            elif getattr(self.config, f"{band}_band") == '89b':
-                data_dict[f"lats_{band}"] = lats_89b
-                data_dict[f"lons_{band}"] = lons_89b
+        for band in data_dict:
+            if band == '89a':
+                data_dict[band]['longitude'] = lons_89a
+                data_dict[band]['latitude'] = lats_89a
+            elif band == '89b':
+                data_dict[band]['longitude'] = lons_89b
+                data_dict[band]['latitude'] = lats_89b
             else:
                 # Extract BTs of Target Band using conversion algorithm from 89a channel.
-                coreg_index = self.config.key_mappings[getattr(self.config, f"{band}_band")][0]
+                coreg_index = self.config.key_mappings[band][0]
                 lats, lons = self.amsr2_latlon_conversion(
                     coreg_a=coreg_a[coreg_index],
                     coreg_b=coreg_b[coreg_index],
@@ -449,11 +637,26 @@ class DataIngestion:
                     lats_hi=lats_89a
                 )
 
-                data_dict[f"lats_{band}"] = lats
-                data_dict[f"lons_{band}"] = lons
+                data_dict[band]['longitude'] = lons
+                data_dict[band]['latitude'] = lats
 
-        for variable in data_dict:
-            data_dict[variable] = data_dict[variable].flatten('C')
+        # Create map between scan number and earth sample number
+        for band in data_dict:
+            num_scans, num_samples = data_dict[band]['longitude'].shape
+            data_dict[band]['scan_number'] = float32(repeat(arange(num_scans), num_samples).reshape(num_scans, num_samples))
+            data_dict[band]['sample_number'] = float32(tile(arange(num_samples), (num_scans, 1)))
+
+        # Remove out of bounds inds
+        for band in data_dict:
+            data_dict[band] = self.remove_out_of_bounds(data_dict[band])
+
+        # Flatten data
+        for band in data_dict:
+            for variable in data_dict[band]:
+                data_dict[band][variable] = data_dict[band][variable].flatten('C')
+
+        # Clean Data
+        data_dict = self.clean_data(data_dict)
         return data_dict
 
     def ingest_smap(self):
@@ -467,8 +670,8 @@ class DataIngestion:
             Dictionary containing the data extracted from the HDF5 file.
         """
         data_dict = self.read_hdf5()
-        # qc_dict = self.extract_smap_qc(qc_dict)
         data_dict = self.clean_data(data_dict)
+        # qc_dict = self.extract_smap_qc(qc_dict)
         # data_dict = self.apply_smap_qc(qc_dict, data_dict)
         return data_dict
 
@@ -478,10 +681,9 @@ class DataIngestion:
         :return:
         """
         # Open netcdf file
-        data_dict = self.read_netcdf()
-        # Combine feeds (Move this into read_netcdf?)
-        # Still need to adjust the scan angle feed offsets
-        data_dict = self.combine_cimr_feeds(data_dict)
+        data_dict = self.read_netcdf
+        data_dict = self.clean_data(data_dict)
+        # Apply QC as and when
         return data_dict
 
     def ingest_data(self):

@@ -3,7 +3,8 @@ import numpy as np
 from grid_generator import GridGenerator
 from pyproj import CRS, Transformer
 from utils import normalize, generic_transformation_matrix, rotation_matrix
-from scipy.interpolate import RegularGridInterpolator
+from scipy.interpolate import RegularGridInterpolator, LinearNDInterpolator
+import matplotlib.pyplot as plt
 import time
 # Terms to add to config file:
 # antenna_pattern_path
@@ -12,61 +13,90 @@ import time
 class AntennaPattern:
 
     def __init__(self, config_object):
+        threshold_dB = -9. #this could maybe be a parameter
         self.config = config_object
-        self.antenna_file = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/Antenna_patterns/SMAP/RadiometerAntPattern_170830_v011.h5' # Should be in config file and provided in repository
-        self.theta, self.phi, self.gain_dict = self.get_full_patterns_in_dict(self.antenna_file, phi_range=None, theta_range=None)
-        self.scalar_antenna_pattern = self.get_scalar_antenna_pattern()
+        if self.config.input_data_type == 'SMAP':
+            self.antenna_file = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/Antenna_patterns/SMAP/RadiometerAntPattern_170830_v011.h5' # Should be in config file and provided in repository
+        elif self.config.input_data_type == 'CIMR':
+            self.antenna_file = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/Antenna_patterns/SMAP/RadiometerAntPattern_170830_v011.h5'
+        # self.antenna_file = '/home/davide/Downloads/CIMR-PAP-FR-L1-TPv0.3.h5'
+        theta, phi, gain_dict = self.get_full_patterns_in_dict(self.antenna_file, phi_range=None, theta_range=None)
 
-    def get_scalar_antenna_pattern(self):
+        self.average_radius = 200000 #this number depends on the instrument. 
+        #it can be computed, but not trivial (create radial bins, find the radius where the gain goes below threshold)
 
-        Ghco = self.gain_dict['G1h'] + 1j * self.gain_dict['G2h']
-        Ghcx = self.gain_dict['G3h'] + 1j * self.gain_dict['G4h']
-        Gvco = self.gain_dict['G1v'] + 1j * self.gain_dict['G2v']
-        Gvcx = self.gain_dict['G3v'] + 1j * self.gain_dict['G4v']
+        Ghco = gain_dict['G1h'] + 1j * gain_dict['G2h']
+        Ghcx = gain_dict['G3h'] + 1j * gain_dict['G4h']
+        Gvco = gain_dict['G1v'] + 1j * gain_dict['G2v']
+        Gvcx = gain_dict['G3v'] + 1j * gain_dict['G4v']
 
-        Ghco_norm = np.abs(Ghco)
-        Ghcx_norm = np.abs(Ghcx)
-        Gvco_norm = np.abs(Gvco)
-        Gvcx_norm = np.abs(Gvcx)
+        Gnorm = 0.5* (np.sqrt(np.abs(Ghco)**2+np.abs(Ghcx)**2) + np.sqrt(np.abs(Gvco)**2+np.abs(Gvcx)**2))
 
-        Gv = np.sqrt(Gvco_norm**2 + Gvcx_norm**2)
-        Gh = np.sqrt(Ghco_norm**2 + Ghcx_norm**2)
+        mask = Gnorm < 10**(threshold_dB/10.)
+        Ghco[mask] = 0.
+        Ghcx[mask] = 0.
+        Gvco[mask] = 0.
+        Gvcx[mask] = 0.
 
-        Gscalar = 0.5*(Gv + Gh)
-        mask = Gscalar < 0.01
-        Gscalar[mask] = 0.
+        f_gain_hco = RegularGridInterpolator((phi, theta), Ghco)
+        f_gain_hcx = RegularGridInterpolator((phi, theta), Ghcx)
+        f_gain_vco = RegularGridInterpolator((phi, theta), Gvco)
+        f_gain_vcx = RegularGridInterpolator((phi, theta), Gvcx)
+            
+        self.scalar_gain_function = self.get_scalar_antenna_pattern(f_gain_hco, f_gain_hcx, f_gain_vco, f_gain_vcx)
+        self.mueller_matrix_function = self.get_mueller_matrix(f_gain_hco, f_gain_hcx, f_gain_vco, f_gain_vcx)
 
-        return Gscalar
+        return
+    
+
+    def get_scalar_antenna_pattern(self, f_gain_hco, f_gain_hcx, f_gain_vco, f_gain_vcx):
+
+        def f_scalar_gain(phi, theta):
+            Ghco_norm = np.abs(f_gain_hco((phi, theta)))
+            Ghcx_norm = np.abs(f_gain_hcx((phi, theta)))
+            Gvco_norm = np.abs(f_gain_vco((phi, theta)))
+            Gvcx_norm = np.abs(f_gain_vcx((phi, theta)))
+            Gv = np.sqrt(Gvco_norm**2 + Gvcx_norm**2)
+            Gh = np.sqrt(Ghco_norm**2 + Ghcx_norm**2)
+            Gscalar = 0.5*(Gv + Gh)
+            return Gscalar
+        
+        return f_scalar_gain
 
 
-    def get_mueller_matrix(self):
+    def get_mueller_matrix(self, f_gain_hco, f_gain_hcx, f_gain_vco, f_gain_vcx, threshold_dB=1e40):
 
-        Ghh = self.gain_dict('G1h') + 1j * self.gain_dict('G2h')
-        Ghv = self.gain_dict('G3h') + 1j * self.gain_dict('G4h')
-        Gvv = self.gain_dict('G1v') + 1j * self.gain_dict('G2v')
-        Gvh = self.gain_dict('G3v') + 1j * self.gain_dict('G4v')           
+        def f_mueller_matrix(phi, theta):
 
-        n1, n2 = Ghh.shape
-        G = np.zeros((4, 4, n1, n2))
+            Ghh = f_gain_hco((phi, theta))    #check the hh means hcross, etc.. 
+            Ghv = f_gain_hcx((phi, theta))
+            Gvv = f_gain_vco((phi, theta))
+            Gvh = f_gain_vcx((phi, theta))
 
-        G[0, 0] = np.abs(Gvv)**2
-        G[0, 1] = np.abs(Gvh)**2
-        G[0, 2] = np.real(Gvh*np.conj(Gvv))
-        G[0, 3] = np.imag(Gvh*np.conj(Gvv))
-        G[1, 0] = np.abs(Ghv)**2
-        G[1, 1] = np.abs(Ghh)**2
-        G[1, 2] = np.real(Ghh*np.conj(Ghv))
-        G[1, 3] = np.imag(Ghh*np.conj(Ghv))
-        G[2, 0] = 2. * np.real(Gvv*np.conj(Ghv))
-        G[2, 1] = 2. * np.real(Gvh*np.conj(Ghh))
-        G[2, 2] = np.real(Gvv*np.conj(Ghh)+Gvh*np.conj(Ghv))
-        G[2, 3] = -np.imag(Gvv*np.conj(Ghh)-Gvh*np.conj(Ghv))
-        G[3, 0] = 2. * np.imag(Gvv*np.conj(Ghv))
-        G[3, 1] = 2. * np.imag(Gvh*np.conj(Ghh))
-        G[3, 2] = np.imag(Gvv*np.conj(Ghh)+Gvh*np.conj(Ghv))
-        G[3, 3] = np.real(Gvv*np.conj(Ghh)-Gvh*np.conj(Ghv))
+            n1, n2 = Ghh.shape
+            G = np.zeros((4, 4, n1, n2))
 
-        return G
+            G[0, 0] = np.abs(Gvv)**2
+            G[0, 1] = np.abs(Gvh)**2
+            G[0, 2] = np.real(Gvh*np.conj(Gvv))
+            G[0, 3] = np.imag(Gvh*np.conj(Gvv))
+            G[1, 0] = np.abs(Ghv)**2
+            G[1, 1] = np.abs(Ghh)**2
+            G[1, 2] = np.real(Ghh*np.conj(Ghv))
+            G[1, 3] = np.imag(Ghh*np.conj(Ghv))
+            G[2, 0] = 2. * np.real(Gvv*np.conj(Ghv))
+            G[2, 1] = 2. * np.real(Gvh*np.conj(Ghh))
+            G[2, 2] = np.real(Gvv*np.conj(Ghh)+Gvh*np.conj(Ghv))
+            G[2, 3] = -np.imag(Gvv*np.conj(Ghh)-Gvh*np.conj(Ghv))
+            G[3, 0] = 2. * np.imag(Gvv*np.conj(Ghv))
+            G[3, 1] = 2. * np.imag(Gvh*np.conj(Ghh))
+            G[3, 2] = np.imag(Gvv*np.conj(Ghh)+Gvh*np.conj(Ghv))
+            G[3, 3] = np.real(Gvv*np.conj(Ghh)-Gvh*np.conj(Ghv))
+
+            return G
+        
+        return f_mueller_matrix
+
         
     @staticmethod
     def get_full_patterns_in_dict(antenna_file, phi_range=None, theta_range=None):
@@ -81,7 +111,7 @@ class AntennaPattern:
                 mask_phi   = np.logical_and(phi > phi_range[0], phi < phi_range[1])
                 phi = phi[mask_phi]
 
-            if phi_range is not None:
+            if theta_range is not None:
                 mask_theta = np.logical_and(theta > theta_range[0], theta < theta_range[1])
                 theta = theta[mask_theta]
 
@@ -100,46 +130,66 @@ class AntennaPattern:
         return theta, phi, gain_dict
         
 
+    def make_integration_grid(self, longitudes, latitudes, margin=None):
 
-    def make_integration_grid(self, lon_target, lat_target):
+        longitudes = np.array(longitudes)
+        latitudes  = np.array(latitudes)
 
-        #size of the interpolation grid, we could choose it based on the position of the antenna patterns
-        dx = 500000.
+        gdef = self.config.grid_definition
+        pdef = self.config.projection_definition
 
-        if np.abs(lat_target) < 83.: # 75
-            # Check that this doesnt permanently change the config object in other places in the file.
-            # Temporary fix to not permenently change the config object.
-            original_grid_definition = self.config.grid_definition
+        if np.all(np.abs(latitudes) <= 75.): # 83.
             self.config.grid_definition = 'EASE2_G3km'
             self.config.projection_definition = 'G'
-            x0, y0 = GridGenerator(self.config).lonlat_to_xy(lon_target, lat_target)
-            xmin = x0 - dx/2
-            xmax = x0 + dx/2
-            ymin = y0 - dx/2
-            ymax = y0 + dx/2
-            xs, ys = GridGenerator(self.config).generate_grid_xy()
-            xs = xs[np.logical_and(xs > xmin, xs < xmax)]
-            ys = ys[np.logical_and(ys > ymin, ys < ymax)]
-            lons, lats = GridGenerator(self.config).xy_to_lonlat(xs, ys)
-            lons, lats = np.meshgrid(lons, lats)
-            self.config.grid_definition = original_grid_definition
-        else:
-            original_grid_definition = self.config.grid_definition
+
+        elif np.any(latitudes > 75.):
             self.config.grid_definition = 'EASE2_N3km'
             self.config.projection_definition = 'N'
-            x0, y0 = GridGenerator(self.config).lonlat_to_xy(lon_target, lat_target)
-            xmin = x0 - dx
-            xmax = x0 + dx
-            ymin = y0 - dx
-            ymax = y0 + dx
-            xs, ys = GridGenerator(self.config).generate_grid_xy()
+
+        elif np.any(latitudes < -75.):
+            self.config.grid_definition = 'EASE2_S3km'
+            self.config.projection_definition = 'S'
+
+        xpoints = []
+        ypoints = []
+        for lon, lat in zip(longitudes, latitudes):
+            x0, y0 = GridGenerator(self.config).lonlat_to_xy(lon, lat)
+            xpoints.append(x0)
+            ypoints.append(y0)
+        if margin is None:
+            margin = self.average_radius
+        xmin = np.min(xpoints) - margin
+        xmax = np.max(xpoints) + margin
+        ymin = np.min(ypoints) - margin
+        ymax = np.max(ypoints) + margin
+
+        xs, ys = GridGenerator(self.config).generate_grid_xy()
+        xeasemin = xs.min() #should be the cell edge, not the cell center
+        xeasemax = xs.max() #should be the cell edge, not the cell center
+
+        if self.config.projection_definition == 'G':
+            xmin1 = xeasemax
+            xmax1 = xeasemin
+            if xmin < xeasemin:
+                xmin1 = xeasemax - (xeasemin - xmin)
+            if xmax > xeasemax:
+                xmax1 = xeasemin + (xmax - xeasemax)
+
+            xs = np.concatenate((xs[xs > xmin1], xs[np.logical_and(xs > xmin, xs < xmax)], xs[xs < xmax1]))
+            ys = ys[np.logical_and(ys > ymin, ys < ymax)]
+
+        else:
             xs = xs[np.logical_and(xs > xmin, xs < xmax)]
             ys = ys[np.logical_and(ys > ymin, ys < ymax)]
-            xs, ys = np.meshgrid(xs, ys)
-            lons, lats = GridGenerator(self.config).xy_to_lonlat(xs, ys)
-            self.config.grid_definition = original_grid_definition
+
+        Xs, Ys = np.meshgrid(xs, ys)        
+        lons, lats = GridGenerator(self.config).xy_to_lonlat(Xs, Ys)
+
+        self.config.grid_definition = gdef
+        self.config.projection_definition = pdef
 
         return lons, lats
+
 
     @staticmethod
     def make_gaussian(grid_lons, grid_lats, lon0, lat0, slon, slat, rot=0.):
@@ -155,42 +205,20 @@ class AntennaPattern:
         
         return Z
 
-    def get_l1b_data(self, var, scan_ind, earth_sample_ind=None):
-        # This is just a placeholder function for now
-        # We should be able to get the data directly from the file
-        # and this should be passed from the DataIngestion
-        # and should be in some sort of data_dict.
-        with h5py.File(self.config.input_data_path, 'r') as data:
-            spacecraft = data['Spacecraft_Data']
-            measurement = data['Brightness_Temperature']
-            try:
-                var_data = spacecraft[var][:]
-            except:
-                try:
-                    var_data = measurement[var][:].flatten()
-                    # This is a temporary solution as we remove the Nans from the data
-                    # in order to be able to use the search tree.
-                    # There might be problems here if things arent working.
+    def get_l1b_data(self, data_dict, var, scan_ind, earth_sample_ind):
+        if var in getattr(self.config, 'variables_1d', []):
+            return data_dict[var][scan_ind]
+        else:
+            return data_dict[var][earth_sample_ind]
 
-                    var_data = var_data[self.config.non_nan_mask]
-                except:
-                    print(f"{var} not found in L1b file")
-                    exit()
-                    return
 
-            if scan_ind is None and earth_sample_ind is None:
-                return var_data
-            elif earth_sample_ind is None:
-                return var_data[scan_ind]
-            else:
-                flattened_ind = np.ravel_multi_index((scan_ind, earth_sample_ind), (779, 241))
-                return var_data[flattened_ind]
 
-    def antenna_pattern_to_earth_simplified(self, scan_ind, earth_sample_ind, int_dom_lons, int_dom_lats, use_full_mueller_matrix=False):
+    #this function can be removed
+    def antenna_pattern_to_earth_simplified(self, data_dict, scan_ind, earth_sample_ind, int_dom_lons, int_dom_lats, use_full_mueller_matrix=False):
 
-        x_pos = self.get_l1b_data('x_pos', scan_ind, None)
-        y_pos = self.get_l1b_data('y_pos', scan_ind, None)
-        z_pos = self.get_l1b_data('z_pos', scan_ind, None)    
+        x_pos = self.get_l1b_data(data_dict,'x_pos', scan_ind, None)
+        y_pos = self.get_l1b_data(data_dict,'y_pos', scan_ind, None)
+        z_pos = self.get_l1b_data(data_dict,'z_pos', scan_ind, None)
 
         lonb, latb = self.boresight_to_earth(scan_ind, earth_sample_ind)      
     
@@ -232,32 +260,38 @@ class AntennaPattern:
         phi = 0. #this is the big simplification! I assume azimuthal simmetry, so I don't need to care about the scan angle
 
         if not use_full_mueller_matrix:
-            gain = self.scalar_antenna_pattern
-            Ginterp  = RegularGridInterpolator((self.phi, self.theta), gain)((phi, theta))
+            Ginterp  = self.scalar_gain_function(phi, theta)
             Ginterp *= cos_angle_proj
 
         else:
-            gain = self.get_mueller_matrix()
-            _, _, n1, n2 = gain.shape
-            Ginterp = np.zeros((4, 4, n1, n2))
-            for i in range(4):
-                for j in range(4):
-                     Ginterp[i, j]  = RegularGridInterpolator((self.phi, self.theta), gain[i, j])((phi, theta))
-                     Ginterp[i, j] *= cos_angle_proj
+            Ginterp = self.mueller_matrix_function(phi, theta)
+            Ginterp *= cos_angle_proj 
 
         return Ginterp
 
 
-    def antenna_pattern_from_boresight(self, scan_ind,
-                                       boresight_lon, boresight_lat, 
+    def antenna_pattern_from_boresight(self,data_dict,
+                                       boresight_lon, boresight_lat,
                                        int_dom_lons, int_dom_lats, 
-                                       use_full_mueller_matrix=False):
-                        
-        x_pos = self.get_l1b_data('x_pos', scan_ind, None)
-        y_pos = self.get_l1b_data('y_pos', scan_ind, None)
-        z_pos = self.get_l1b_data('z_pos', scan_ind, None)
-        nadir_lon = self.get_l1b_data('sc_nadir_lon', scan_ind, None)
-        nadir_lat = self.get_l1b_data('sc_nadir_lat', scan_ind, None)
+                                       use_full_mueller_matrix=False, scan_ind=None, earth_sample_ind=None):
+        
+        """
+        It uses the boresight location on Earth and satellite position from L1b data to project an 
+        antenna pattern on Earth. Currently it doens't include roll, pitch and yaw.
+        """
+        if hasattr(self.config, 'variables_1d'):
+            x_pos = self.get_l1b_data(data_dict,'x_pos', scan_ind, None)
+            y_pos = self.get_l1b_data(data_dict,'y_pos', scan_ind, None)
+            z_pos = self.get_l1b_data(data_dict,'z_pos', scan_ind, None)
+            nadir_lon = self.get_l1b_data(data_dict,'sc_nadir_lon', scan_ind, None)
+            nadir_lat = self.get_l1b_data(data_dict,'sc_nadir_lat', scan_ind, None)
+        else:
+            x_pos = self.get_l1b_data(data_dict, 'x_pos', scan_ind, earth_sample_ind)
+            y_pos = self.get_l1b_data(data_dict, 'y_pos', scan_ind, earth_sample_ind)
+            z_pos = self.get_l1b_data(data_dict, 'z_pos', scan_ind, earth_sample_ind)
+            nadir_lon = self.get_l1b_data(data_dict, 'sc_nadir_lon', scan_ind, earth_sample_ind)
+            nadir_lat = self.get_l1b_data(data_dict, 'sc_nadir_lat', scan_ind, earth_sample_ind)
+
         
         crs_ecef = CRS.from_epsg(4978)
         crs_wgs84 = CRS.from_epsg(4326)
@@ -312,38 +346,26 @@ class AntennaPattern:
         phi[phi<0] += 2.*np.pi
 
         if not use_full_mueller_matrix:
-            gain = self.scalar_antenna_pattern
-            Ginterp  = RegularGridInterpolator((self.phi, self.theta), gain)((phi, theta))
+            Ginterp  = self.scalar_gain_function(phi, theta)
             Ginterp *= cos_angle_proj
 
         else:
-            gain = self.get_mueller_matrix()
-            _, _, n1, n2 = gain.shape
-            Ginterp = np.zeros((4, 4, n1, n2))
-            for i in range(4):
-                for j in range(4):
-                     Ginterp[i, j]  = RegularGridInterpolator((self.phi, self.theta), gain[i, j])((phi, theta))
-                     Ginterp[i, j] *= cos_angle_proj
+            Ginterp = self.mueller_matrix_function(phi, theta)
+            ## here some code changing the components of the mueller matrix because of the change in polarization basis
+            Ginterp *= cos_angle_proj
 
         return Ginterp      
 
 
-    def antenna_pattern_to_earth(self, scan_ind, earth_sample_ind, int_dom_lons, int_dom_lats, use_full_mueller_matrix=False):
+    def antenna_pattern_to_earth(self, data_dict, scan_ind, earth_sample_ind, int_dom_lons, int_dom_lats, use_full_mueller_matrix=False):
 
-        # For now we will grab the data directly from the file
-        # However, this could/should be passed from the DataIngestion
-        # and should be in some sort of data_dict.
-
-        scan_angle = self.get_l1b_data('antenna_scan_angle', scan_ind, earth_sample_ind)
-        x_pos = self.get_l1b_data('x_pos', scan_ind, None)
-        y_pos = self.get_l1b_data('y_pos', scan_ind, None)
-        z_pos = self.get_l1b_data('z_pos', scan_ind, None)
-        x_vel = self.get_l1b_data('x_vel', scan_ind, None)
-        y_vel = self.get_l1b_data('y_vel', scan_ind, None)
-        z_vel = self.get_l1b_data('z_vel', scan_ind, None)
-        pitch = self.get_l1b_data('pitch', scan_ind, None)
-        roll = self.get_l1b_data('roll', scan_ind, None)
-        yaw = self.get_l1b_data('yaw', scan_ind, None)
+        scan_angle = self.get_l1b_data(data_dict,'antenna_scan_angle', scan_ind, earth_sample_ind)
+        x_pos = self.get_l1b_data(data_dict,'x_pos', scan_ind, None)
+        y_pos = self.get_l1b_data(data_dict,'y_pos', scan_ind, None)
+        z_pos = self.get_l1b_data(data_dict,'z_pos', scan_ind, None)
+        x_vel = self.get_l1b_data(data_dict,'x_vel', scan_ind, None)
+        y_vel = self.get_l1b_data(data_dict,'y_vel', scan_ind, None)
+        z_vel = self.get_l1b_data(data_dict,'z_vel', scan_ind, None)
 
         crs_ecef = CRS.from_epsg(4978)
         crs_wgs84 = CRS.from_epsg(4326)
@@ -412,38 +434,29 @@ class AntennaPattern:
 
         phi[phi < 0] += 2. * np.pi
 
-        # Interpolation should "conserve power" according to Joey Tennerelli
-        # To be discussed
-
         if not use_full_mueller_matrix:
-            gain = self.scalar_antenna_pattern
-            Ginterp  = RegularGridInterpolator((self.phi, self.theta), gain)((phi, theta))
+            Ginterp  = self.scalar_gain_function(phi, theta)
             Ginterp *= cos_angle_proj
 
         else:
-            gain = self.get_mueller_matrix()
-            _, _, n1, n2 = gain.shape
-            Ginterp = np.zeros((4, 4, n1, n2))
-            for i in range(4):
-                for j in range(4):
-                     Ginterp[i, j]  = RegularGridInterpolator((self.phi, self.theta), gain[i, j])((phi, theta))
-                     Ginterp[i, j] *= cos_angle_proj
+            Ginterp = self.mueller_matrix_function(phi, theta)
+            Ginterp *= cos_angle_proj
 
-        return Ginterp
-    
+        return Ginterp    
 
-    def boresight_to_earth(self, scan_ind, earth_sample_ind):
 
-        scan_angle = self.get_l1b_data('antenna_scan_angle', scan_ind, earth_sample_ind)
-        x_pos = self.get_l1b_data('x_pos', scan_ind, None)
-        y_pos = self.get_l1b_data('y_pos', scan_ind, None)
-        z_pos = self.get_l1b_data('z_pos', scan_ind, None)
-        x_vel = self.get_l1b_data('x_vel', scan_ind, None)
-        y_vel = self.get_l1b_data('y_vel', scan_ind, None)
-        z_vel = self.get_l1b_data('z_vel', scan_ind, None)
-        pitch = self.get_l1b_data('pitch', scan_ind, None)
-        roll = self.get_l1b_data('roll', scan_ind, None)
-        yaw = self.get_l1b_data('yaw', scan_ind, None)
+    def boresight_to_earth(self,data_dict, scan_ind, earth_sample_ind):
+
+        scan_angle = self.get_l1b_data(data_dict,'antenna_scan_angle', scan_ind, earth_sample_ind)
+        x_pos = self.get_l1b_data(data_dict,'x_pos', scan_ind, None)
+        y_pos = self.get_l1b_data(data_dict,'y_pos', scan_ind, None)
+        z_pos = self.get_l1b_data(data_dict,'z_pos', scan_ind, None)
+        x_vel = self.get_l1b_data(data_dict,'x_vel', scan_ind, None)
+        y_vel = self.get_l1b_data(data_dict,'y_vel', scan_ind, None)
+        z_vel = self.get_l1b_data(data_dict,'z_vel', scan_ind, None)
+        pitch = self.get_l1b_data(data_dict,'pitch', scan_ind, None)
+        roll = self.get_l1b_data(data_dict,'roll', scan_ind, None)
+        yaw = self.get_l1b_data(data_dict,'yaw', scan_ind, None)
     
         P0         = np.array([x_pos, y_pos, z_pos])
         tilt_angle = np.deg2rad(144.54)
@@ -499,8 +512,11 @@ class AntennaPattern:
 
 # scan_ind = 81038 // 241
 # earth_sample_ind = 81038 % 241
+# #scan_ind = 27
+# #earth_sample_ind = 27
 
 # lon, lat = 124.9500000000116, 6.749999992828501
+# #lon, lat = -179.91505, 84.00648
 
 # from data_ingestion import DataIngestion
 # import os
@@ -511,9 +527,12 @@ class AntennaPattern:
 
 # AP = AntennaPattern(config)
 
-# int_dom_lons, int_dom_lats = AP.make_integration_grid(lon_target=lon, lat_target=lat)
+# int_dom_lons, int_dom_lats = AP.make_integration_grid([lon], [lat])
+
+# t = time.time()
 # pattern = AP.antenna_pattern_from_boresight(scan_ind, lon, lat, int_dom_lons, int_dom_lats)
+# print('time for projection: ', time.time()-t)
 
 # import matplotlib.pyplot as plt
-# plt.imshow(pattern)
+# plt.imshow(pattern); plt.colorbar()
 # plt.show()
