@@ -10,7 +10,7 @@ process.
 
 import re
 from numpy import (array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile, repeat, arange,
-                   isnan, delete, where, concatenate, full, newaxis, float32, asarray, any)
+                   isnan, delete, where, concatenate, full, newaxis, float32, asarray, any, atleast_1d)
 from config_file import ConfigFile
 from utils import remove_overlap
 from grid_generator import GRIDS, GridGenerator
@@ -278,9 +278,10 @@ class DataIngestion:
                     variable_dict = {}
 
                     # Extract Feed offsets and u, v to add to config
-                    scan_angle_feeds_offsets = band_data['scan_angle_feeds_offsets'][:]
-                    self.config.scan_angle_feed_offsets[band]=scan_angle_feeds_offsets
-                    self.config.u0[band], self.config.v0[band] = getattr(band_data, 'uo'), getattr(band_data, 'vo')
+                    scan_angle_feeds_offsets = band_data['scan_angle_feeds_offsets_relative_to_reflector'][:]
+                    self.config.scan_angle_feed_offsets[band]=atleast_1d(scan_angle_feeds_offsets)
+                    self.config.u0[band] = atleast_1d(getattr(band_data, 'uo'))
+                    self.config.v0[band] = atleast_1d(getattr(band_data, 'vo'))
 
                     # Extract variables (This can be tweaked to remove variables for Non-AP algorithms)
                     required_variables = ['longitude', 'latitude', 'processing_scan_angle',

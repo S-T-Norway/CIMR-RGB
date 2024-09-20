@@ -30,6 +30,9 @@ class AntennaPattern:
         Gvco = gain_dict['G1v'] + 1j * gain_dict['G2v']
         Gvcx = gain_dict['G3v'] + 1j * gain_dict['G4v']
 
+        plt.imshow(np.log10(abs(Ghco)))
+        plt.show()
+
         Gnorm = 0.5* (np.sqrt(np.abs(Ghco)**2+np.abs(Ghcx)**2) + np.sqrt(np.abs(Gvco)**2+np.abs(Gvcx)**2))
 
         mask = Gnorm < 10**(threshold_dB/10.)
