@@ -149,9 +149,13 @@ class DataIngestion:
                 coreg_b = self.amsr2_coreg_extraction(data.attrs['CoRegistrationParameterA2'][0])
                 overlap = int(data.attrs['OverlapScans'][0])
                 num_scans = int(data.attrs['NumberOfScans'][0])
-                self.config.num_scans = num_scans
-                self.config.AM2_DEF_SNUM_HI = AM2_DEF_SNUM_HI
-                self.config.AM2_DEF_SNUM_LOW = AM2_DEF_SNUM_LOW
+                self.config.num_target_scans = num_scans
+
+                if ['89a', '89b'] in self.config.target_band:
+                    self.config.num_target_samples = AM2_DEF_SNUM_HI
+                else:
+                    self.config.num_target_samples = AM2_DEF_SNUM_LOW
+
 
                 if not num_scans <= self.config.LMT:
                     raise ValueError(
@@ -479,8 +483,6 @@ class DataIngestion:
                 data_dict[band] = variable_dict
         return data_dict
 
-
-
     def amsr2_latlon_conversion(self, coreg_a, coreg_b, lons_hi, lats_hi):
         """
         Obtains the latitudes and longitudes of the lower frequency channels from the
@@ -508,10 +510,10 @@ class DataIngestion:
         deg = 180.0 / pi
 
         # Initiate lower frequency channel lat/lon arrays
-        lats_lo = zeros((self.config.num_scans, AM2_DEF_SNUM_LOW))
-        lons_lo = zeros((self.config.num_scans, AM2_DEF_SNUM_LOW))
+        lats_lo = zeros((self.config.num_target_scans, AM2_DEF_SNUM_LOW))
+        lons_lo = zeros((self.config.num_target_scans, AM2_DEF_SNUM_LOW))
 
-        for scan in range(self.config.num_scans):
+        for scan in range(self.config.num_target_scans):
             for sample in range(AM2_DEF_SNUM_LOW):
                 lat_1 = lats_hi[scan, sample * 2 + 0]
                 lat_2 = lats_hi[scan, sample * 2 + 1]
@@ -648,8 +650,9 @@ class DataIngestion:
             data_dict[band]['sample_number'] = float32(tile(arange(num_samples), (num_scans, 1)))
 
         # Remove out of bounds inds
-        for band in data_dict:
-            data_dict[band] = self.remove_out_of_bounds(data_dict[band])
+        if self.config.grid_type != 'L1R':
+            for band in data_dict:
+                data_dict[band] = self.remove_out_of_bounds(data_dict[band])
 
         # Flatten data
         for band in data_dict:
