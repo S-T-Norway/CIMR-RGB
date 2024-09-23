@@ -10,7 +10,7 @@ process.
 
 import re
 from numpy import (array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile, repeat, arange,
-                   isnan, delete, where, concatenate, full, newaxis, float32, asarray, any)
+                   isnan, delete, where, concatenate, full, newaxis, float32, asarray, any, atleast_1d)
 from config_file import ConfigFile
 from utils import remove_overlap
 from grid_generator import GRIDS, GridGenerator
@@ -149,9 +149,13 @@ class DataIngestion:
                 coreg_b = self.amsr2_coreg_extraction(data.attrs['CoRegistrationParameterA2'][0])
                 overlap = int(data.attrs['OverlapScans'][0])
                 num_scans = int(data.attrs['NumberOfScans'][0])
-                self.config.num_scans = num_scans
-                self.config.AM2_DEF_SNUM_HI = AM2_DEF_SNUM_HI
-                self.config.AM2_DEF_SNUM_LOW = AM2_DEF_SNUM_LOW
+                self.config.num_target_scans = num_scans
+
+                if ['89a', '89b'] in self.config.target_band:
+                    self.config.num_target_samples = AM2_DEF_SNUM_HI
+                else:
+                    self.config.num_target_samples = AM2_DEF_SNUM_LOW
+
 
                 if not num_scans <= self.config.LMT:
                     raise ValueError(
@@ -278,9 +282,10 @@ class DataIngestion:
                     variable_dict = {}
 
                     # Extract Feed offsets and u, v to add to config
-                    scan_angle_feeds_offsets = band_data['scan_angle_feeds_offsets'][:]
-                    self.config.scan_angle_feed_offsets[band]=scan_angle_feeds_offsets
-                    self.config.u0[band], self.config.v0[band] = getattr(band_data, 'uo'), getattr(band_data, 'vo')
+                    scan_angle_feeds_offsets = band_data['scan_angle_feeds_offsets_relative_to_reflector'][:]
+                    self.config.scan_angle_feed_offsets[band]=atleast_1d(scan_angle_feeds_offsets)
+                    self.config.u0[band] = atleast_1d(getattr(band_data, 'uo'))
+                    self.config.v0[band] = atleast_1d(getattr(band_data, 'vo'))
 
                     # Extract variables (This can be tweaked to remove variables for Non-AP algorithms)
                     required_variables = ['longitude', 'latitude', 'processing_scan_angle',
@@ -478,8 +483,6 @@ class DataIngestion:
                 data_dict[band] = variable_dict
         return data_dict
 
-
-
     def amsr2_latlon_conversion(self, coreg_a, coreg_b, lons_hi, lats_hi):
         """
         Obtains the latitudes and longitudes of the lower frequency channels from the
@@ -507,10 +510,10 @@ class DataIngestion:
         deg = 180.0 / pi
 
         # Initiate lower frequency channel lat/lon arrays
-        lats_lo = zeros((self.config.num_scans, AM2_DEF_SNUM_LOW))
-        lons_lo = zeros((self.config.num_scans, AM2_DEF_SNUM_LOW))
+        lats_lo = zeros((self.config.num_target_scans, AM2_DEF_SNUM_LOW))
+        lons_lo = zeros((self.config.num_target_scans, AM2_DEF_SNUM_LOW))
 
-        for scan in range(self.config.num_scans):
+        for scan in range(self.config.num_target_scans):
             for sample in range(AM2_DEF_SNUM_LOW):
                 lat_1 = lats_hi[scan, sample * 2 + 0]
                 lat_2 = lats_hi[scan, sample * 2 + 1]
@@ -647,8 +650,9 @@ class DataIngestion:
             data_dict[band]['sample_number'] = float32(tile(arange(num_samples), (num_scans, 1)))
 
         # Remove out of bounds inds
-        for band in data_dict:
-            data_dict[band] = self.remove_out_of_bounds(data_dict[band])
+        if self.config.grid_type != 'L1R':
+            for band in data_dict:
+                data_dict[band] = self.remove_out_of_bounds(data_dict[band])
 
         # Flatten data
         for band in data_dict:
