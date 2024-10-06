@@ -6,7 +6,12 @@ dpr/L1C/CIMR/RGB/*
 # The file is too big to put it in the repo 
 dpr/L1B/SMAP/RadiometerAntPattern_170830_v011.h5 
 dpr/AP 
-dpr/AP_all 
+dpr/AP_all
+/src/cimr_rgb/test/*log 
+/src/cimr_rgb/*log
+/src/*log 
+/*log 
+*log 
 
 # --------------------------------------
 # Python-specific ignores 

@@ -79,12 +79,16 @@ class DataIngestion:
         """
         self.config = config_object
 
+
     def remove_out_of_bounds(self, data_dict):
+
         grid = GRIDS[self.config.grid_definition]
         x_bound_min = grid['x_min'] - 0.5 * grid['res']
         x_bound_max = grid['x_min'] + grid['n_cols']*grid['res'] + 0.5 * grid['res']
         y_bound_max = grid['y_max'] + 0.5 * grid['res']
         y_bound_min = grid['y_max'] - grid['n_rows']*grid['res'] - 0.5 * grid['res']
+
+        print(f"longitude is of shape: {data_dict['longitude'].shape}")
 
         source_x, source_y = GridGenerator(self.config).lonlat_to_xy(
             lon=data_dict['longitude'],
@@ -92,10 +96,12 @@ class DataIngestion:
         )
 
         out_of_bound_inds = where((source_y < y_bound_min) | (source_y > y_bound_max))
+
         for variable in data_dict:
             data_dict[variable][out_of_bound_inds] = nan
 
         return data_dict
+
 
     @staticmethod
     def amsr2_coreg_extraction(coreg_parameters):
@@ -123,6 +129,7 @@ class DataIngestion:
             else:
                 params_floats.append(float(param[1:]))
         return params_floats
+
 
     def read_hdf5(self):
         """
@@ -238,6 +245,8 @@ class DataIngestion:
                         variable_dict[variable] = tile(variable_dict[variable], (num_samples, 1)).T
 
                 # Remove out of bounds
+                # 
+                # [Note]: This method calls in the generate_grid method under the hood 
                 variable_dict = self.remove_out_of_bounds(variable_dict)
 
                 # Split Fore/Aft and Flatten
@@ -351,6 +360,7 @@ class DataIngestion:
 
         return data_dict
 
+
     @staticmethod
     def extract_smap_qc(qc_dict):
         """
@@ -374,6 +384,7 @@ class DataIngestion:
             qc_dict[qc] = where(qc_dict[qc] == 0, 1, nan)
         return qc_dict
 
+
     @staticmethod
     def apply_smap_qc(qc_dict, data_dict):
         """
@@ -394,11 +405,14 @@ class DataIngestion:
             data with quality control values applied.
 
         """
+
         data_dict['bt_h_target'] = data_dict['bt_h_target'] * qc_dict['bt_h_qc']
         data_dict['bt_v_target'] = data_dict['bt_v_target'] * qc_dict['bt_v_qc']
         data_dict['bt_3_target'] = data_dict['bt_3_target'] * qc_dict['bt_3_qc']
         data_dict['bt_4_target'] = data_dict['bt_4_target'] * qc_dict['bt_4_qc']
+
         return data_dict
+
 
     def clean_data(self, data_dict):
         """
@@ -562,6 +576,7 @@ class DataIngestion:
 
         return lats_lo, lons_lo
 
+
     def combine_cimr_feeds(self, variable_dict, num_feed_horns):
         """
         :param data_dict:
@@ -601,6 +616,7 @@ class DataIngestion:
         variable_dict['feed_horn_number'] = float32(feed_horn_number.flatten('C'))
 
         return variable_dict
+
 
     def ingest_amsr2(self):
         """
@@ -659,6 +675,7 @@ class DataIngestion:
         data_dict = self.clean_data(data_dict)
         return data_dict
 
+
     def ingest_smap(self):
         """
         Ingests AMSR2 data from the user specified path
@@ -669,11 +686,13 @@ class DataIngestion:
         data_dict: dict
             Dictionary containing the data extracted from the HDF5 file.
         """
+        print("read_hdf5")
         data_dict = self.read_hdf5()
         data_dict = self.clean_data(data_dict)
         # qc_dict = self.extract_smap_qc(qc_dict)
         # data_dict = self.apply_smap_qc(qc_dict, data_dict)
         return data_dict
+
 
     def ingest_cimr(self):
         """
@@ -685,6 +704,7 @@ class DataIngestion:
         data_dict = self.clean_data(data_dict)
         # Apply QC as and when
         return data_dict
+
 
     def ingest_data(self):
         """
@@ -698,6 +718,7 @@ class DataIngestion:
         if self.config.input_data_type == "AMSR2":
             return self.ingest_amsr2()
         if self.config.input_data_type == "SMAP":
+            print("ingest_smap")
             return self.ingest_smap()
         if self.config.input_data_type == "CIMR":
             return self.ingest_cimr()

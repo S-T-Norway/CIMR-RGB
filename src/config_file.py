@@ -27,6 +27,7 @@ class ConfigFile:
         Validates the configuration variable and returns the value if valid
 
     """
+
     def __init__(self, config_file_path):
         """
         Initializes the ConfigFile class and stores validated
@@ -432,6 +433,7 @@ class ConfigFile:
         valid_input = ['EASE2_G9km', 'EASE2_N9km', 'EASE2_S9km',
                        'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km',
                        'STEREO_N25km', 'STEREO_S25km']
+
         if config_object.find(grid_definition).text in valid_input:
             return config_object.find(grid_definition).text
         raise ValueError(
@@ -458,12 +460,15 @@ class ConfigFile:
         str
             Validated projection definition
         """
+        #print(grid_definition)
         if grid_definition:
             if 'EASE2' in grid_definition:
                 valid_input = ['G', 'N', 'S']
 
             elif 'STEREO' in grid_definition:
-                valid_input = ['SN', 'SS']
+                #valid_input = ['SN', 'SS']
+                valid_input = ['STEREO_N', 'STEREO_S'] 
+                #print(valid_input)
 
             if config_object.find(projection_definition).text in valid_input:
                 return config_object.find(projection_definition).text

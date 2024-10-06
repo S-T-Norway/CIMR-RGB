@@ -1,41 +1,171 @@
-import pathlib as pb  
-import re 
-import glob 
-import numbers 
-import time 
+"""
 
+"""
+# Python STD imports 
+import re 
+import pathlib as pb  
+#import glob 
+#import numbers 
+import time 
+import functools 
+import psutil 
+
+# 3d-party tools 
 import numpy as np 
 import scipy as sp 
 import h5py 
-import xarray as xr 
-import dask 
-import dask.array as da 
-from dask.diagnostics import ProgressBar
-from dask.distributed import Client, LocalCluster 
+#import xarray as xr 
+#import dask 
+#import dask.array as da 
+#from dask.diagnostics import ProgressBar
+#from dask.distributed import Client, LocalCluster 
 import matplotlib
 #import matplotlib.pyplot as plt 
-from   colorama import Fore, Back, Style   
+from   colorama import Fore, Style#, Back   
 import tqdm 
 
+# Custom modules 
 import grasp_io as io 
 import grasp_utils as utils 
+from rgb_logging import RGBLogging 
+
+
+# TODO: Think of different name? 
+#def rgb_profiled(time_it = False, profile_it = False, log = False):
+#
+#    def decorator(func):
+#
+#        def wrapper(*args, **kwargs):
+#
+#            message = ""
+#
+#            if time_it: 
+#                print("Starting Timer") 
+#                start_time   = time.perf_counter()
+#
+#            if profile_it: 
+#                print("Starting Profiler")
+#                start_cpu    = psutil.cpu_percent(interval=None)
+#                start_memory = psutil.Process().memory_info().rss / (1024 * 1024)  # Memory in MB
+#
+#
+#             
+#            result = func(*args, **kwargs)
+#
+#            if time_it: 
+#                end_time     = time.perf_counter()
+#                time_taken   = end_time - start_time
+#
+#                message = f"Function '{func.__name__}' executed in {time_taken:.2f}s. "
+#
+#            if profile_it: 
+#                end_cpu = psutil.cpu_percent(interval=None)
+#                end_memory = psutil.Process().memory_info().rss / (1024 * 1024)  # Memory in MB
+#                cpu_usage = end_cpu - start_cpu
+#                memory_usage = end_memory - start_memory
+#
+#                message = message + "\n" + (
+#                           f"CPU usage: {cpu_usage:.2f}%, "
+#                           f"Memory usage change: {memory_usage:.2f} MB.")
+#            
+#            print(message)
+#
+#            return result
+#
+#        return wrapper 
+#
+#    return decorator  
+#
+#@rgb_profiled(time_it = True, profile_it = True) 
+#def add(a = 2, b = 1):
+#    return a + b 
+#
+#add() 
+#exit() 
+
+
+#def conditional_decorator(condition, decorator):
+#    """
+#    A factory that returns a conditional decorator.
+#    If `condition` is True, applies `decorator`. Otherwise, returns the original function.
+#    
+#    Parameters:
+#    - condition (bool): The condition to check.
+#    - decorator (function): The decorator to apply if the condition is True.
+#    """
+#    def wrapper(func):
+#        # If the condition is true, apply the decorator
+#        if condition:
+#            return decorator(func)
+#        # Otherwise, return the original function
+#        return func
+#    return wrapper
+#
+## Timing decorator
+#def timeit(func):
+#
+#    @functools.wraps(func)
+#    def wrapper(*args, **kwargs):
+#
+#        start_time = time.perf_counter()
+#
+#        result = func(*args, **kwargs)
+#
+#        end_time = time.perf_counter()
+#        time_taken = end_time - start_time
+#
+#        print(f"Function '{func.__name__}' executed in {time_taken:.2f} seconds.")
+#
+#        return result
+#
+#    return wrapper
+#
+#def time_and_track(log=True, to_print=True):
+#    """
+#    Decorator for timing and resource usage (CPU, Memory).
+#    """
+#    def decorator(func):
+#        def wrapper(*args, **kwargs):
+#            # Record the start time and resource usage
+#            start_time = time.perf_counter()
+#            start_cpu = psutil.cpu_percent(interval=None)
+#            start_memory = psutil.Process().memory_info().rss / (1024 * 1024)  # Memory in MB
+#            
+#            # Execute the wrapped function
+#            result = func(*args, **kwargs)
+#            
+#            # Record the end time and resource usage
+#            end_time = time.perf_counter()
+#            end_cpu = psutil.cpu_percent(interval=None)
+#            end_memory = psutil.Process().memory_info().rss / (1024 * 1024)  # Memory in MB
+#            
+#            # Calculate time taken, CPU, and memory usage
+#            time_taken = end_time - start_time
+#            cpu_usage = end_cpu - start_cpu
+#            memory_usage = end_memory - start_memory
+#            
+#            message = (f"Function '{func.__name__}' executed in {time_taken:.4f} seconds, "
+#                       f"CPU usage: {cpu_usage:.2f}%, "
+#                       f"Memory usage change: {memory_usage:.2f} MB.")
+#
+#            # Log and/or print the message
+#            if log:
+#                self.logger.info(message)
+#            if to_print:
+#                print(message)
+#
+#            return result
+#        return wrapper
+#    return decorator
 
 
 
-
+#@conditional_decorator(condition=True, decorator=timeit) 
+#@timeit
+#@rgb_decorator 
 def get_beamdata(beamfile: pb.Path, half_space: str, file_version: float, cimr: dict()) -> dict():  
     """
-    Opens GRASP `grd` file defined in uv-coordinates (IGRID value is 1) and
-    returns electric field values on a (theta, phi) grid. The processing
-    includes: 
-    
-    - Parsing original .grd file  
-    - Recentering the beam grid to center on the max gain value 
-    - Converting (u,v) into (theta,phi) grids 
-    - Interpolating the resulting non-rectilinear grid of (theta,phi) into rectilinear (theta,phi)
-
-    [**Note**]: The data format is described in the `CIMR_Antenna_Patterns_Format.ipynb` 
-    located inside `notebooks` within the repo.   
+    Parses GRASP `grd` file and returns data as dictionary object. 
 
     Parameters:
     -----------
@@ -83,9 +213,8 @@ def get_beamdata(beamfile: pb.Path, half_space: str, file_version: float, cimr: 
         # First 3 lines after ++++  
         info = [line.strip("\n") for i, line in enumerate(bfile)] 
         line_shift = 3
+
         for i in range(0, line_shift):
-            #line_numbers = re.findall(r'-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?',
-            #                          info[i])
             line_numbers = reline_pattern.findall(info[i])
 
             if i == 0 :
@@ -213,8 +342,6 @@ def get_beamdata(beamfile: pb.Path, half_space: str, file_version: float, cimr: 
                 default, so we loop to in_ which is IN in our case. 
                 """
 
-                #exit() 
-
                 for ict in range(in_):
                 #for ict in tqdm.tqdm(range(nxr), desc="NX", leave=False, unit=" col"):
 
@@ -341,9 +468,9 @@ def recenter_beamdata(cimr: dict()) -> dict():
     Gvh_max_value = cimr["temp"]['Gvh'][Gvh_max_index]
 
     print(f"| Ghh_max_value = {Ghh_max_value}")
-    print(f"| Ghv_max_value = {Ghh_max_value}")
-    print(f"| Gvv_max_value = {Ghh_max_value}")
-    print(f"| Gvh_max_value = {Ghh_max_value}")
+    print(f"| Ghv_max_value = {Ghv_max_value}")
+    print(f"| Gvv_max_value = {Gvv_max_value}")
+    print(f"| Gvh_max_value = {Gvh_max_value}")
     
     # Get the coordinates corresponding to maximum gain inside the mesh grids
     # (u, v). This is our new central value.  
@@ -412,17 +539,39 @@ def recenter_beamdata(cimr: dict()) -> dict():
 
 
 # TODO: This method does not work properly if we have a numpy arrays inside
-# nested dictionaries. BUT, it works for the empty dictionries  
+#       nested dictionaries. BUT, it works for the empty dictionaries  
 def is_nested_dict_empty(d):
     if not isinstance(d, dict) or not d:  # If it's not a dictionary or the dictionary is empty
         return not d
     return all(is_nested_dict_empty(v) for v in d.values())
 
 
-def main(datadir, outdir, file_version, 
-         use_bhs: bool = False, recenter_beam: bool = True) -> None:     
+def main(datadir:            str | pb.Path, 
+         outdir:             str | pb.Path, 
+         file_version:       str, 
+         grid_res_phi:       float = 0.1, 
+         grid_res_theta:     float = 0.1, 
+         chunk_data:         bool  = True, 
+         num_chunks:         int   = 4, 
+         overlap_margin:     float = 0.1, 
+         interp_method:      str   = "linear",  
+         use_bhs:            bool  = False, 
+         recenter_beam:      bool  = True, 
+         use_rgb_logging:    bool  = False, 
+         use_rgb_decoration: bool  = False, 
+         logger = None 
+         ) -> None:     
     """
-    Main method (entry point to the program)
+    Main method (entry point to the program). It performs the following steps: 
+    
+    - Parsing original .grd file and saves into HDF5   
+    - Recentering the beam grid to center on the max gain value 
+    - Creating (theta, phi) grid with a given resolution and creating its (x,y) respresentation 
+    - Interpolating (in chunks) the original (u,v) grid into coarser (x,y) 
+    - Saving the resulting data into HDF5 file 
+
+    [**Note**]: The data format is described in the `CIMR_Antenna_Patterns_Format.ipynb` 
+    located inside `notebooks` within the repo.   
     
     Parameters:
     -----------
@@ -432,7 +581,7 @@ def main(datadir, outdir, file_version,
     outdir: str or Path  
         The path to the output directory where to store all results of execution. 
 
-    file_version: float  
+    file_version: str    
         Version of the parsed files to be produced. 
 
     recenter_beam: bool 
@@ -442,15 +591,6 @@ def main(datadir, outdir, file_version,
         Parameter that defines whether to parse and preprocess BHS files or not. 
     """
 
-    # List of all beam files 
-    beamfiles_in  = [] 
-    beamfiles_out = [] 
-    # List of all band dirs containing respective beam files 
-    bands_dirs    = [] 
-    # List of the output directories to be created  
-    bands_outdirs = [] 
-    i = 0 
-    j = 0
     
     # ========================
     # Parsing Antenna Patterns  
@@ -471,44 +611,31 @@ def main(datadir, outdir, file_version,
             apat_name_info[band][2][horn] = []
         
         apat_name_info[band][2][horn].append(half_space)
-    #print(apat_name_info)
-    #exit() 
 
     
-    print(f"| {Fore.YELLOW}=============================={Style.RESET_ALL}") 
-    print(f"| {Fore.BLUE}Parsing the Antenna Patterns{Style.RESET_ALL}") 
-    print(f"| {Fore.YELLOW}=============================={Style.RESET_ALL}") 
+    #print(f"| {Fore.YELLOW}=============================={Style.RESET_ALL}") 
+    #print(f"| {Fore.BLUE}Parsing the Antenna Patterns{Style.RESET_ALL}") 
+    #print(f"| {Fore.YELLOW}=============================={Style.RESET_ALL}") 
+    logger.info(f"==============================") 
+    logger.info(f"Parsing the Antenna Patterns") 
+    logger.info(f"==============================") 
     
 
     # Creating directory to store parsed files  
     parsed_dir = outdir.joinpath("parsed", f"v{file_version}")
-    io.rec_create_dir(parsed_dir)
+    io.rec_create_dir(parsed_dir, logger = logger)
 
     preprocessed_dir = outdir.joinpath("preprocessed", f"v{file_version}")
-    io.rec_create_dir(preprocessed_dir)
+    io.rec_create_dir(preprocessed_dir, logger = logger)
 
-    print(f"| {Fore.GREEN}Data Directory:{Fore.RESET}\n| {Fore.BLUE}{datadir}{Style.RESET_ALL}") 
-    print(f"| {Fore.GREEN}Parsed Directory:{Fore.RESET}\n| {Fore.BLUE}{parsed_dir}{Style.RESET_ALL}") 
-    print(f"| {Fore.GREEN}Preprocessed Directory:{Fore.RESET}\n| {Fore.BLUE}{preprocessed_dir}{Style.RESET_ALL}") 
+    #print(f"| {Fore.GREEN}Data Directory:{Fore.RESET}\n| {Fore.BLUE}{datadir}{Style.RESET_ALL}") 
+    #print(f"| {Fore.GREEN}Parsed Directory:{Fore.RESET}\n| {Fore.BLUE}{parsed_dir}{Style.RESET_ALL}") 
+    #print(f"| {Fore.GREEN}Preprocessed Directory:{Fore.RESET}\n| {Fore.BLUE}{preprocessed_dir}{Style.RESET_ALL}") 
+    logger.info(f"Data Directory:\n{datadir}") 
+    logger.info(f"Parsed Directory:\n{parsed_dir}") 
+    logger.info(f"Preprocessed Directory:\n{preprocessed_dir}") 
 
-    #grid_res_theta = 0.11
-    #grid_res_phi = 0.1  
-    #grid_points_theta = int(90 / grid_res_theta) 
-    ##print(90/ grid_res_theta)
-    ##print(type(90/ grid_res_theta)) 
-    #print(grid_points_theta)
-    #print(int(grid_points_theta)) 
-    #print(type(grid_points_theta)) 
 
-    #theta = np.linspace(0, 90, int(90 // grid_res_theta) + 1)
-    #phi   = np.linspace(0, 360, int(360 // grid_res_phi) + 1)
-    #print( theta, phi )
-    #theta = np.arange(0, 91, grid_res_theta)
-    #phi   = np.arange(0, 361, grid_res_phi)
-    #print( theta, phi )
-    #
-    #exit() 
-    
     # Main parsing loop 
     for band in apat_name_info.keys(): 
         
@@ -517,20 +644,14 @@ def main(datadir, outdir, file_version,
             freq = apat_name_info[band][0] 
             pol  = apat_name_info[band][1] 
             
-            # In principle, we do not need BHS for the analysis, so I am putting this 
-            #if not use_bhs:  
-            #    half_spaces = ["FR"]
-            #    #print("Debug")
-            #    #exit() 
-
-            #use_bhs = True 
             for half_space in half_spaces: 
 
+                # Since we do not require BHS, we skip the relevant part of the
+                # loop  
                 if not use_bhs and half_space == "BK": 
-                    print(half_space)
+                    print(f"| use_bhs = {use_bhs}; skipping {half_space}.")
                     continue 
 
-                #print(half_space)
                 cimr = {"Gain": {}, "Grid": {}} 
                 cimr_is_empty = False  
 
@@ -551,10 +672,7 @@ def main(datadir, outdir, file_version,
                 outfile_oap = pb.Path(str(parsed_dir) + f"/{parsedfile_prefix}-" + band + horn + f"-{parsedfile_suffix}v{file_version}.h5")   
                 
                 if io.check_outfile_existance(outfile_oap) == True: 
-                #    continue 
-                #    #print(cimr.keys())
                      cimr_is_empty = is_nested_dict_empty(cimr) 
-                #if io.check_outfile_existance(outfile_oap) != True: 
                 else: 
                     
                     print(f"| ------------------------------") 
@@ -564,7 +682,7 @@ def main(datadir, outdir, file_version,
                     start_time_pars = time.time() 
 
                     cimr = get_beamdata(infile, half_space, file_version, cimr) #_uv, cimr_tp)     
-                    
+                    exit() 
                     end_time_pars = time.time() - start_time_pars 
                     print(f"| Finished Parsing in: {end_time_pars:.2f}s") 
                     
@@ -573,9 +691,6 @@ def main(datadir, outdir, file_version,
                     with h5py.File(outfile_oap, 'w') as hdf5_file:
                         io.save_dict_to_hdf5(hdf5_file, cimr)
 
-
-                #print(cimr.keys())
-                #exit() 
 
                 # Performing Beam Recentering and Interpolation on rectilinear grid  
                 preprocfile_prefix = f"CIMR-PAP-{half_space}" 
@@ -595,17 +710,12 @@ def main(datadir, outdir, file_version,
                         end_time_pars = time.time() - start_time_pars 
                         print(f"| Finished Loading in: {end_time_pars:.2f}s") 
 
-                    #print(cimr['Grid'].keys()) 
-                    #print(cimr['Gain'].keys()) 
 
                     # Creating a set of temporary values to be removed from memory 
                     cimr["temp"] = {} 
 
-                    cimr = utils.construct_complete_gains(cimr) 
+                    cimr = utils.construct_complete_gains(cimr)  
                     
-                    #print(cimr['Grid'].keys()) 
-                    #print(cimr['Gain'].keys()) 
-                    #print(cimr['temp'].keys()) 
                     cimr["Grid"]["u_grid"], cimr["Grid"]["v_grid"] = utils.generate_uv_grid(
                                                               xcen = cimr["Grid"]['xcen'], 
                                                               ycen = cimr["Grid"]['ycen'], 
@@ -614,10 +724,8 @@ def main(datadir, outdir, file_version,
                                                               nx   = cimr["Grid"]['nx'], 
                                                               ny   = cimr["Grid"]['ny'], 
                                                               dx   = cimr["Grid"]['dx'], 
-                                                              dy   = cimr["Grid"]['dy']
+                                                              dy   = cimr["Grid"]['dy'], 
                                                             )  
-                    #print(cimr['temp'].keys()) 
-                    #exit() 
 
                     # If no recentering, then just create a temporary grid to
                     # pass those values further and then delete them once we
@@ -641,33 +749,14 @@ def main(datadir, outdir, file_version,
                     
                     start_time_interpn = time.time()  
                     
-                    #cimr = interpolate_beamdata(cimr)
-                    cimr = utils.interp_beamdata_into_uv(cimr) 
-                    #exit() 
-
-                    # Deleting redundant fields  
-                    #del cimr["Grid"]['dx'] 
-                    #del cimr["Grid"]['dy'] 
-                    #del cimr["Grid"]['nx'] 
-                    #del cimr["Grid"]['ny'] 
-                    #del cimr["Grid"]['xs'] 
-                    #del cimr["Grid"]['ys']    
-                    ##del cimr["Grid"]['u'] 
-                    ##del cimr["Grid"]['v'] 
-                    #del cimr["Grid"]['xcen'] 
-                    #del cimr["Grid"]['ycen'] 
-                    ##del cimr["Grid"]['u_grid'] 
-                    ##del cimr["Grid"]['v_grid'] 
-                    ##del cimr["Grid"]['phi_grid'] 
-                    ##del cimr["Grid"]['theta_grid'] 
-                    #
-                    ##del cimr["Gain"]['Ghh'] 
-                    ##del cimr["Gain"]['Ghv'] 
-                    ##del cimr["Gain"]['Gvv'] 
-                    ##del cimr["Gain"]['Gvh'] 
-
-                    #print(cimr["Gain"].keys())
-                    #print(cimr["Grid"].keys())
+                    cimr = utils.interp_beamdata_into_uv(cimr = cimr, 
+                                                         grid_res_phi   = grid_res_phi, 
+                                                         grid_res_theta = grid_res_theta, 
+                                                         chunk_data     = chunk_data, 
+                                                         num_chunks     = num_chunks, 
+                                                         overlap_margin = overlap_margin, 
+                                                         interp_method  = interp_method
+                                                         ) 
 
                     end_time_interpn = time.time() - start_time_interpn
                     print(f"| Finished Interpolation in: {end_time_interpn:.2f}s") 
@@ -676,8 +765,6 @@ def main(datadir, outdir, file_version,
                     with h5py.File(outfile_pap, 'w') as hdf5_file:
                         io.save_dict_to_hdf5(hdf5_file, cimr)
                     
-                    #exit() 
-                
 
             print(f"| {Fore.YELLOW}------------------------------{Style.RESET_ALL}") 
 
@@ -694,16 +781,29 @@ if __name__ == '__main__':
     print(f"| matplotlib {matplotlib.__version__}") 
     #print(f"| colorama   {colorama.__version__}") 
 
-    # TODO: Create a parameter file that will take as input this info  
+    # TODO: 
+    # - Create a parameter file that will take as input this info. 
+    # - Create a logger object and perfomr proper logging of the functionality.   
 
     # Getting the root of the repo 
     root_dir = io.find_repo_root() 
 
-    file_version = '0.6.0' 
+    # Params to be put inside parameter file  
+    outdir             = pb.Path(f"{root_dir}/output").resolve()
+    datadir            = pb.Path(f"{root_dir}/dpr/AP").resolve() 
+    use_bhs            = False 
+    recenter_beam      = True    
+    grid_res_phi       = 0.1 
+    grid_res_theta     = 0.1 
+    chunk_data         = True 
+    num_chunks         = 4 
+    overlap_margin     = 0.1 
+    interp_method      = "linear"  
+    file_version       = '0.6.1' 
+    # Logging functionality 
+    use_rgb_logging    = True  
+    use_rgb_decoration = True 
 
-    # Params to be put inside parameter file 
-    outdir  = pb.Path(f"{root_dir}/output").resolve()
-    datadir = pb.Path(f"{root_dir}/dpr/AP_all").resolve() 
 
     if not pb.Path(outdir).exists(): 
         print(f"Creating output directory:\n{outdir}")
@@ -715,9 +815,29 @@ if __name__ == '__main__':
     # Getting all beam paths inside dpr/AP 
     beamfiles_paths = datadir.glob("*/*")   
 
+    # Creating a logger object based on the user preference 
+    if use_rgb_logging: 
+        logger_config = pb.Path(f"{root_dir}/src/cimr_grasp/logger_config.json") 
+        rgb_logging   = RGBLogging(log_config = logger_config)
+        rgb_logger    = rgb_logging.get_logger("rgb") 
 
-    #main(datadir, outdir, ref_tilt_ang_deg, downscale_factor, vsign, nu, nv, file_version)    
-    main(datadir, outdir, file_version)    
+
+    #main(datadir, outdir, file_version)    
+    main(datadir            = datadir, 
+         outdir             = outdir, 
+         file_version       = file_version,
+         use_bhs            = use_bhs, 
+         recenter_beam      = recenter_beam, 
+         grid_res_phi       = grid_res_phi, 
+         grid_res_theta     = grid_res_theta, 
+         chunk_data         = chunk_data, 
+         num_chunks         = num_chunks, 
+         overlap_margin     = overlap_margin, 
+         interp_method      = interp_method,   
+         use_rgb_logging    = use_rgb_logging, 
+         use_rgb_decoration = use_rgb_decoration, 
+         logger = rgb_logger 
+         )    
     
     end_time_tot = time.time() - start_time_tot
     print(f"| Finished Script in: {end_time_tot:.2f}s") 

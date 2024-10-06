@@ -18,10 +18,10 @@ class ReGridder:
     def __init__(self, config):
         self.config = config
         self.algos = {
-            'NN': NNInterp(self.config),
-            'DIB': DIBInterp(self.config),
-            'IDS': IDSInterp(self.config),
-            'BG': BGInterp(self.config),
+            'NN':   NNInterp(self.config),
+            'DIB':  DIBInterp(self.config),
+            'IDS':  IDSInterp(self.config),
+            'BG':   BGInterp(self.config),
             'rSIR': rSIRInterp(self.config)
         }
 
@@ -164,8 +164,10 @@ class ReGridder:
         return samples_dict, variable_dict
 
     def create_output_grid_inds(self, ease_1d_index):
+
         grid_shape = GRIDS[self.config.grid_definition]['n_rows'], GRIDS[self.config.grid_definition]['n_cols']
         row, col = unravel_index(ease_1d_index, grid_shape)
+
         return row, col
 
     def regrid_l1c(self, data_dict):
@@ -174,6 +176,7 @@ class ReGridder:
         target_grid = self.get_grid(data_dict)
 
         data_dict_out = {}
+
         for band in data_dict:
             variable_dict = data_dict[band]
             samples_dict, variable_dict = self.sample_selection(variable_dict, target_grid)
@@ -201,8 +204,8 @@ class ReGridder:
             else:
                 # Don't split fore/aft
                 variable_dict_out = self.algos.get(self.config.regridding_algorithm).interp_variable_dict(
-                    samples_dict=samples_dict,
-                    variable_dict=variable_dict
+                    samples_dict  =samples_dict,
+                    variable_dict =variable_dict
                 )
 
                 # Add cell_row and cell_col indexes

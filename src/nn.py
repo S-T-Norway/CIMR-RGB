@@ -12,7 +12,9 @@ class NNInterp:
     def interp_variable_dict(self, samples_dict, variable_dict, scan_direction=None, band=None):
 
         variable_dict_out = {}
+ 
         for variable in variable_dict:
+
             if scan_direction:
                 if scan_direction not in variable:
                     continue

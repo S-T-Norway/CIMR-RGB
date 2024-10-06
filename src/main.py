@@ -7,6 +7,7 @@ It is also responsible for printing the output to the console
 It is also responsible for returning the output to the caller
 """
 import os
+impoer pathlib as pb 
 import pickle
 from numpy import full, nan
 
@@ -19,11 +20,10 @@ import matplotlib
 tkagg = matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
+
 if __name__ == '__main__':
     # This is the main function that is called when the script is run
     # It is the entry point of the script
-
-
 
 
     # Ingest and Extract L1B Data

@@ -1,4 +1,4 @@
-import pathlib  
+import pathlib as pb   
 import re 
 
 import numpy as np 
@@ -6,14 +6,14 @@ import h5py
 from   colorama import Fore, Back, Style   
 
 
-def get_header(beamfile):
+def get_header(beamfile: str()) -> list():
     """
     Method to get some useful information from the header file. 
     
     Parameters:
     -----------
-    beamfile: text (.grd) file 
-        The file to parse the header information from. 
+    beamfile: str 
+        The (text; .grd) file to parse the header information from. 
 
     Returns:
     --------
@@ -33,32 +33,8 @@ def get_header(beamfile):
 
     return header 
 
-#def get_horn_number(string):
-#    """
-#    Method to get a horn number from the file name  
-#    """
-#    
-#    # Split the string by the first hyphen
-#    parts = string.split('-', 1)
-#    
-#    # Extract the first part
-#    first_part = parts[0]
-#    
-#    # Use regular expression to separate number and letters
-#    match = re.match(r'(\D+)(\d*)', first_part)
-#    
-#    # If number is missing, default to 1
-#    if match.group(2) == '':
-#        number = '1'
-#    else:
-#        number = match.group(2)
-#    
-#    letter = match.group(1)
-#    
-#    return number, letter
 
-
-def check_outfile_existance(outfile: pathlib.Path) -> bool: 
+def check_outfile_existance(outfile: pb.Path) -> bool: 
     """
     Checks for the existence of a given (e.g., antenna pattern) file and
     returns boolean value.   
@@ -82,7 +58,7 @@ def check_outfile_existance(outfile: pathlib.Path) -> bool:
         return True  
 
 
-def parse_file_name(file_name):
+def parse_file_name(file_name: pb.Path) -> (str, str, str, str, str):
     """
     Parses the beamfile name to get the band, horn and half-space identifier. 
     The file name should be of format: 
@@ -115,7 +91,7 @@ def parse_file_name(file_name):
 
     # Regex to match the expected patterns of the filename
     pattern = r"([A-Za-z]+\d*)-(\d+)-([A-Z]+)-([A-Z]+)"
-    match = re.match(pattern, file_name)
+    match   = re.match(pattern, file_name)
     
     if not match:
         raise ValueError("Invalid filename format: " + file_name)
@@ -128,30 +104,11 @@ def parse_file_name(file_name):
     # Check for horn based on whether there's a number in the band name
     horn = ''.join(filter(str.isdigit, band)) if any(char.isdigit() for char in band) else "1"
     band = ''.join(filter(str.isalpha, band)) 
-    #print(band, horn, freq, pol) 
-    
-    #parts = file_name.split('-')
-    #print(parts) 
-    ##exit() 
-    #band = parts[0]
-    #freq = parts[1]
-    #pol  = parts[2]
-    #
-    #if len(band) == 1: 
-    #    horn = "1" 
-    #elif len(band) == 2: 
-    #    horn = band[1] 
-    #else: 
-    #    raise ValueError("Invalid filename format: " + file_name) 
-    #    
-    #band = band[0]
-
-    #half_space = parts[-1].split('.')[0]
         
     return band, horn, freq, pol, half_space 
 
 
-def save_dict_to_hdf5(hdf5_group, data_dict):
+def save_dict_to_hdf5(hdf5_group, data_dict: dict()) -> None:
     """
     Recursively saves (e.g, parsed beam) dictionary data into HDF5. 
 
@@ -170,9 +127,6 @@ def save_dict_to_hdf5(hdf5_group, data_dict):
         elif isinstance(value, np.ndarray):
             # If the value is a NumPy array, create a dataset
             hdf5_group.create_dataset(key, data=value)
-        #else:
-        #    # If the value is a scalar or other type, create an attribute
-        #    hdf5_group.attrs[key] = value
         elif np.isscalar(value): 
             # If the value is a scalar, also create a dataset
             hdf5_group.create_dataset(key, data=value) #np.array(value))
@@ -180,7 +134,6 @@ def save_dict_to_hdf5(hdf5_group, data_dict):
             raise TypeError(f"Unsupported data type for key '{key}': {type(value)}") 
 
             
-# Function to recursively load HDF5 file into a dictionary
 def load_hdf5_to_dict(hdf5_group) -> dict():
     """
     Loads (e.g, parsed beam) information from the HDF5 file in a form of a
@@ -212,9 +165,9 @@ def load_hdf5_to_dict(hdf5_group) -> dict():
     return data_dict
 
 
-def find_repo_root(start_path: pathlib.Path = None) -> pathlib.Path:
+def find_repo_root(start_path: pb.Path = None) -> pb.Path:
     """
-    Finds the root path of the repo based off the location of `.git` directory. 
+    Finds the root path of the repo based off the location of the first `.git` directory encountered.  
 
     Parameters:
     -----------
@@ -234,7 +187,7 @@ def find_repo_root(start_path: pathlib.Path = None) -> pathlib.Path:
     
     # If no start path is provided, use the current working directory
     if start_path is None:
-        start_path = pathlib.Path.cwd()
+        start_path = pb.Path.cwd()
     
     # Convert to absolute path
     start_path = start_path.resolve()
@@ -247,17 +200,28 @@ def find_repo_root(start_path: pathlib.Path = None) -> pathlib.Path:
     raise FileNotFoundError("No .git directory found in any parent directories") 
 
 
-def rec_create_dir(path: pathlib.Path) -> None: 
+def rec_create_dir(path: pb.Path, logger = None) -> None: 
     """
     Recursively create directories. 
+
+    Parameters:
+    -----------
+    path: Path
+        The path to the directory in question. 
     """
 
+    if logger is None: 
+        logger = logging.getLogger(__name__) 
+        logger.addHandler(logging.NullHandler())
+
     # Convert the path to a Path object
-    path = pathlib.Path(path)
+    path = pb.Path(path)
     
     # Create the directories if they do not exist
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
-        print(f"Directories created: {path}")
+        logger.debug(f"Directories created: {path}")
     else:
-        print(f"Path already exists: {path}")
+        logger.debug(f"Path already exists: {path}")
+
+
