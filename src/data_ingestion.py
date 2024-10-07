@@ -9,11 +9,15 @@ process.
 """
 
 import re
+
 from numpy import (array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile, repeat, arange,
                    isnan, delete, where, concatenate, full, newaxis, float32, asarray, any)
-from config_file import ConfigFile
-from utils import remove_overlap
+
+from rgb_logging    import RGBLogging 
+from config_file    import ConfigFile
+from utils          import remove_overlap
 from grid_generator import GRIDS, GridGenerator
+
 
 # SMAP Constants
 SMAP_FILL_FLOAT_32 = -9999.0
@@ -78,21 +82,22 @@ class DataIngestion:
             The path to the configuration file that contains the user specified parameters.
         """
         self.config = config_object
+        self.logger = config_object.logger 
 
 
     def remove_out_of_bounds(self, data_dict):
 
         grid = GRIDS[self.config.grid_definition]
+
         x_bound_min = grid['x_min'] - 0.5 * grid['res']
         x_bound_max = grid['x_min'] + grid['n_cols']*grid['res'] + 0.5 * grid['res']
         y_bound_max = grid['y_max'] + 0.5 * grid['res']
         y_bound_min = grid['y_max'] - grid['n_rows']*grid['res'] - 0.5 * grid['res']
 
-        print(f"longitude is of shape: {data_dict['longitude'].shape}")
 
         source_x, source_y = GridGenerator(self.config).lonlat_to_xy(
-            lon=data_dict['longitude'],
-            lat=data_dict['latitude']
+            lon = data_dict['longitude'],
+            lat = data_dict['latitude']
         )
 
         out_of_bound_inds = where((source_y < y_bound_min) | (source_y > y_bound_max))
@@ -144,6 +149,7 @@ class DataIngestion:
         import h5py as h5
 
         data_dict = {}
+
         with h5.File(self.config.input_data_path, 'r') as data:
 
             # Not using qc_dict at the moment need to add functionality for "qc remap".
@@ -152,9 +158,9 @@ class DataIngestion:
             if self.config.input_data_type == "AMSR2":
 
                 # Extract Metadata
-                coreg_a = self.amsr2_coreg_extraction(data.attrs['CoRegistrationParameterA1'][0])
-                coreg_b = self.amsr2_coreg_extraction(data.attrs['CoRegistrationParameterA2'][0])
-                overlap = int(data.attrs['OverlapScans'][0])
+                coreg_a   = self.amsr2_coreg_extraction(data.attrs['CoRegistrationParameterA1'][0])
+                coreg_b   = self.amsr2_coreg_extraction(data.attrs['CoRegistrationParameterA2'][0])
+                overlap   = int(data.attrs['OverlapScans'][0])
                 num_scans = int(data.attrs['NumberOfScans'][0])
                 self.config.num_scans = num_scans
                 self.config.AM2_DEF_SNUM_HI = AM2_DEF_SNUM_HI
@@ -167,9 +173,9 @@ class DataIngestion:
 
                 # Extract Data used for all re-grids
                 # lats and lons of 89A are used to extrac the lats and lons for all other bands
-                lats_89a = remove_overlap(
-                    array=data['Latitude of Observation Point for 89A'][:],
-                    overlap=overlap
+                lats_89a    = remove_overlap(
+                    array   = data['Latitude of Observation Point for 89A'][:],
+                    overlap = overlap
                 )
 
                 lons_89a = remove_overlap(
@@ -246,7 +252,7 @@ class DataIngestion:
 
                 # Remove out of bounds
                 # 
-                # [Note]: This method calls in the generate_grid method under the hood 
+                # [Note]: This method calls in the `generate_grid` method under the hood 
                 variable_dict = self.remove_out_of_bounds(variable_dict)
 
                 # Split Fore/Aft and Flatten
@@ -517,6 +523,7 @@ class DataIngestion:
         lons_lo: numpy.ndarray
             Longitude values of the lower frequency channel.
         """
+
         rad = pi / 180.0
         deg = 180.0 / pi
 
@@ -536,7 +543,10 @@ class DataIngestion:
                         lat_2 < -90.0 or lat_2 > 90.0 or
                         lon_1 < -180.0 or lon_1 > 180.0 or
                         lon_2 < -180.0 or lon_2 > 180.0):
-                    print(f"amsr2latlon conversion: out of range warning:"
+                    #print(f"amsr2latlon conversion: out of range warning:"
+                    #      f"Latitude and/or longitude are"
+                    #      f"out of range on Scan = {scan} and Sample = {sample}")
+                    self.logger.warning(f"amsr2latlon conversion: out of range warning:"
                           f"Latitude and/or longitude are"
                           f"out of range on Scan = {scan} and Sample = {sample}")
                     lats_lo[scan, sample] = MV
@@ -544,32 +554,32 @@ class DataIngestion:
                     continue
 
                 # Conversion Calculation. Taken from AMSR2 Sample C programs.
-                p1 = array([cos(lon_1 * rad) * cos(lat_1 * rad),
-                            sin(lon_1 * rad) * cos(lat_1 * rad),
-                            sin(lat_1 * rad)])
+                p1    = array([cos(lon_1 * rad) * cos(lat_1 * rad),
+                               sin(lon_1 * rad) * cos(lat_1 * rad),
+                               sin(lat_1 * rad)])
 
-                p2 = array([cos(lon_2 * rad) * cos(lat_2 * rad),
-                            sin(lon_2 * rad) * cos(lat_2 * rad),
-                            sin(lat_2 * rad)])
-                temp = p1[0] * p2[0] + p1[1] * p2[1] + p1[2] * p2[2]
+                p2    = array([cos(lon_2 * rad) * cos(lat_2 * rad),
+                               sin(lon_2 * rad) * cos(lat_2 * rad),
+                               sin(lat_2 * rad)])
+                temp  = p1[0] * p2[0] + p1[1] * p2[1] + p1[2] * p2[2]
                 theta = arccos(temp)
-                ex = p1
-                temp = sqrt(p1[0] * p1[0] + p1[1] * p1[1] + p1[2] * p1[2]) * sqrt(
-                    p2[0] * p2[0] + p2[1] * p2[1] + p2[2] * p2[2]) * sin(theta)
-                ez = array([p1[1] * p2[2] - p1[2] * p2[1],
-                            p1[2] * p2[0] - p1[0] * p2[2],
-                            p1[0] * p2[1] - p1[1] * p2[0]]) / temp
-                ey = array([ez[1] * ex[2] - ez[2] * ex[1],
-                            ez[2] * ex[0] - ez[0] * ex[2],
-                            ez[0] * ex[1] - ez[1] * ex[0]])
-                j = cos(coreg_b * theta)
-                k = cos(coreg_a * theta)
-                l = sin(coreg_a * theta)
-                m = sin(coreg_b * theta)
-                pt = array([j * (k * ex[0] + l * ey[0]) + m * ez[0],
-                            j * (k * ex[1] + l * ey[1]) + m * ez[1],
-                            j * (k * ex[2] + l * ey[2]) + m * ez[2]])
-                temp = sqrt(pt[0] * pt[0] + pt[1] * pt[1])
+                ex    = p1
+                temp  = sqrt(p1[0] * p1[0] + p1[1] * p1[1] + p1[2] * p1[2]) * sqrt(
+                     p2[0] * p2[0] + p2[1] * p2[1] + p2[2] * p2[2]) * sin(theta)
+                ez    = array([p1[1] * p2[2] - p1[2] * p2[1],
+                               p1[2] * p2[0] - p1[0] * p2[2],
+                               p1[0] * p2[1] - p1[1] * p2[0]]) / temp
+                ey    = array([ez[1] * ex[2] - ez[2] * ex[1],
+                               ez[2] * ex[0] - ez[0] * ex[2],
+                               ez[0] * ex[1] - ez[1] * ex[0]])
+                j     = cos(coreg_b * theta)
+                k     = cos(coreg_a * theta)
+                l     = sin(coreg_a * theta)
+                m     = sin(coreg_b * theta)
+                pt    = array([j * (k * ex[0] + l * ey[0]) + m * ez[0],
+                               j * (k * ex[1] + l * ey[1]) + m * ez[1],
+                               j * (k * ex[2] + l * ey[2]) + m * ez[2]])
+                temp  = sqrt(pt[0] * pt[0] + pt[1] * pt[1])
 
                 lons_lo[scan, sample] = arctan2(pt[1], pt[0]) * deg
                 lats_lo[scan, sample] = arctan2(pt[2], temp) * deg
@@ -673,6 +683,7 @@ class DataIngestion:
 
         # Clean Data
         data_dict = self.clean_data(data_dict)
+
         return data_dict
 
 
@@ -686,11 +697,32 @@ class DataIngestion:
         data_dict: dict
             Dictionary containing the data extracted from the HDF5 file.
         """
-        print("read_hdf5")
-        data_dict = self.read_hdf5()
-        data_dict = self.clean_data(data_dict)
+
+        self.logger.info("read_hdf5")
+
+        # Retrieving Data 
+        tracked_func  = RGBLogging.rgb_decorated(
+            decorate  = self.config.logpar_decorate, 
+            decorator = RGBLogging.track_perf, 
+            logger    = self.logger 
+            )(self.read_hdf5) 
+
+        data_dict = tracked_func() 
+
+        #data_dict = self.read_hdf5()
+
+        # Cleaning Data
+        tracked_func  = RGBLogging.rgb_decorated(
+            decorate  = self.config.logpar_decorate, 
+            decorator = RGBLogging.track_perf, 
+            logger    = self.logger 
+            )(self.clean_data) 
+        data_dict = tracked_func(data_dict) 
+        #data_dict = self.clean_data(data_dict)
+
         # qc_dict = self.extract_smap_qc(qc_dict)
         # data_dict = self.apply_smap_qc(qc_dict, data_dict)
+
         return data_dict
 
 
@@ -702,6 +734,7 @@ class DataIngestion:
         # Open netcdf file
         data_dict = self.read_netcdf
         data_dict = self.clean_data(data_dict)
+
         # Apply QC as and when
         return data_dict
 
@@ -715,10 +748,12 @@ class DataIngestion:
         data_dict: dict
             Dictionary containing pre-processed data extracted from the HDF5 file.
         """
+
         if self.config.input_data_type == "AMSR2":
             return self.ingest_amsr2()
+
         if self.config.input_data_type == "SMAP":
-            print("ingest_smap")
             return self.ingest_smap()
+
         if self.config.input_data_type == "CIMR":
             return self.ingest_cimr()

@@ -1,5 +1,5 @@
 """
-This module is the entry point for the RGB.
+Thi  module is the entry point for the RGB.
 It is responsible for calling the other functions in the script
 It is also responsible for handling the command line arguments
 It is also responsible for handling the exceptions that are raised
@@ -7,39 +7,74 @@ It is also responsible for printing the output to the console
 It is also responsible for returning the output to the caller
 """
 import os
-impoer pathlib as pb 
+import pathlib as pb 
 import pickle
+
 from numpy import full, nan
-
-from data_ingestion import DataIngestion
-from grid_generator import GridGenerator, GRIDS
-from regridder_v2 import ReGridder
-
 # ---- Testing ----
 import matplotlib
 tkagg = matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+# -----------------
+
+from config_file    import ConfigFile
+from data_ingestion import DataIngestion
+from grid_generator import GridGenerator, GRIDS
+from regridder_v2   import ReGridder
+from rgb_logging    import RGBLogging 
+
 
 
 if __name__ == '__main__':
     # This is the main function that is called when the script is run
     # It is the entry point of the script
 
+    # Initiate config object (that validates parameters)
+    rgb_config        = pb.Path('..', 'config-maks.xml').resolve() 
+    rgb_config        = ConfigFile(rgb_config) 
 
     # Ingest and Extract L1B Data
-    ingestion_object = DataIngestion(os.path.join(os.getcwd(), '..', 'config.xml'))
-    config = ingestion_object.config
-    data_dict = ingestion_object.ingest_data()
+    timed_obj         = RGBLogging.rgb_decorated(
+            decorate  = rgb_config.logpar_decorate, 
+            decorator = RGBLogging.track_perf, 
+            logger    = rgb_config.logger 
+            )(DataIngestion) 
+
+    ingestion_object  = timed_obj(rgb_config)
+
+    timed_func        = RGBLogging.rgb_decorated(
+            decorate  = rgb_config.logpar_decorate, 
+            decorator = RGBLogging.track_perf, 
+            logger    = rgb_config.logger
+            )(ingestion_object.ingest_data)
+
+    data_dict         = timed_func()  
+
 
     # Regrid Data
-    if config.input_data_type == 'SMAP':
-        data_dict_out = ReGridder(config).regrid_l1c(data_dict)
+    regridder         = ReGridder(rgb_config)
 
-    if config.input_data_type == 'AMSR2':
-        data_dict_out = ReGridder(config).regrid_l1r(data_dict)
+    if rgb_config.input_data_type == 'SMAP':
 
-    if config.input_data_type == 'CIMR':
-            data_dict_out= ReGridder(config).regrid_l1c(data_dict)
+        timed_func        = RGBLogging.rgb_decorated(
+                decorate  = rgb_config.logpar_decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = rgb_config.logger
+                )(regridder.regrid_l1c)
+
+        data_dict_out     = timed_func(data_dict)
+        
+        #data_dict_out = ReGridder(config).regrid_l1c(data_dict)
+
+    if rgb_config.input_data_type == 'AMSR2':
+
+        data_dict_out = regridder.regrid_l1r(data_dict)
+        #data_dict_out = ReGridder(config).regrid_l1r(data_dict)
+
+    if rgb_config.input_data_type == 'CIMR':
+
+        data_dict_out = regridder.regrid_l1c(data_dict)
+        #data_dict_out= ReGridder(config).regrid_l1c(data_dict)
 
 
     # Intermediate results check

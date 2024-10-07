@@ -68,7 +68,7 @@ class RGBLogging:
         logger = logging.getLogger(name)
         logger.debug(f"Getting logger named {name}")
 
-        return logger #logging.getLogger(name)
+        return logger 
 
 
 
@@ -113,7 +113,7 @@ class RGBLogging:
     
             #logger.info(f"Finished execution of `{func.__name__}`: {time_taken:.2f}s")
 
-            message = (f"Function `{func.__name__}` executed in {time_taken:.2f} seconds, "
+            message = (f"`{func.__name__}` executed in {time_taken:.2f} seconds, "
                f"CPU usage: {cpu_usage:.2f}%, "
                f"Memory usage change: {memory_usage:.2f} MB.")
 

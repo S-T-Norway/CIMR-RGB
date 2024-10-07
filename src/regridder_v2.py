@@ -1,23 +1,40 @@
+import logging 
+
 import numpy as np
-from numpy import meshgrid, isinf, where, full, nan, unravel_index, all, sqrt
-
-from nn import NNInterp
-from ids import IDSInterp
-from dib import DIBInterp
-from bg import BGInterp
-from rsir import rSIRInterp
-from grid_generator import GridGenerator, GRIDS
 from pyresample import kd_tree, geometry
-
+from numpy import meshgrid, isinf, where, full, nan, unravel_index, all, sqrt
 import matplotlib
 tkagg = matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
+from nn   import NNInterp
+from ids  import IDSInterp
+from dib  import DIBInterp
+from bg   import BGInterp
+from rsir import rSIRInterp
+from grid_generator import GridGenerator, GRIDS
+from rgb_logging import RGBLogging 
+
 
 class ReGridder:
-    def __init__(self, config):
-        self.config = config
-        self.algos = {
+    def __init__(self, config_object):#, logger = None, decorate: bool = False):
+
+        self.config = config_object
+        self.logger = config_object.logger 
+
+        # Configuring the logger object by adding the nullHandler as per
+        # python's official documentation. In this way we do not interfere with
+        # library users' logging functionality.  
+        #if self.logger is None: 
+        #    self.logger = logging.getLogger(__name__)
+        #    self.logger.addHandler(logging.NullHandler())
+
+        #self.logger   = logger 
+        #self.decorate = decorate 
+
+        #self.config   = config
+
+        self.algos    = {
             'NN':   NNInterp(self.config),
             'DIB':  DIBInterp(self.config),
             'IDS':  IDSInterp(self.config),
@@ -25,27 +42,55 @@ class ReGridder:
             'rSIR': rSIRInterp(self.config)
         }
 
+
     # Check if you need the full data dict once the function is complete
     def get_grid(self, data_dict):
+
+
         # Get target grid
         if self.config.grid_type == 'L1C':
-            target_x, target_y, res = GridGenerator(self.config).generate_grid_xy(
-                return_resolution=True
-            )
-            x_shape = len(target_x)
-            y_shape = len(target_y)
-            target_x, target_y = meshgrid(target_x, target_y)
-            target_x = target_x.flatten()
-            target_y = target_y.flatten()
 
-            target_lon, target_lat = GridGenerator(self.config).xy_to_lonlat(
-                x=target_x,
-                y=target_y
+            gridgen_obj   = GridGenerator(config_object = self.config) 
+
+            tracked_func  = RGBLogging.rgb_decorated(
+                decorate  = self.config.logpar_decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(gridgen_obj.generate_grid_xy) 
+
+            target_x, target_y, res = tracked_func(return_resolution = True) 
+
+            #target_x, target_y, res = GridGenerator(self.config, self.logger).generate_grid_xy(
+            #      return_resolution = True
+            #)
+
+            x_shape       = len(target_x)
+            y_shape       = len(target_y)
+
+            target_x, target_y = meshgrid(target_x, target_y)
+
+            target_x      = target_x.flatten()
+            target_y      = target_y.flatten()
+
+            tracked_func  = RGBLogging.rgb_decorated(
+                decorate  = self.config.logpar_decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(gridgen_obj.xy_to_lonlat) 
+
+            target_lon, target_lat = tracked_func( 
+                x         = target_x,
+                y         = target_y
             )
+            #target_lon, target_lat = GridGenerator(self.config).xy_to_lonlat(
+            #    x = target_x,
+            #    y = target_y
+            #)
 
             # Rehshape to original matrix
-            target_lon = target_lon.reshape(y_shape, x_shape)
-            target_lat = target_lat.reshape(y_shape, x_shape)
+            target_lon    = target_lon.reshape(y_shape, x_shape)
+            target_lat    = target_lat.reshape(y_shape, x_shape)
+
 
         elif self.config.input == 'L1R':
             # For the generation of a target grid in L1r, we just needs the lats and lons of
@@ -90,6 +135,7 @@ class ReGridder:
         # Remember that valid_output_index could be necessary for something in the future
         return reduced_distance, reduced_index, original_indices, valid_input_index
 
+
     # We need data dict or just pass specific variables?
     def get_l1c_samples(self, variable_dict, target_grid):
         target_lon = target_grid[0]
@@ -100,6 +146,7 @@ class ReGridder:
         neighbours = self.config.max_neighbours
 
         samples_dict = {}
+
         if self.config.split_fore_aft:
 
             for scan_direction in ['fore', 'aft']:
@@ -143,6 +190,7 @@ class ReGridder:
 
         return samples_dict
 
+
     def sample_selection(self, variable_dict, target_grid=None):
 
         if self.config.grid_type == 'L1C':
@@ -163,12 +211,14 @@ class ReGridder:
 
         return samples_dict, variable_dict
 
+
     def create_output_grid_inds(self, ease_1d_index):
 
         grid_shape = GRIDS[self.config.grid_definition]['n_rows'], GRIDS[self.config.grid_definition]['n_cols']
         row, col = unravel_index(ease_1d_index, grid_shape)
 
         return row, col
+
 
     def regrid_l1c(self, data_dict):
 
@@ -184,14 +234,16 @@ class ReGridder:
             if self.config.split_fore_aft:
                 variable_dict_out = {}
                 for scan_direction in ['fore', 'aft']:
-                    print(scan_direction)
+                    #print(scan_direction)
+                    self.logger.info(scan_direction)
 
                     # Regrid Variables
                     variable_dict_out[scan_direction] = self.algos.get(self.config.regridding_algorithm).interp_variable_dict(
-                        samples_dict=samples_dict[scan_direction],
-                        variable_dict=variable_dict,
-                        scan_direction=scan_direction,
-                        band = band)
+                        samples_dict   = samples_dict[scan_direction],
+                        variable_dict  = variable_dict,
+                        scan_direction = scan_direction,
+                        band = band
+                        )
 
                     # Add cell_row and cell_col indexes
                     cell_row, cell_col = self.create_output_grid_inds(samples_dict[scan_direction]['grid_1d_index'])
@@ -204,8 +256,8 @@ class ReGridder:
             else:
                 # Don't split fore/aft
                 variable_dict_out = self.algos.get(self.config.regridding_algorithm).interp_variable_dict(
-                    samples_dict  =samples_dict,
-                    variable_dict =variable_dict
+                    samples_dict  = samples_dict,
+                    variable_dict = variable_dict
                 )
 
                 # Add cell_row and cell_col indexes

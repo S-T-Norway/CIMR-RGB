@@ -9,6 +9,8 @@ The DataIngestion class utilizes configuration files to manage the ingestion
 process.
 """
 
+import logging 
+
 import numpy as np
 import pyproj
 
@@ -50,6 +52,7 @@ GRIDS = {'EASE2_G1km':   {'epsg': 6933, 'x_min':-17367530.44 , 'y_max':7314540.8
          'STEREO_S25km':   {'epsg': 3976, 'x_min': -3950000, 'y_max': 4350000,
                            'res': 25000, 'n_cols': 316, 'n_rows': 332}
          }
+
 
 # TODO: Abandon the usage of proj4 strings in favor of newer format? 
 PROJECTIONS = {
@@ -109,7 +112,7 @@ class GridGenerator:
         TBD
     """
 
-    def __init__(self, config_object):
+    def __init__(self, config_object):#, logger = None):
         """
         Initializes the GridGenerator object with the configuration object.
 
@@ -120,11 +123,22 @@ class GridGenerator:
         """
 
         self.config = config_object
+        self.logger = config_object.logger 
+
+        # Configuring the logger object by adding the nullHandler as per
+        # python's official documentation. In this way we do not interfere with
+        # library users' logging functionality.  
+        #if self.logger is None: 
+        #    self.logger  = logging.getLogger(__name__)
+        #    self.logger.addHandler(logging.NullHandler())
+
+
         if self.config.grid_type == 'L1C':
             self.projection = PROJECTIONS[config_object.projection_definition]
 
 
-    def generate_grid_xy_ease2(self, return_resolution: bool = False) -> (np.ndarray, np.ndarray): 
+    def generate_grid_xy_ease2(self, return_resolution: bool = False
+                               ) -> (np.ndarray | float, np.ndarray | float): 
         """
         Generates the grid in x and y coordinates from a given grid definition.
         Grid definitions can be found in the GRIDS dictionary at the start of the module.
@@ -166,6 +180,7 @@ class GridGenerator:
         
         return xs, ys
 
+
     def generate_grid_xy_stereo(): 
         """
 
@@ -185,7 +200,9 @@ class GridGenerator:
 
 
 
-    def generate_grid_xy(self, return_resolution = False):
+    # TODO: Finish the implementation of this one 
+    def generate_grid_xy(self, return_resolution: bool = False
+                         ) -> (np.ndarray | float, np.ndarray | float):
         """
         Generates the grid in x and y coordinates from a given grid definition.
         Grid definitions can be found in the GRIDS dictionary at the start of the module.
@@ -207,10 +224,10 @@ class GridGenerator:
         """
 
         if "EASE2" in self.config.grid_definition:
-            print(self.config.grid_definition)
-            xs, ys = self.generate_grid_xy_ease2(return_resolution = False) 
+            result = self.generate_grid_xy_ease2(return_resolution = return_resolution) 
+
         elif "" in self.config.grid_definion: 
-            print(self.config.grid_definition)
+            pass 
 
         else: 
             raise NotImplementedError(f"Grid {self.config.grid_definition} is not implemented.")
@@ -231,10 +248,10 @@ class GridGenerator:
         #for i in range(n_rows):
         #    ys[i] = y_max - (i * res)
 
-        #if return_resolution:
-        #    return xs, ys, res
+        if return_resolution:
+            return result[0], result[1], result[2]
 
-        return xs, ys
+        return result[0], result[1] 
 
 
     #def generate_grid_xy(self, return_resolution=False):
@@ -301,75 +318,78 @@ class GridGenerator:
             Array of latitudes.
         """
 
-        xs, ys = self.generate_grid_xy(return_resolution=False)
+        xs, ys = self.generate_grid_xy(return_resolution = False)
         grid_x, grid_y = np.meshgrid(xs, ys)
 
-        lons, lats = pyproj.Proj(self.projection)(grid_x, grid_y, inverse=True)
+        lons, lats = pyproj.Proj(self.projection)(grid_x, grid_y, inverse = True)
 
         return lons, lats
 
     # -------------------------------------------------------------------------
     # Direct Projections: (lon, lat) -> (x, y)
     # -------------------------------------------------------------------------
-    def lonlat_to_xy_laea(self, lon: np.ndarray, lat: np.ndarray, 
-                          pole: str = 'N') -> (np.ndarray, np.ndarray): 
+    def lonlat_to_xy_laea(self, lon: np.ndarray | float, lat: np.ndarray | float, 
+                          pole: str = 'N') -> (np.ndarray | float, np.ndarray | float): 
         """
         Lambert's Azimuthal Equal Area (North and South) 
         """
 
         # Assigning the sign value (+/-) depending on the pole 
-        sign = -1 if pole == 'N' else 1 if pole == 'S' \
-                else (lambda: (_ for _ in ()).throw(
-                    ValueError("Invalid value for pole. Must be 'N' or 'S'.")
-                    ))
+        sign    = -1 if pole == 'N' else 1 if pole == 'S' \
+                   else (lambda: (_ for _ in ()).throw(
+                       ValueError("Invalid value for pole. Must be 'N' or 'S'.")
+                       ))
 
-        epsilon = 1e-6
-        params = self.projection.split()
-        lon_0 = float(next((param.split('=')[1] for param in params if 'lon_0' in param), None))
-        dlon = lon - lon_0
-        phi = np.deg2rad(lat)
-        lam = np.deg2rad(dlon)
-        sin_phi = np.sin(phi)
+        epsilon   = 1e-6
+        params    = self.projection.split()
+        lon_0     = float(next((param.split('=')[1] for param in params if 'lon_0' in param), None))
+        dlon      = lon - lon_0
+        phi       = np.deg2rad(lat)
+        lam       = np.deg2rad(dlon)
+        sin_phi   = np.sin(phi)
 
-        q = (1 - E2) * (
-            (sin_phi / (1 - E2 * sin_phi ** 2)) -
-            (1 / (2 * E)) * np.log((1 - E * sin_phi) / (1 + E * sin_phi))
-        )
+        q         = (1 - E2) * (
+                    (sin_phi / (1 - E2 * sin_phi ** 2)) -
+                    (1 / (2 * E)) * np.log((1 - E * sin_phi) / (1 + E * sin_phi))
+                    )
 
         pole_diff = abs(qp + sign * q)
         inds      = pole_diff >= epsilon
         rho       = MAP_EQUATORIAL_RADIUS * np.sqrt(qp + sign * q) * inds
 
-        x =        rho * np.sin(lam)
-        y = sign * rho * np.cos(lam)
+        x         =        rho * np.sin(lam)
+        y         = sign * rho * np.cos(lam)
 
         return x, y
 
 
-    def lonlat_to_xy_cea(self, lon: np.ndarray, lat: np.ndarray) -> (np.ndarray, np.ndarray): 
+    def lonlat_to_xy_cea(self, 
+                         lon: np.ndarray | float, 
+                         lat: np.ndarray | float
+                         ) -> (np.ndarray | float, np.ndarray | float): 
         """
         Cylindrical Equal Area (Global) 
         """
 
-        print(f"lonlat_to_xy_cea: lon.shape = {lon.shape}")
+        #print(f"lonlat_to_xy_cea: lon.shape = {lon.shape}")
 
         epsilon = 1e-6
-        params = self.projection.split()
-        lon_0 = float(next((param.split('=')[1] for param in params if 'lon_0' in param), None))
-        dlon = lon - lon_0
-        phi = np.deg2rad(lat)
-        lam = np.deg2rad(dlon)
+        params  = self.projection.split()
+        lon_0   = float(next((param.split('=')[1] for param in params if 'lon_0' in param), None))
+        dlon    = lon - lon_0
+        phi     = np.deg2rad(lat)
+        lam     = np.deg2rad(dlon)
         sin_phi = np.sin(phi)
 
-        q = (1 - E2) * (
-            (sin_phi / (1 - E2 * sin_phi ** 2)) -
-            (1 / (2 * E)) * np.log((1 - E * sin_phi) / (1 + E * sin_phi))
-        )
+        q       = (1 - E2) * (
+                  (sin_phi / (1 - E2 * sin_phi ** 2)) -
+                  (1 / (2 * E)) * np.log((1 - E * sin_phi) / (1 + E * sin_phi))
+                  )
 
         # qp = q(phi = 90)
-        qp = 1 - (
-            ((1 - E2) / (2 * E)) * np.log((1 - E) / (1 + E))
-        )
+        qp      = 1 - (
+                 ((1 - E2) / (2 * E)) * np.log((1 - E) / (1 + E))
+                 )
 
         lat_ts_value = float(
             next(
@@ -379,18 +399,21 @@ class GridGenerator:
         )
         sin_phi_1 = np.sin(np.deg2rad(lat_ts_value))
         cos_phi_1 = np.cos(np.deg2rad(lat_ts_value))
-        k0 = cos_phi_1 / np.sqrt(1 - (E2 * sin_phi_1 * sin_phi_1))
-        x =  MAP_EQUATORIAL_RADIUS * k0 * lam
-        y = (MAP_EQUATORIAL_RADIUS * q) / (2 * k0)
+        k0        = cos_phi_1 / np.sqrt(1 - (E2 * sin_phi_1 * sin_phi_1))
+        x         =  MAP_EQUATORIAL_RADIUS * k0 * lam
+        y         = (MAP_EQUATORIAL_RADIUS * q) / (2 * k0)
 
-        print(f"lonlat_to_xy_cea: x.shape = {x.shape}")
+        #print(f"lonlat_to_xy_cea: x.shape = {x.shape}")
 
         return x, y
 
 
     # TODO: Add native implementation? 
-    def lonlat_to_xy_stereo(self, lon: np.ndarray, lat: np.ndarray, 
-                            pole: str = 'N') -> (np.ndarray, np.ndarray):
+    def lonlat_to_xy_stereo(self, 
+                            lon: np.ndarray | float, 
+                            lat: np.ndarray | float, 
+                            pole: str = 'N'
+                            ) -> (np.ndarray | float, np.ndarray | float):
         """
         Polar Stereographic projection using pyproj library: 
         https://proj.org/en/9.5/operations/projections/stere.html 
@@ -400,7 +423,7 @@ class GridGenerator:
         https://spatialreference.org/ref/epsg/3413/proj4.txt 
         """
 
-        print(f"lonlat_to_xy_stereo: lon.shape = {lon.shape}")
+        #print(f"lonlat_to_xy_stereo: lon.shape = {lon.shape}")
 
         if pole == 'N': 
             projection = PROJECTIONS['STEREO_N']
@@ -410,13 +433,16 @@ class GridGenerator:
             ValueError("Invalid value for pole. Must be 'N' or 'S'.")
 
         projection = pyproj.Proj(projection)
-        x, y = projection(longitude = lon, latitude = lat)
+        x, y       = projection(longitude = lon, latitude = lat)
 
         return x, y
 
 
-    def lonlat_to_xy_ups(self, lon: np.ndarray, lat: np.ndarray, 
-                            pole: str = 'N') -> (np.ndarray, np.ndarray):
+    def lonlat_to_xy_ups(self, 
+                         lon: np.ndarray | float, 
+                         lat: np.ndarray | float, 
+                         pole: str = 'N'
+                         ) -> (np.ndarray | float, np.ndarray | float):
         """
         Universal Polar Stereographic projection using pyproj library: 
         https://proj.org/en/9.5/operations/projections/ups.html
@@ -438,12 +464,15 @@ class GridGenerator:
             ValueError("Invalid value for pole. Must be 'N' or 'S'.")
 
         projection = pyproj.Proj(projection)
-        x, y = projection(longitude = lon, latitude = lat)
+        x, y       = projection(longitude = lon, latitude = lat)
 
         return x, y
 
 
-    def lonlat_to_xy_merc(self, lon: np.ndarray, lat: np.ndarray) -> (np.ndarray, np.ndarray):
+    def lonlat_to_xy_merc(self, 
+                          lon: np.ndarray | float, 
+                          lat: np.ndarray | float
+                          ) -> (np.ndarray | float, np.ndarray | float):
         """
         (Global) Mercator projection using pyproj library: 
         https://proj.org/en/9.5/operations/projections/merc.html 
@@ -460,7 +489,10 @@ class GridGenerator:
         return x, y 
 
 
-    def lonlat_to_xy(self, lon: np.ndarray, lat: np.ndarray) -> (np.ndarray, np.ndarray):
+    def lonlat_to_xy(self, 
+                     lon: np.ndarray | float, 
+                     lat: np.ndarray | float
+                     ) -> (np.ndarray | float, np.ndarray | float):
         """
         Generic method. Converts longitude and latitude coordinates to x and y
         coordinates for a given projection.
@@ -599,8 +631,11 @@ class GridGenerator:
     # -------------------------------------------------------------------------
     # Inverse Projections: (x, y) -> (lon, lat)
     # -------------------------------------------------------------------------
-    def xy_to_lonlat_laea(self, x: np.ndarray, y: np.ndarray, 
-                          pole: str = 'N') -> (np.ndarray, np.ndarray): 
+    def xy_to_lonlat_laea(self, 
+                          x: np.ndarray | float, 
+                          y: np.ndarray | float, 
+                          pole: str = 'N'
+                          ) -> (np.ndarray | float, np.ndarray | float): 
         """
         Inverse of Lambert's Azimuthal Equal Area (North and South) projection  
         """
@@ -635,7 +670,10 @@ class GridGenerator:
         return lon, lat 
 
 
-    def xy_to_lonlat_cea(self, x: np.ndarray, y: np.ndarray) -> (np.ndarray, np.ndarray): 
+    def xy_to_lonlat_cea(self, 
+                         x: np.ndarray | float, 
+                         y: np.ndarray | float
+                         ) -> (np.ndarray | float, np.ndarray | float): 
         """
         Inverse of Cylindrical Equal Area (Global) projection. 
         """
@@ -674,8 +712,11 @@ class GridGenerator:
 
 
     # TODO: Add native implementation? 
-    def xy_to_lonlat_stereo(self, x: np.ndarray, y: np.ndarray, 
-                            pole: str = 'N') -> (np.ndarray, np.ndarray):
+    def xy_to_lonlat_stereo(self, 
+                            x: np.ndarray | float, 
+                            y: np.ndarray | float, 
+                            pole: str = 'N'
+                            ) -> (np.ndarray | float, np.ndarray | float):
         """
         Polar Stereographic projection using pyproj library: 
         https://proj.org/en/9.5/operations/projections/stere.html 
@@ -684,9 +725,6 @@ class GridGenerator:
         https://spatialreference.org/ref/epsg/3413/ 
         https://spatialreference.org/ref/epsg/3413/proj4.txt 
         """
-        print(x)
-        print(x.shape)
-        exit() 
 
         if pole == 'N': 
             projection = PROJECTIONS['STEREO_N']
@@ -701,8 +739,11 @@ class GridGenerator:
         return lon, lat 
 
 
-    def xy_to_lonlat_ups(self, x: np.ndarray, y: np.ndarray, 
-                            pole: str = 'N') -> (np.ndarray, np.ndarray):
+    def xy_to_lonlat_ups(self, 
+                         x: np.ndarray | float, 
+                         y: np.ndarray | float, 
+                         pole: str = 'N'
+                         ) -> (np.ndarray | float, np.ndarray | float):
         """
         Universal Polar Stereographic projection using pyproj library: 
         https://proj.org/en/9.5/operations/projections/ups.html
@@ -729,7 +770,10 @@ class GridGenerator:
         return lon, lat 
 
 
-    def xy_to_lonlat_merc(self, x: np.ndarray, y: np.ndarray) -> (np.ndarray, np.ndarray):
+    def xy_to_lonlat_merc(self, 
+                          x: np.ndarray | float, 
+                          y: np.ndarray | float
+                          ) -> (np.ndarray | float, np.ndarray | float):
         """
         (Global) Mercator projection using pyproj library: 
         https://proj.org/en/9.5/operations/projections/merc.html 
@@ -746,7 +790,10 @@ class GridGenerator:
         return x, y 
 
 
-    def xy_to_lonlat(self, x: np.ndarray, y: np.ndarray) -> (np.ndarray, np.ndarray):
+    def xy_to_lonlat(self, 
+                     x: np.ndarray | float, 
+                     y: np.ndarray | float
+                     ) -> (np.ndarray| float, np.ndarray | float):
         """
         Converts x and y coordinates to longitude and latitude coordinates for a given projection.
         Parameters

@@ -2,9 +2,7 @@
 <config>
     <inputData>
         <type>SMAP</type>
-        <path>/run/media/eva-v3/seagate_small/Maks/CurrProjects/SaT/CIMR-RGB/code/cimr-126/dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>
-<!--        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>-->
-<!--        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/AMSR2/GW1AM2_202308301033_051D_L1SGBTBR_2220220.h5</path>-->
+        <path>../dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>
         <splitForeAft>True</splitForeAft>
         <!-- AMSR2 Specific Configuration Parameters -->
         <sourceBand>89a</sourceBand>
@@ -32,6 +30,17 @@
     </ReGridderParams>
     <outputData>
         <saveTodisk>True</saveTodisk>
-        <outputPath>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1cProducts/SMAP/RGB/</outputPath>
+	<outputPath>./outputs/L1cProducts/SMAP/RGB/</outputPath>
     </outputData>
+    <LoggingParams>
+	<!-- Log Config File --> 
+        <!-- Relative is relative to the main.py, not the config file! 
+	     if it is empty, no logger will be configured 
+        --> 
+        <configPath>../src/logger_config.json</configPath>
+	<!--<configPath></configPath>-->
+	<decorate>True</decorate>
+	<!-- [ RGB, Custom ] -->  
+	<!--<decorator>RGBLogging.track_perf</decorator>--> 	
+    </LoggingParams> 
 </config>

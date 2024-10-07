@@ -1,12 +1,17 @@
 """
 This script reads the configuration file and validates the chosen parameters.
 """
-from operator import truediv
+import pathlib as pb 
+import logging 
 from os import path, getcwd
 import sys
 from xml.etree.ElementTree import ParseError, parse
-from grid_generator import GRIDS
+
+from operator import truediv
 from numpy import sqrt
+
+from grid_generator import GRIDS
+from rgb_logging import RGBLogging 
 
 
 class ConfigFile:
@@ -37,58 +42,84 @@ class ConfigFile:
         ----------
         config_file_path: str
         """
-        config_object = self.read_config(config_file_path)
+
+        config_object        = self.read_config(config_file_path)
+
+        # TODO: Put this into its own validation method? 
+        # -----------
+        # Path to logger_config.json 
+        # -----------
+        self.logpar_config   = config_object.find("LoggingParams/configPath").text
+
+        if self.logpar_config is not None: 
+            self.logpar_config = pb.Path(self.logpar_config).resolve()  
+
+        # Whether to use RGB decorator  
+        self.logpar_decorate = bool(config_object.find("LoggingParams/decorate").text) 
+
+        # Initialising RGB logging 
+        rgb_logging          = RGBLogging(log_config = self.logpar_config) 
+        self.logger          = rgb_logging.get_logger("rgb") 
+
+        if self.logpar_config is None: 
+            # Configuring the logger object by adding the NullHandler as per
+            # python's official documentation. In this way we do not interfere with
+            # library users' logging functionality.  
+            self.logger.addHandler(logging.NullHandler())
+        # -----------
+
+
 
         self.input_data_type = self.validate_input_data_type(
-            config_object=config_object,
-            input_data_type='inputData/type'
+            config_object    = config_object,
+            input_data_type  = 'inputData/type'
         )
 
         self.input_data_path = self.validate_input_data_path(
-            config_object=config_object,
-            input_data_path='inputData/path'
+            config_object    = config_object,
+            input_data_path  = 'inputData/path'
         )
 
-        self.dpr_path = path.join(path.dirname(getcwd()), 'dpr')
+        self.dpr_path        = path.join(path.dirname(getcwd()), 'dpr')
 
-        self.grid_type = self.validate_grid_type(
-            config_object=config_object,
-            grid_type='GridParams/gridType',
-            input_data_type=self.input_data_type
+        self.grid_type       = self.validate_grid_type(
+            config_object    = config_object,
+            grid_type        = 'GridParams/gridType',
+            input_data_type  = self.input_data_type
         )
 
-        self.target_band = self.validate_target_band(
-            config_object=config_object,
-            target_band='inputData/targetBand',
-            input_data_type=self.input_data_type,
-            grid_type=self.grid_type
+        self.target_band     = self.validate_target_band(
+            config_object    = config_object,
+            target_band      = 'inputData/targetBand',
+            input_data_type  = self.input_data_type,
+            grid_type        = self.grid_type
         )
 
 
         if self.grid_type == "L1C":
-            self.source_band=[]
+            self.source_band = []
         else:
             self.source_band = self.validate_source_band(
-                config_object=config_object,
-                source_band='inputData/sourceBand',
+                config_object= config_object,
+                source_band  = 'inputData/sourceBand',
                 input_data_type=self.input_data_type
             )
 
         self.grid_definition = self.validate_grid_definition(
-            config_object=config_object,
-            grid_type=self.grid_type,
-            grid_definition='GridParams/gridDefinition'
+            config_object    = config_object,
+            grid_type        = self.grid_type,
+            grid_definition  = 'GridParams/gridDefinition'
         )
 
         self.projection_definition = self.validate_projection_definition(
-            config_object=config_object,
-            grid_definition=self.grid_definition,
-            projection_definition='GridParams/projectionDefinition'
+            config_object    = config_object,
+            grid_definition  = self.grid_definition,
+            projection_definition  = 'GridParams/projectionDefinition'
         )
 
-        self.regridding_algorithm = self.validate_regridding_algorithm(
-            config_object=config_object,
-            regridding_algorithm='ReGridderParams/regriddingAlgorithm'
+        self.regridding_algorithm  = self.validate_regridding_algorithm(
+            config_object          = config_object,
+            regridding_algorithm   = 'ReGridderParams/regriddingAlgorithm'
         )
 
         self.split_fore_aft = self.validate_split_fore_aft(
@@ -236,6 +267,8 @@ class ConfigFile:
                 self.antenna_pattern_path = path.normpath(path.join(getcwd(), relative_path))
 
                 self.antenna_tilt_angle = 46.886 # update to read from file
+
+
     @staticmethod
     def read_config(config_file_path):
         """
@@ -256,6 +289,7 @@ class ConfigFile:
             raise ValueError(f"Error parsing the configuration file: {e}") from e
         return root
 
+
     @staticmethod
     def validate_input_data_type(config_object, input_data_type):
         """
@@ -273,10 +307,14 @@ class ConfigFile:
         str
             Validated input data type
         """
+
         valid_input = ['AMSR2', 'SMAP', 'CIMR']
+
         if config_object.find(input_data_type).text in valid_input:
             return config_object.find(input_data_type).text
+
         raise ValueError(f"Invalid input data type. Valid input data types are: {valid_input}")
+
 
     @staticmethod
     def validate_input_data_path(config_object, input_data_path):
@@ -294,7 +332,14 @@ class ConfigFile:
         str
             Validated input data path
         """
-        return config_object.find(input_data_path).text
+
+        input_data_path = pb.Path(config_object.find(input_data_path).text).resolve() 
+
+        if input_data_path.exists(): 
+            return input_data_path  
+        else: 
+            raise FileNotFoundError(f"File\n {input_data_path}\n not found. Check file location.") 
+
 
     @staticmethod
     def validate_grid_type(config_object, grid_type, input_data_type):
@@ -315,6 +360,7 @@ class ConfigFile:
         str
             Validated grid type
         """
+
         if input_data_type == "SMAP":
             valid_input = ['L1C']
         else:
@@ -322,8 +368,10 @@ class ConfigFile:
 
         if config_object.find(grid_type).text in valid_input:
             return config_object.find(grid_type).text
+
         raise ValueError(f"Invalid Grid Type. Check Configuration File. Valid grid types are:"
                          f" {valid_input} for {input_data_type} data.")
+
 
     @staticmethod
     def validate_target_band(config_object, target_band, input_data_type, grid_type):
@@ -374,6 +422,7 @@ class ConfigFile:
                                 f" Valid target bands are: {valid_input} or any combination of individual bands.")
                     return config_object.find(target_band).text.split()
 
+
     @staticmethod
     def validate_source_band(config_object, source_band, input_data_type):
         """
@@ -408,6 +457,7 @@ class ConfigFile:
         if input_data_type == "CIMR":
             pass
 
+
     @staticmethod
     def validate_grid_definition(config_object, grid_type, grid_definition):
         """
@@ -427,6 +477,7 @@ class ConfigFile:
         str
             Validated grid definition
         """
+
         if grid_type == 'L1R':
             return None
 
@@ -440,6 +491,7 @@ class ConfigFile:
             f"Invalid Grid Definition, check configuration file. "
             f"Valid grid definitions are: {valid_input}"
         )
+
 
     @staticmethod
     def validate_projection_definition(config_object, grid_definition, projection_definition):
@@ -460,7 +512,7 @@ class ConfigFile:
         str
             Validated projection definition
         """
-        #print(grid_definition)
+
         if grid_definition:
             if 'EASE2' in grid_definition:
                 valid_input = ['G', 'N', 'S']
@@ -478,6 +530,7 @@ class ConfigFile:
             )
         else:
             return None
+
 
     @staticmethod
     def validate_regridding_algorithm(config_object, regridding_algorithm):
@@ -503,6 +556,7 @@ class ConfigFile:
             f"Invalid regridding algorithm. Check Configuration File."
             f" Valid regridding algorithms are: {valid_input}"
             )
+
 
     @staticmethod
     def validate_split_fore_aft(config_object, split_fore_aft, input_data_type):
@@ -534,6 +588,7 @@ class ConfigFile:
             f" Valid split fore aft are: {valid_input}"
         )
 
+
     @staticmethod
     def validate_save_to_disk(config_object, save_to_disk):
         value = bool(config_object.find(save_to_disk).text)
@@ -542,6 +597,7 @@ class ConfigFile:
                 f"Invalid saveToDisk. Check Configuration File."
                 f" SaveToDisk must be either True or False")
         return value
+
 
     @staticmethod
     def validate_search_radius(config_object, search_radius, grid_definition, grid_type, input_data_type):
@@ -574,6 +630,7 @@ class ConfigFile:
 
         return value
 
+
     @staticmethod
     def get_scan_geometry(config, band_to_remap=None):
         if config.input_data_type == 'SMAP':
@@ -596,6 +653,7 @@ class ConfigFile:
                 num_scans = 74
                 num_earth_samples = 7692*8
         return num_scans, num_earth_samples
+
 
     @staticmethod
     def validate_variables_to_regrid(config_object, input_data_type, variables_to_regrid):
@@ -626,6 +684,7 @@ class ConfigFile:
         else:
             # Return default variables
             return default_vars
+
 
     @staticmethod
     def validate_max_neighbours(config_object, max_neighbours, regridding_algorithm):
