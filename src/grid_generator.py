@@ -310,6 +310,21 @@ class GridGenerator:
 
         return row, col
 
+    def rowcol_to_lonlat(self, row, col):
+        # First conver row col to x, y
+        r0 = GRIDS[self.config.grid_definition]['n_cols'] / 2
+        s0 = GRIDS[self.config.grid_definition]['n_rows'] / 2
+        res = GRIDS[self.config.grid_definition]['res']
+
+        # Need to check if the half cell has been added for lat, lon/x, y of the center of the cell
+        x = (col - r0)*res
+        y = (s0 - row)*res
+
+        # Convert x, y to lon, lat
+        lon, lat = self.xy_to_lonlat(x, y)
+
+        return lon, lat
+
     @staticmethod
     def generate_swath_grid(target_lons, target_lats):
         test = 0
