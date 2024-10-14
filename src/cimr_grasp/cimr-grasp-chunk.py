@@ -2,6 +2,7 @@
 
 """
 # Python STD imports 
+import sys 
 import re 
 import pathlib as pb  
 #import glob 
@@ -27,143 +28,21 @@ import tqdm
 # Custom modules 
 import grasp_io as io 
 import grasp_utils as utils 
+
+# TODO: This should be modified in the future 
+# Add the root of your project to PYTHONPATH
+rootpath = pb.Path('.').resolve().parents[0]
+syspath = str(rootpath)
+sys.path.append(syspath) 
 from rgb_logging import RGBLogging 
 
 
-# TODO: Think of different name? 
-#def rgb_profiled(time_it = False, profile_it = False, log = False):
-#
-#    def decorator(func):
-#
-#        def wrapper(*args, **kwargs):
-#
-#            message = ""
-#
-#            if time_it: 
-#                print("Starting Timer") 
-#                start_time   = time.perf_counter()
-#
-#            if profile_it: 
-#                print("Starting Profiler")
-#                start_cpu    = psutil.cpu_percent(interval=None)
-#                start_memory = psutil.Process().memory_info().rss / (1024 * 1024)  # Memory in MB
-#
-#
-#             
-#            result = func(*args, **kwargs)
-#
-#            if time_it: 
-#                end_time     = time.perf_counter()
-#                time_taken   = end_time - start_time
-#
-#                message = f"Function '{func.__name__}' executed in {time_taken:.2f}s. "
-#
-#            if profile_it: 
-#                end_cpu = psutil.cpu_percent(interval=None)
-#                end_memory = psutil.Process().memory_info().rss / (1024 * 1024)  # Memory in MB
-#                cpu_usage = end_cpu - start_cpu
-#                memory_usage = end_memory - start_memory
-#
-#                message = message + "\n" + (
-#                           f"CPU usage: {cpu_usage:.2f}%, "
-#                           f"Memory usage change: {memory_usage:.2f} MB.")
-#            
-#            print(message)
-#
-#            return result
-#
-#        return wrapper 
-#
-#    return decorator  
-#
-#@rgb_profiled(time_it = True, profile_it = True) 
-#def add(a = 2, b = 1):
-#    return a + b 
-#
-#add() 
-#exit() 
 
-
-#def conditional_decorator(condition, decorator):
-#    """
-#    A factory that returns a conditional decorator.
-#    If `condition` is True, applies `decorator`. Otherwise, returns the original function.
-#    
-#    Parameters:
-#    - condition (bool): The condition to check.
-#    - decorator (function): The decorator to apply if the condition is True.
-#    """
-#    def wrapper(func):
-#        # If the condition is true, apply the decorator
-#        if condition:
-#            return decorator(func)
-#        # Otherwise, return the original function
-#        return func
-#    return wrapper
-#
-## Timing decorator
-#def timeit(func):
-#
-#    @functools.wraps(func)
-#    def wrapper(*args, **kwargs):
-#
-#        start_time = time.perf_counter()
-#
-#        result = func(*args, **kwargs)
-#
-#        end_time = time.perf_counter()
-#        time_taken = end_time - start_time
-#
-#        print(f"Function '{func.__name__}' executed in {time_taken:.2f} seconds.")
-#
-#        return result
-#
-#    return wrapper
-#
-#def time_and_track(log=True, to_print=True):
-#    """
-#    Decorator for timing and resource usage (CPU, Memory).
-#    """
-#    def decorator(func):
-#        def wrapper(*args, **kwargs):
-#            # Record the start time and resource usage
-#            start_time = time.perf_counter()
-#            start_cpu = psutil.cpu_percent(interval=None)
-#            start_memory = psutil.Process().memory_info().rss / (1024 * 1024)  # Memory in MB
-#            
-#            # Execute the wrapped function
-#            result = func(*args, **kwargs)
-#            
-#            # Record the end time and resource usage
-#            end_time = time.perf_counter()
-#            end_cpu = psutil.cpu_percent(interval=None)
-#            end_memory = psutil.Process().memory_info().rss / (1024 * 1024)  # Memory in MB
-#            
-#            # Calculate time taken, CPU, and memory usage
-#            time_taken = end_time - start_time
-#            cpu_usage = end_cpu - start_cpu
-#            memory_usage = end_memory - start_memory
-#            
-#            message = (f"Function '{func.__name__}' executed in {time_taken:.4f} seconds, "
-#                       f"CPU usage: {cpu_usage:.2f}%, "
-#                       f"Memory usage change: {memory_usage:.2f} MB.")
-#
-#            # Log and/or print the message
-#            if log:
-#                self.logger.info(message)
-#            if to_print:
-#                print(message)
-#
-#            return result
-#        return wrapper
-#    return decorator
-
-
-
-#@conditional_decorator(condition=True, decorator=timeit) 
-#@timeit
-#@rgb_decorator 
-def get_beamdata(beamfile: pb.Path, half_space: str, file_version: float, cimr: dict()) -> dict():  
+def get_beamdata(beamfile: pb.Path | str, 
+                 half_space: str, 
+                 file_version: float, 
+                 cimr: dict(), 
+                 logger) -> dict():  
     """
     Parses GRASP `grd` file and returns data as dictionary object. 
 
@@ -230,12 +109,12 @@ def get_beamdata(beamfile: pb.Path, half_space: str, file_version: float, cimr: 
 
         # Raising an error if igrid is not = 1 (see GRASP TICRA manual for the
         # info abut all other values it can have)
-        print(f"| KTYPE = {ktype}")
-        print(f"| NSET  = {nset}, ICOMP = {icomp}, NCOMP = {ncomp}, IGRID = {igrid}") 
+        logger.info(f"KTYPE = {ktype}")
+        logger.info(f"NSET  = {nset}, ICOMP = {icomp}, NCOMP = {ncomp}, IGRID = {igrid}") 
         if igrid == 1: 
-            print(f"| Antenna patterns are provided in the (u,v) coordinates and will be converted into (theta,phi)")
+            logger.info(f"Antenna patterns are provided in the (u,v) coordinates and will be converted into (theta,phi)")
         else: 
-            raise NotImplementedError(f"| The module functionality is implemented only for IGRID value = 1 since CIMR patterns were provided in this format.")
+            raise NotImplementedError(f"The module functionality is implemented only for IGRID value = 1 since CIMR patterns were provided in this format.")
 
 
         # The following lines are repeated NSET of times (as per GRASP manual instructions) 
@@ -258,9 +137,9 @@ def get_beamdata(beamfile: pb.Path, half_space: str, file_version: float, cimr: 
                     
             line_shift = line_shift + 2 
 
-            print(f"| IX = {ix}, IY = {iy}")
-            print(f"| XS = {xs}, YS = {ys}, XE = {xe}, YE = {ye}")
-            print(f"| NX = {nx}, NY = {ny}")
+            logger.info(f"IX = {ix}, IY = {iy}")
+            logger.info(f"XS = {xs}, YS = {ys}, XE = {xe}, YE = {ye}")
+            logger.info(f"NX = {nx}, NY = {ny}")
             
             # Grid spacing 
             dx   = (xe - xs) / (nx - 1)
@@ -268,8 +147,8 @@ def get_beamdata(beamfile: pb.Path, half_space: str, file_version: float, cimr: 
             xcen = dx * ix 
             ycen = dy * iy 
 
-            print(f"| DX   = {dx},   DY = {dy}")
-            print(f"| XCEN = {xcen}, YCEN = {ycen}")
+            logger.info(f"DX   = {dx},   DY = {dy}")
+            logger.info(f"XCEN = {xcen}, YCEN = {ycen}")
 
             
             # The output components 
@@ -345,9 +224,6 @@ def get_beamdata(beamfile: pb.Path, half_space: str, file_version: float, cimr: 
                 for ict in range(in_):
                 #for ict in tqdm.tqdm(range(nxr), desc="NX", leave=False, unit=" col"):
 
-                    #line_numbers = re.findall(r'-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?',
-                    #                          info[j_ + line_shift + (ict + 1)])
-
                     line_numbers = reline_pattern.findall(info[j_ + line_shift + (ict + 1)])
 
                     # If is_ = 1, then ic and ict are exactly the same it seems 
@@ -366,31 +242,10 @@ def get_beamdata(beamfile: pb.Path, half_space: str, file_version: float, cimr: 
                     G3v[ic, j_] = float(line_numbers[0])
                     G4v[ic, j_] = float(line_numbers[1]) 
                     
-                    # Grid points (x,y) run through the values  
-                    # 
-                    # [Note]: this is how the grid generated accroding to GRASP
-                    # manula. But this way results in more NaN grid values than
-                    # the way below, so we will be using that instead.  
-                    
-                    #u0[ic, j_] = xcen + xs + dx * (ic - 1) 
-                    #v0[ic, j_] = ycen + ys + dy * (j_ - 1)
-                    
-                    #u0[ic] = xcen + xs + dx * (ic - 1) 
-
-                    ## Converting the cartesian (u,v) grid into (theta, phi)   
-                    #theta[ic, j_], phi[ic, j_] = utils.convert_uv_to_tp(u0[ic, j_], v0[ic, j_])
                 
                 # To go to the next block of points within the file we need to
                 # increase the line counter 
                 line_shift = line_shift + in_ 
-
-    # Generating the grid 
-    #u0 = xcen + xs
-    #u1 = u0 + dx * (nx - 1)
-    #v0 = ycen + ys
-    #v1 = v0 + dy * (ny - 1)
-
-    #u_grid, v_grid = np.mgrid[u0:(u1 + dx):dx, v0:(v1 + dy):dy]  
 
     u_grid, v_grid = utils.generate_uv_grid(xcen, ycen, xs, ys, nx, ny, dx, dy)
 
@@ -398,14 +253,8 @@ def get_beamdata(beamfile: pb.Path, half_space: str, file_version: float, cimr: 
     # Getting Vectors Back 
     # 
     # See the note in the generate grid as to why we do it this way
-    #u = np.unique(u_grid[:, 0]) 
-    #v = np.unique(v_grid[0, :])  
     u = np.unique(u_grid[0, :]) 
     v = np.unique(v_grid[:, 0])  
-    #print(u) 
-    #u = u.T 
-    #print(v) 
-    #exit() 
     
     # Mandatory Parameters 
     cimr["Grid"]['u']    = u   
@@ -439,7 +288,7 @@ def get_beamdata(beamfile: pb.Path, half_space: str, file_version: float, cimr: 
     return cimr 
     
 
-def recenter_beamdata(cimr: dict()) -> dict(): 
+def recenter_beamdata(cimr: dict(), logger) -> dict(): 
     """
     Method to recenter original beam.  
 
@@ -449,6 +298,16 @@ def recenter_beamdata(cimr: dict()) -> dict():
     space. Therefore, we need to find where the maximum value is located
     on the u,v grid and offset u,v values to recenter the beam grid on
     beam's maximum value.  
+
+    Parameters:
+    -----------
+    cimr: dict 
+        Dictionary that contains beam data to be modified and returned. 
+
+    Returns:
+    --------
+    cimr: dict 
+        Dictionary that contains beam data to be modified and returned. 
     """
 
     Ghh_max_index = utils.get_max_index(cimr["temp"]['Ghh']) 
@@ -456,10 +315,10 @@ def recenter_beamdata(cimr: dict()) -> dict():
     Gvv_max_index = utils.get_max_index(cimr["temp"]['Gvv']) 
     Gvh_max_index = utils.get_max_index(cimr["temp"]['Gvh']) 
 
-    print(f"| Ghh_max_index = {Ghh_max_index}")  
-    print(f"| Ghv_max_index = {Ghv_max_index}")  
-    print(f"| Gvv_max_index = {Gvv_max_index}")  
-    print(f"| Gvh_max_index = {Gvh_max_index}")  
+    logger.info(f"Ghh_max_index = {Ghh_max_index}")  
+    logger.info(f"Ghv_max_index = {Ghv_max_index}")  
+    logger.info(f"Gvv_max_index = {Gvv_max_index}")  
+    logger.info(f"Gvh_max_index = {Gvh_max_index}")  
     
     # Get the maximum value
     Ghh_max_value = cimr["temp"]['Ghh'][Ghh_max_index]
@@ -467,17 +326,17 @@ def recenter_beamdata(cimr: dict()) -> dict():
     Gvv_max_value = cimr["temp"]['Gvv'][Gvv_max_index]
     Gvh_max_value = cimr["temp"]['Gvh'][Gvh_max_index]
 
-    print(f"| Ghh_max_value = {Ghh_max_value}")
-    print(f"| Ghv_max_value = {Ghv_max_value}")
-    print(f"| Gvv_max_value = {Gvv_max_value}")
-    print(f"| Gvh_max_value = {Gvh_max_value}")
+    logger.info(f"Ghh_max_value = {Ghh_max_value}")
+    logger.info(f"Ghv_max_value = {Ghv_max_value}")
+    logger.info(f"Gvv_max_value = {Gvv_max_value}")
+    logger.info(f"Gvh_max_value = {Gvh_max_value}")
     
     # Get the coordinates corresponding to maximum gain inside the mesh grids
     # (u, v). This is our new central value.  
     u_coordinate = cimr['Grid']['u_grid'][Ghh_max_index]
     v_coordinate = cimr['Grid']['v_grid'][Ghh_max_index] 
-    print(f"| u_coordinate = {u_coordinate}")
-    print(f"| v_coordinate = {v_coordinate}")
+    logger.info(f"u_coordinate = {u_coordinate}")
+    logger.info(f"v_coordinate = {v_coordinate}")
     
     # "Shift" is the distance between two coordinates (the center of the beam
     # and the coordinate that corresponds to its maximum gain value). So we
@@ -488,8 +347,8 @@ def recenter_beamdata(cimr: dict()) -> dict():
     u_shift = float(format(np.abs(cimr["Grid"]['xcen'] - u_coordinate), '.15f'))       
     v_shift = float(format(np.abs(cimr["Grid"]['ycen'] - v_coordinate), '.15f'))       
     #v_shift = np.abs(ycen - v_coordinate)      
-    print(f"| u_shift = {u_shift}")
-    print(f"| v_shift = {v_shift}")
+    logger.info(f"u_shift = {u_shift}")
+    logger.info(f"v_shift = {v_shift}")
     
     # If the maximum gain coordinate is negative then we add the shift value
     # (go right to reach zero), else --- we subtract (go left).  
@@ -497,14 +356,11 @@ def recenter_beamdata(cimr: dict()) -> dict():
         cimr['Grid']['u_grid']  = cimr['Grid']['u_grid'] + u_shift 
     else: 
         cimr['Grid']['u_grid']  = cimr['Grid']['u_grid'] - u_shift 
-        #u_grid = u_grid - u_shift 
         
     if v_coordinate < 0: 
         cimr['Grid']['v_grid']  = cimr['Grid']['v_grid'] + v_shift 
-        #v_grid = v_grid + v_shift 
     else: 
         cimr['Grid']['v_grid']  = cimr['Grid']['v_grid'] - v_shift 
-        #v_grid = v_grid - v_shift 
     
     # Converting (u,v) into (theta,phi)
     # 
@@ -532,8 +388,8 @@ def recenter_beamdata(cimr: dict()) -> dict():
     #cimr["Gain"]['Gvv']        = Gvv
     #cimr["Gain"]['Gvh']        = Gvh
 
-    #print(cimr["Gain"].keys())
-    #print(cimr["Grid"].keys())
+    #logger.info(cimr["Gain"].keys())
+    #logger.info(cimr["Grid"].keys())
 
     return cimr 
 
@@ -613,9 +469,6 @@ def main(datadir:            str | pb.Path,
         apat_name_info[band][2][horn].append(half_space)
 
     
-    #print(f"| {Fore.YELLOW}=============================={Style.RESET_ALL}") 
-    #print(f"| {Fore.BLUE}Parsing the Antenna Patterns{Style.RESET_ALL}") 
-    #print(f"| {Fore.YELLOW}=============================={Style.RESET_ALL}") 
     logger.info(f"==============================") 
     logger.info(f"Parsing the Antenna Patterns") 
     logger.info(f"==============================") 
@@ -628,12 +481,9 @@ def main(datadir:            str | pb.Path,
     preprocessed_dir = outdir.joinpath("preprocessed", f"v{file_version}")
     io.rec_create_dir(preprocessed_dir, logger = logger)
 
-    #print(f"| {Fore.GREEN}Data Directory:{Fore.RESET}\n| {Fore.BLUE}{datadir}{Style.RESET_ALL}") 
-    #print(f"| {Fore.GREEN}Parsed Directory:{Fore.RESET}\n| {Fore.BLUE}{parsed_dir}{Style.RESET_ALL}") 
-    #print(f"| {Fore.GREEN}Preprocessed Directory:{Fore.RESET}\n| {Fore.BLUE}{preprocessed_dir}{Style.RESET_ALL}") 
-    logger.info(f"Data Directory:\n{datadir}") 
-    logger.info(f"Parsed Directory:\n{parsed_dir}") 
-    logger.info(f"Preprocessed Directory:\n{preprocessed_dir}") 
+    logger.info(f"{Fore.GREEN}Data Directory:{Fore.RESET}\n| {Fore.BLUE}{datadir}{Style.RESET_ALL}") 
+    logger.info(f"{Fore.GREEN}Parsed Directory:{Fore.RESET}\n| {Fore.BLUE}{parsed_dir}{Style.RESET_ALL}") 
+    logger.info(f"{Fore.GREEN}Preprocessed Directory:{Fore.RESET}\n| {Fore.BLUE}{preprocessed_dir}{Style.RESET_ALL}") 
 
 
     # Main parsing loop 
@@ -649,7 +499,7 @@ def main(datadir:            str | pb.Path,
                 # Since we do not require BHS, we skip the relevant part of the
                 # loop  
                 if not use_bhs and half_space == "BK": 
-                    print(f"| use_bhs = {use_bhs}; skipping {half_space}.")
+                    logger.info(f"| use_bhs = {use_bhs}; skipping {half_space}.")
                     continue 
 
                 cimr = {"Gain": {}, "Grid": {}} 
@@ -662,8 +512,8 @@ def main(datadir:            str | pb.Path,
                     infile = band + str(horn) + "-" + freq + "-" + pol + "-" + half_space + ".grd" 
                 
                 infile = pb.Path(str(datadir) + "/" + band + "/" + infile)  
-                print(f"| {Fore.YELLOW}------------------------------{Style.RESET_ALL}") 
-                print(f"| {Fore.GREEN}Working with Input File: {infile.name}{Style.RESET_ALL}") 
+                logger.info(f"{Fore.YELLOW}------------------------------{Style.RESET_ALL}") 
+                logger.info(f"{Fore.GREEN}Working with Input File: {infile.name}{Style.RESET_ALL}") 
 
                 # Parsing Original GRASP Beam Files 
                 # Output filename 
@@ -675,18 +525,17 @@ def main(datadir:            str | pb.Path,
                      cimr_is_empty = is_nested_dict_empty(cimr) 
                 else: 
                     
-                    print(f"| ------------------------------") 
-                    print(f"| Parsing")
-                    print(f"| ------------------------------") 
+                    logger.info(f"------------------------------") 
+                    logger.info(f"Parsing")
+                    logger.info(f"------------------------------") 
                     
-                    start_time_pars = time.time() 
+                    start_time_pars = time.perf_counter() 
 
-                    cimr = get_beamdata(infile, half_space, file_version, cimr) #_uv, cimr_tp)     
-                    exit() 
-                    end_time_pars = time.time() - start_time_pars 
-                    print(f"| Finished Parsing in: {end_time_pars:.2f}s") 
+                    cimr = get_beamdata(infile, half_space, file_version, cimr, logger)      
+                    end_time_pars = time.perf_counter() - start_time_pars 
+                    logger.info(f"Finished Parsing in: {end_time_pars:.2f}s") 
                     
-                    print(f"| {Fore.BLUE}Saving Output File: {outfile_oap.name}{Style.RESET_ALL}") 
+                    logger.info(f"{Fore.BLUE}Saving Output File: {outfile_oap.name}{Style.RESET_ALL}") 
                     
                     with h5py.File(outfile_oap, 'w') as hdf5_file:
                         io.save_dict_to_hdf5(hdf5_file, cimr)
@@ -701,14 +550,14 @@ def main(datadir:            str | pb.Path,
                     continue 
                 else: 
                     if cimr_is_empty: 
-                        print("| Loading data object...") 
+                        logger.info("Loading data object...") 
                         start_time_pars = time.time() 
                         
                         with h5py.File(outfile_oap, 'r') as hdf5_file:
                             cimr = io.load_hdf5_to_dict(hdf5_file)
                             
                         end_time_pars = time.time() - start_time_pars 
-                        print(f"| Finished Loading in: {end_time_pars:.2f}s") 
+                        logger.info(f"Finished Loading in: {end_time_pars:.2f}s") 
 
 
                     # Creating a set of temporary values to be removed from memory 
@@ -731,25 +580,26 @@ def main(datadir:            str | pb.Path,
                     # pass those values further and then delete them once we
                     # are done 
                     if recenter_beam: 
-                        print(f"| ------------------------------") 
-                        print(f"| ReCentering")
-                        print(f"| ------------------------------") 
+                        logger.info(f"------------------------------") 
+                        logger.info(f"ReCentering")
+                        logger.info(f"------------------------------") 
                         
-                        start_time_recen = time.time() 
+                        start_time_recen = time.perf_counter() 
                         
-                        cimr = recenter_beamdata(cimr)
+                        cimr = recenter_beamdata(cimr, logger)
                         
-                        end_time_recen = time.time() - start_time_recen
-                        print(f"| Finished Recentering in: {end_time_recen:.2f}s") 
+                        end_time_recen = time.perf_counter() - start_time_recen
+                        logger.info(f"Finished Recentering in: {end_time_recen:.2f}s") 
 
                     
-                    print(f"| ------------------------------") 
-                    print(f"| Interpolating")
-                    print(f"| ------------------------------") 
+                    logger.info(f"------------------------------") 
+                    logger.info(f"Interpolating")
+                    logger.info(f"------------------------------") 
                     
-                    start_time_interpn = time.time()  
+                    start_time_interpn = time.perf_counter()  
                     
                     cimr = utils.interp_beamdata_into_uv(cimr = cimr, 
+                                                         logger = logger, 
                                                          grid_res_phi   = grid_res_phi, 
                                                          grid_res_theta = grid_res_theta, 
                                                          chunk_data     = chunk_data, 
@@ -758,32 +608,25 @@ def main(datadir:            str | pb.Path,
                                                          interp_method  = interp_method
                                                          ) 
 
-                    end_time_interpn = time.time() - start_time_interpn
-                    print(f"| Finished Interpolation in: {end_time_interpn:.2f}s") 
+                    end_time_interpn = time.perf_counter() - start_time_interpn
+                    logger.info(f"Finished Interpolation in: {end_time_interpn:.2f}s") 
 
-                    print(f"| {Fore.BLUE}Saving Output File: {outfile_pap.name}{Style.RESET_ALL}") 
+                    logger.info(f"{Fore.BLUE}Saving Output File: {outfile_pap.name}{Style.RESET_ALL}") 
                     with h5py.File(outfile_pap, 'w') as hdf5_file:
                         io.save_dict_to_hdf5(hdf5_file, cimr)
                     
 
-            print(f"| {Fore.YELLOW}------------------------------{Style.RESET_ALL}") 
+            logger.info(f"| {Fore.YELLOW}------------------------------{Style.RESET_ALL}") 
 
     
 if __name__ == '__main__': 
     
 
-    start_time_tot = time.time() 
-    print(f"| Starting the script using the following libraries:")
-    print(f"| numpy      {np.__version__}" ) 
-    print(f"| scipy      {sp.__version__}" ) 
-    print(f"| h5py       {h5py.__version__}") 
-    print(f"| tqdm       {tqdm.__version__}") 
-    print(f"| matplotlib {matplotlib.__version__}") 
-    #print(f"| colorama   {colorama.__version__}") 
+    start_time_tot = time.perf_counter() 
 
     # TODO: 
     # - Create a parameter file that will take as input this info. 
-    # - Create a logger object and perfomr proper logging of the functionality.   
+    # - Create a logger object and performs proper logging of the functionality.   
 
     # Getting the root of the repo 
     root_dir = io.find_repo_root() 
@@ -804,9 +647,22 @@ if __name__ == '__main__':
     use_rgb_logging    = True  
     use_rgb_decoration = True 
 
+    # Creating a logger object based on the user preference 
+    if use_rgb_logging: 
+        logger_config = pb.Path(f"{root_dir}/src/logger_config.json") 
+        rgb_logging   = RGBLogging(log_config = logger_config)
+        rgb_logger    = rgb_logging.get_logger("rgb") 
+
+
+    rgb_logger.debug(f"Starting the script using the following libraries:")
+    rgb_logger.debug(f"numpy      {np.__version__}" ) 
+    rgb_logger.debug(f"scipy      {sp.__version__}" ) 
+    rgb_logger.debug(f"h5py       {h5py.__version__}") 
+    rgb_logger.debug(f"tqdm       {tqdm.__version__}") 
+    rgb_logger.debug(f"matplotlib {matplotlib.__version__}") 
 
     if not pb.Path(outdir).exists(): 
-        print(f"Creating output directory:\n{outdir}")
+        rgb_logger.info(f"Creating output directory:\n{outdir}")
         pb.Path(outdir).mkdir()
 
     if not datadir.is_dir():
@@ -815,14 +671,7 @@ if __name__ == '__main__':
     # Getting all beam paths inside dpr/AP 
     beamfiles_paths = datadir.glob("*/*")   
 
-    # Creating a logger object based on the user preference 
-    if use_rgb_logging: 
-        logger_config = pb.Path(f"{root_dir}/src/cimr_grasp/logger_config.json") 
-        rgb_logging   = RGBLogging(log_config = logger_config)
-        rgb_logger    = rgb_logging.get_logger("rgb") 
 
-
-    #main(datadir, outdir, file_version)    
     main(datadir            = datadir, 
          outdir             = outdir, 
          file_version       = file_version,
@@ -836,10 +685,14 @@ if __name__ == '__main__':
          interp_method      = interp_method,   
          use_rgb_logging    = use_rgb_logging, 
          use_rgb_decoration = use_rgb_decoration, 
-         logger = rgb_logger 
+         logger             = rgb_logger 
          )    
-    
-    end_time_tot = time.time() - start_time_tot
-    print(f"| Finished Script in: {end_time_tot:.2f}s") 
-    print(f"| ------------------------------") 
 
+    
+    end_time_tot = time.perf_counter() - start_time_tot
+    rgb_logger.info(f"Finished Script in: {end_time_tot:.2f}s") 
+    rgb_logger.info(f"------------------------------") 
+    
+    
+    
+    

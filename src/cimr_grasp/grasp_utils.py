@@ -9,7 +9,8 @@ import scipy as sp
 
 
 
-def convert_uv_to_tp(u: float | np.ndarray, v: float | np.ndarray) -> (float | np.ndarray, float | np.ndarray): 
+def convert_uv_to_tp(u: float | np.ndarray, 
+                     v: float | np.ndarray) -> (float | np.ndarray, float | np.ndarray): 
     """
     Converting (u,v) into (theta,phi) and returning the grid in degrees.   
     
@@ -58,9 +59,6 @@ def convert_uv_to_tp(u: float | np.ndarray, v: float | np.ndarray) -> (float | n
         Phi angle value 
     """
 
-    #theta = np.degrees(np.arccos(np.sqrt(1 - u**2 - v**2))) 
-    #phi   = np.degrees(np.arctan2(v, u)) 
-    
     theta = np.arccos(np.sqrt(1 - u**2 - v**2)) 
     phi   = np.arctan2(v, u) 
 
@@ -76,7 +74,8 @@ def convert_uv_to_tp(u: float | np.ndarray, v: float | np.ndarray) -> (float | n
         
 
 
-def convert_tp_to_uv(theta: float | np.ndarray, phi: float | np.ndarray) -> (float | np.ndarray, float | np.ndarray): 
+def convert_tp_to_uv(theta: float | np.ndarray, 
+                     phi: float | np.ndarray) -> (float | np.ndarray, float | np.ndarray): 
     """
     Method converts the cartesian (u,v) coordinates into (theta, phi).  
 
@@ -219,6 +218,7 @@ def interp_gain_in_chunks(gain: np.ndarray,
                           Y: np.ndarray, 
                           x_down: np.ndarray, 
                           y_down: np.ndarray,  
+                          logger, 
                           num_chunks: int = 4, 
                           overlap_margin: float = 0.1, 
                           interp_method: str = "linear") -> np.ndarray: 
@@ -321,11 +321,9 @@ def interp_gain_in_chunks(gain: np.ndarray,
             # Flatten the arrays to get the coordinates and temperature values as 1D arrays
             #original_grid_points_chunk = np.vstack([x_origin_chunk.ravel(), y_origin_chunk.ravel()]).T
             # Getting the chunked temperature values into appropriate format
-            #gain_chunk = gain_chunk.ravel()
             gain_chunk = gain_chunk.flatten()
             # Interpolating given temperature chunk (portion)
-            start_time = time.time()
-            #gain_down_chunk = sp.interpolate.griddata(original_grid_points_chunk, gain_chunk, (x_down_chunk_cropped, y_down_chunk_cropped), method='linear')
+            start_time = time.perf_counter() 
 
             gain_down_chunk = interp_gain(X      = x_origin_chunk, 
                                           Y      = y_origin_chunk, 
@@ -337,8 +335,8 @@ def interp_gain_in_chunks(gain: np.ndarray,
 
             # Saving the interpolated portion into the main temperature array
             gain_down[mask] = gain_down_chunk
-            end_time = time.time() - start_time
-            print(f"| i = {i}, j = {j} took: {end_time:0.2f}s")
+            end_time = time.perf_counter()  - start_time
+            logger.info(f"i = {i}, j = {j} took: {end_time:0.2f}s")
         
 
             # shifting the array to the left 
@@ -352,6 +350,7 @@ def interp_gain_in_chunks(gain: np.ndarray,
 
 
 def interp_beamdata_into_uv(cimr:           dict(), 
+                            logger, 
                             grid_res_phi:   float = 0.1, 
                             grid_res_theta: float = 0.1, 
                             chunk_data:     bool  = True, 
@@ -405,8 +404,8 @@ def interp_beamdata_into_uv(cimr:           dict(),
     # RuntimeError: dictionary changed size during iteration 
 
     for key in list(cimr["temp"].keys()):  
-        print(f"| Started processing: {key}")
-        start_time_inter = time.time() 
+        logger.info(f"Started processing: {key}")
+        start_time_inter = time.perf_counter()  
 
         
         if chunk_data:
@@ -421,7 +420,8 @@ def interp_beamdata_into_uv(cimr:           dict(),
                                                       y_down         = y, 
                                                       num_chunks     = num_chunks, 
                                                       overlap_margin = overlap_margin, 
-                                                      interp_method  = interp_method 
+                                                      interp_method  = interp_method, 
+                                                      logger         = logger
                                                     )
         else: 
             # No chunks 
@@ -446,8 +446,8 @@ def interp_beamdata_into_uv(cimr:           dict(),
 
         del cimr["temp"][key] 
 
-        end_time_inter = time.time() - start_time_inter 
-        print(f"| Finished with {key} in: {end_time_inter:.2f}s")
+        end_time_inter = time.perf_counter()  - start_time_inter 
+        logger.info(f"Finished with {key} in: {end_time_inter:.2f}s")
 
 
     # Clean-up 

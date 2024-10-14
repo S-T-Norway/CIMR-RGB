@@ -2,6 +2,7 @@
 .direnv
 result
 output/ 
+output/* 
 dpr/L1C/CIMR/RGB/*   
 # The file is too big to put it in the repo 
 dpr/L1B/SMAP/RadiometerAntPattern_170830_v011.h5 
