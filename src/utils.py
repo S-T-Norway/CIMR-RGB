@@ -3,6 +3,10 @@ Utility functions for the RGB.
 """
 
 from numpy import delete, r_, array, linalg, column_stack, cos, sin
+
+
+
+
 def remove_overlap(array, overlap):
     """
     Removes overlap scans from the start and end of the array.
@@ -20,6 +24,8 @@ def remove_overlap(array, overlap):
         Array with overlap scans removed
     """
     return delete(array, r_[0:overlap, array.shape[0] - overlap:array.shape[0]], axis=0)
+
+
 
 def interleave_bits(x, y):
     """
@@ -41,6 +47,8 @@ def interleave_bits(x, y):
     for i in range(max(x.bit_length(), y.bit_length())):
         z |= (x & (1 << i)) << i | (y & (1 << i)) << (i + 1)
     return int(z)
+
+
 
 def deinterleave_bits(z):
     """
@@ -67,6 +75,7 @@ def deinterleave_bits(z):
         y |= (z & (1 << (2*i + 1))) >> (i + 1)
     return x, y
 
+
 # function to normalize a vector (or a list of vectors) to 1
 def normalize(vec):
     vec = array(vec)
@@ -76,11 +85,14 @@ def normalize(vec):
         vec_norm = array(vec) / linalg.norm(vec)
     return vec_norm
 
+
+
 def generic_transformation_matrix(x0, y0, z0, x1, y1, z1):
     A = column_stack((x0, y0, z0))
     B = column_stack((x1, y1, z1))
     R = B @ linalg.inv(A)
     return R
+
 
 # returns the rotation matrix around a given axis and a given angle
 def rotation_matrix(axis, angle):

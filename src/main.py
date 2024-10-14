@@ -1,5 +1,5 @@
 """
-Thi  module is the entry point for the RGB.
+This  module is the entry point for the RGB.
 It is responsible for calling the other functions in the script
 It is also responsible for handling the command line arguments
 It is also responsible for handling the exceptions that are raised
@@ -64,17 +64,13 @@ if __name__ == '__main__':
 
         data_dict_out     = timed_func(data_dict)
         
-        #data_dict_out = ReGridder(config).regrid_l1c(data_dict)
-
     if rgb_config.input_data_type == 'AMSR2':
 
         data_dict_out = regridder.regrid_l1r(data_dict)
-        #data_dict_out = ReGridder(config).regrid_l1r(data_dict)
 
     if rgb_config.input_data_type == 'CIMR':
 
         data_dict_out = regridder.regrid_l1c(data_dict)
-        #data_dict_out= ReGridder(config).regrid_l1c(data_dict)
 
 
     # Intermediate results check
