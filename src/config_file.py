@@ -33,17 +33,22 @@ class ConfigFile:
 
     """
 
-    def __init__(self, config_file_path):
+    def __init__(self, config_file_path: pb.Path | str):
         """
         Initializes the ConfigFile class and stores validated
         config parameters as class attributes.
 
         Parameters
         ----------
-        config_file_path: str
+        config_file_path: Path or str
         """
 
-        config_object        = self.read_config(config_file_path)
+        # converting the relative path into absolute one if needed 
+        if not pb.Path(config_file_path).is_absolute(): 
+            config_file_path = pb.Path(config_file_path).resolve() 
+
+        config_object, tree  = self.read_config(config_file_path)
+
 
         # TODO: Put this into its own validation method? 
         # -----------
@@ -154,6 +159,7 @@ class ConfigFile:
                 print(f"{e}")
                 sys.exit(1)
 
+
         # SMAP specific Parameters
         if self.input_data_type == "SMAP":
             self.aft_angle_min = 90
@@ -177,6 +183,7 @@ class ConfigFile:
                 'altitude': 'sc_geodetic_alt_ellipsoid'
             }
 
+
         # AMSR2 specific parameters
         if self.input_data_type == "AMSR2":
             self.LMT = 2200
@@ -192,6 +199,7 @@ class ConfigFile:
                 '89b': (None, 'Brightness Temperature (89.0GHz-B,')
             }
             self.kernel_size = config_object.find('ReGridderParams/kernelSize').text
+
 
         # CIMR Specific Parameters
         if self.input_data_type == "CIMR":
@@ -282,12 +290,13 @@ class ConfigFile:
         root: xml.etree.ElementTree.Element
             Root element of the configuration file
         """
+
         try:
             tree = parse(config_file_path)
             root = tree.getroot()
         except ParseError as e:
             raise ValueError(f"Error parsing the configuration file: {e}") from e
-        return root
+        return root, tree
 
 
     @staticmethod
