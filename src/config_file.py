@@ -138,6 +138,17 @@ class ConfigFile:
             save_to_disk='outputData/saveTodisk'
         )
 
+
+
+        # TODO: Add validation for this parameter 
+        #       Add possibility to create output dirs recursively (nested)
+        self.output_path  = pb.Path(config_object.find("outputData/outputPath").text).resolve() 
+        if not pb.Path(self.output_path).exists(): 
+            self.logger.info(f"Creating output directory: {self.output_path}")
+            pb.Path(self.output_path).mkdir() 
+
+
+
         self.search_radius = self.validate_search_radius(
             config_object=config_object,
             search_radius='ReGridderParams/searchRadius',

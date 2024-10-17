@@ -1,0 +1,176 @@
+import pickle 
+import pathlib as pb 
+
+
+import numpy   as np 
+import netCDF4 as nc 
+
+
+
+
+class ProductGenerator: 
+
+    def __init__(self, config):
+        self.config = config 
+        self.logger = config.logger  
+
+
+    def generate_l1c_product(self): 
+
+        # TODO: Change the lists into dictionaries and add metadata (as well as
+        # proper dimensions to variables, since right now it is only x, y but
+        # can also be n_l1b_scans) 
+        # 
+        # Params from CDL 
+        params_to_save = {
+                "Measurement": [
+                    "bt_h_fore", 
+                    "bt_h_aft", 
+                    "bt_v_fore", 
+                    "bt_v_aft", 
+                    "bt_3_fore", 
+                    "bt_3_aft", 
+                    "bt_4_fore", 
+                    "bt_4_aft", 
+                    "faraday_rot_angle_fore", 
+                    "faraday_rot_angle_aft", 
+                    "geometric_rot_angle_fore", 
+                    "geometric_rot_angle_aft", 
+                    "ndet_fore", 
+                    "ndet_aft", 
+                    "tsu_fore", 
+                    "tsu_aft", 
+                    "instrument_status_fore", 
+                    "instrument_status_aft", 
+                    "land_sea_content_fore", 
+                    "land_sea_content_aft", 
+                    "regridding_n_samples_fore", 
+                    "regridding_n_samples_aft", 
+                    "regridding_quality_measure_fore", 
+                    "regridding_quality_measure_aft", 
+                    "regridding_l1b_orphans_fore", 
+                    "regridding_l1b_orphans_aft"
+                    ], 
+                "Navigation":  [
+                    "acq_time_utc_fore", 
+                    "acq_time_utc_aft", 
+                    "azimuth_fore", 
+                    "azimuth_aft", 
+                    "latitude_fore", 
+                    "latitude_aft", 
+                    "longitude_fore", 
+                    "longitude_aft", 
+                    "oza_fore", 
+                    "oza_aft", 
+                    "processing_scan_angle_fore", 
+                    "processing_scan_angle_aft", 
+                    "solar_azimuth_fore", 
+                    "solar_azimuth_aft", 
+                    "solar_zenith_fore", 
+                    "solar_zenith_aft" 
+                    ], 
+                "Processing_flags": ["processing_flags"],  
+                "Quality_information": [
+                    "navigation_status_flag", 
+                    "scan_quality_flag", 
+                    "temperatures_flag"
+                    ] 
+                }
+
+        # TODO: Remove pickled object and pass in proper dictionary to be saved 
+        file_path = pb.Path("../dpr/data_dict_out.pkl")
+        # Open the file in read-binary mode and load the object
+        with open(file_path, 'rb') as file:
+            loaded_object = pickle.load(file)
+
+        #print(loaded_object['X'].keys())
+        
+        #print(self.config.output_path)
+
+        # <Projection> -> Data -> Measurement -> <Band>
+        outfile = pb.Path(f"{self.config.output_path}/test_l1c.nc").resolve()
+        with nc.Dataset(outfile, "w", format = "NETCDF4") as dataset: 
+
+            # Creating Dimentions according to cdl 
+            dataset.createDimension('time', None)
+            dataset.createDimension('x', None)
+            dataset.createDimension('y', None)
+
+            # Creating nested groups according to cdl 
+            projection_group  = dataset.createGroup(f"{self.config.projection_definition}") 
+            data_group        = projection_group.createGroup("Data")
+
+            # Loop through the parameters defined inside CDL and compare their
+            # names to the ones provided inside pickled file. If they coincide
+            # we write them into specific group (defined in CDL). In addition,
+            # CDL values for CIMR have dimensions (time, x, y) while SMAP has
+            # only 1, so we also programmatically figure out the dimensonf of
+            # the numpy array provided and save the data accordingly. 
+            for group_field, group_vals in params_to_save.items(): 
+
+                group = data_group.createGroup(group_field)
+
+                for band_name, band_var in loaded_object.items(): 
+
+                    band_group = group.createGroup(f"{band_name}_BAND")
+
+                    for var_name, var_val in band_var.items(): 
+
+                        var_shape = var_val.shape
+
+                        if var_name in group_vals: 
+                            self.logger.info(f"{group_field}, {band_name}, {var_name}")
+
+                            if len(var_shape) == 1: 
+                                var_data = band_group.createVariable(var_name, "double", ('x')) 
+                                var_data[:] = var_val 
+                            elif len(var_shape) == 2:  
+                                var_data = band_group.createVariable(var_name, "double", ('x', 'y')) 
+                                var_data[:, :] = var_val 
+                            elif len(var_shape) == 3: 
+                                var_data = band_group.createVariable(var_name, "double", ('time', 'x', 'y')) 
+                                var_data[:, :, :] = var_val 
+                            else:
+                                # Return a generic message or handle error for unknown shapes
+                                raise ValueError(f"Unsupported shape with {len(var_shape)} dimensions: {var_shape}")
+
+
+
+    # TODO: Perhaps this one is obsolete? 
+    def determine_dimension(self, var_shape: tuple) -> tuple:
+        """
+        Determines the dimension names based on the shape of the variable.
+
+        Parameters
+        ----------
+        var_shape : tuple
+            A tuple representing the shape of the variable (e.g., (10000,),
+            (10000, 10000), or (1, 111, 111)).
+        
+        Returns
+        -------
+        tuple
+            A tuple containing the dimension names:
+            - ('x',) for 1D shapes (e.g., (10000,))
+            - ('x', 'y') for 2D shapes (e.g., (10000, 10000))
+            - ('time', 'x', 'y') for 3D shapes (e.g., (1, 111, 111))
+        
+        Exceptions
+        ----------
+        ValueError
+            Raised if the shape of the variable has more than 3 dimensions
+            or an unsupported shape is provided. 
+        """
+
+        if len(var_shape) == 1:
+            # 1D case
+            return ('x',)
+        elif len(var_shape) == 2:
+            # 2D case
+            return ('x', 'y')
+        elif len(var_shape) == 3:
+            # 3D case
+            return ('time', 'x', 'y')
+        else:
+            # Return a generic message or handle error for unknown shapes
+            raise ValueError(f"Unsupported shape with {len(var_shape)} dimensions: {var_shape}")

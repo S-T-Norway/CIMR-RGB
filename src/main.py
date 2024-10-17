@@ -23,6 +23,7 @@ from data_ingestion import DataIngestion
 from grid_generator import GridGenerator, GRIDS
 from regridder_v2   import ReGridder
 from rgb_logging    import RGBLogging 
+from product_generator import ProductGenerator 
 
 
 def get_rgb_configuration(parser: argparse.ArgumentParser, 
@@ -241,6 +242,9 @@ if __name__ == '__main__':
     if rgb_config.input_data_type == 'CIMR':
 
         data_dict_out = regridder.regrid_l1c(data_dict)
+
+
+    ProductGenerator(rgb_config).generate_l1c_product() 
 
 
     # Intermediate results check
