@@ -22,11 +22,11 @@ class ReGridder:
             'DIB': DIBInterp(self.config),
             'IDS': IDSInterp(self.config),
             'BG': BGInterp(self.config),
-            'rSIR': rSIRInterp(self.config)
+            'RSIR': rSIRInterp(self.config)
         }
 
     # Check if you need the full data dict once the function is complete
-    def get_grid(self, data_dict):
+    def get_grid(self, data_dict=None):
         # Get target grid
         if self.config.grid_type == 'L1C':
             target_x, target_y, res = GridGenerator(self.config).generate_grid_xy(
@@ -46,13 +46,17 @@ class ReGridder:
             # Rehshape to original matrix
             target_lon = target_lon.reshape(y_shape, x_shape)
             target_lat = target_lat.reshape(y_shape, x_shape)
+            target_grid = [target_lon, target_lat]
 
-        elif self.config.input == 'L1R':
+        elif self.config.grid_type == 'L1R':
             # For the generation of a target grid in L1r, we just needs the lats and lons of
             # the target band.
-            pass
+            target_band = self.config.target_band
+            target_lon = data_dict[target_band[0]]['longitude']
+            target_lat = data_dict[target_band[0]]['latitude']
+            target_grid = [target_lon, target_lat]
 
-        return [target_lon, target_lat]
+        return target_grid
 
     def get_neighbours(self, source_lon, source_lat, target_lon, target_lat, search_radius, neighbours):
 
@@ -60,12 +64,17 @@ class ReGridder:
             lons=source_lon,
             lats=source_lat
         )
-        # Need to make the grid two dimensional for GridDefinition
 
+        if self.config.grid_type == 'L1C':
+            target_def = geometry.GridDefinition(
+                lons=target_lon,
+                lats=target_lat)
 
-        target_def = geometry.GridDefinition(
-            lons=target_lon,
-            lats=target_lat)
+        elif self.config.grid_type == 'L1R':
+            target_def = geometry.SwathDefinition(
+                lons=target_lon,
+                lats=target_lat
+            )
 
         valid_input_index, valid_output_index, index_array, distance_array = kd_tree.get_neighbour_info(
             source_geo_def=source_def,
@@ -92,8 +101,7 @@ class ReGridder:
 
     # We need data dict or just pass specific variables?
     def get_l1c_samples(self, variable_dict, target_grid):
-        target_lon = target_grid[0]
-        target_lat = target_grid[1]
+
         samples_dict = {}
 
         search_radius = self.config.search_radius
@@ -103,6 +111,8 @@ class ReGridder:
         if self.config.split_fore_aft:
 
             for scan_direction in ['fore', 'aft']:
+                target_lon = target_grid[0]
+                target_lat = target_grid[1]
                 source_lon = variable_dict[f"longitude_{scan_direction}"]
                 source_lat = variable_dict[f"latitude_{scan_direction}"]
 
@@ -123,6 +133,8 @@ class ReGridder:
 
         else:
             # Dont split fore/aft
+            target_lon = target_grid[0]
+            target_lat = target_grid[1]
             source_lon = variable_dict["longitude"]
             source_lat = variable_dict["latitude"]
 
@@ -145,36 +157,77 @@ class ReGridder:
 
     def sample_selection(self, variable_dict, target_grid=None):
 
-        if self.config.grid_type == 'L1C':
-            samples_dict = self.get_l1c_samples(variable_dict, target_grid)
+        samples_dict = self.get_l1c_samples(variable_dict, target_grid)
 
-            # Apply valid indices to variable_dict
-            # Check this works properly for CIMR Attitude
-            for variable in variable_dict:
-                if 'fore' in variable:
-                    variable_dict[variable] = variable_dict[variable][samples_dict['fore']['valid_input_index']]
-                elif 'aft' in variable:
-                    variable_dict[variable] = variable_dict[variable][samples_dict['aft']['valid_input_index']]
-                else:
-                    variable_dict[variable] = variable_dict[variable][samples_dict['valid_input_index']]
+        for variable in variable_dict:
+            if 'fore' in variable:
+                variable_dict[variable] = variable_dict[variable][samples_dict['fore']['valid_input_index']]
+            elif 'aft' in variable:
+                variable_dict[variable] = variable_dict[variable][samples_dict['aft']['valid_input_index']]
+            else:
+                variable_dict[variable] = variable_dict[variable][samples_dict['valid_input_index']]
 
-        elif self.config.grid_type == 'L1R':
-            pass
+        # Remove valid_input_index as we don't use it again, and reduce_grid_inds won't
+        # work if its inside (this can be changed if it turns out we need it)
+        if self.config.split_fore_aft:
+            del samples_dict['fore']['valid_input_index']
+            del samples_dict['aft']['valid_input_index']
+        else:
+            del samples_dict['valid_input_index']
+
+        if self.config.reduced_grid_inds:
+            if self.config.split_fore_aft:
+                samples_dict['fore'] = self.reduce_grid_inds(samples_dict['fore'])
+                samples_dict['aft'] = self.reduce_grid_inds(samples_dict['aft'])
+            else:
+                samples_dict = self.reduce_grid_inds(samples_dict)
 
         return samples_dict, variable_dict
 
-    def create_output_grid_inds(self, ease_1d_index):
+    def reduce_grid_inds(self, samples_dict):
         grid_shape = GRIDS[self.config.grid_definition]['n_rows'], GRIDS[self.config.grid_definition]['n_cols']
-        row, col = unravel_index(ease_1d_index, grid_shape)
+        rows_out, cols_out = unravel_index(samples_dict['grid_1d_index'], grid_shape)
+        row_min = self.config.reduced_grid_inds[0]
+        row_max = self.config.reduced_grid_inds[1]
+        col_min = self.config.reduced_grid_inds[2]
+        col_max = self.config.reduced_grid_inds[3]
+        indices = where((rows_out >= row_min) & (rows_out <= row_max) &
+                        (cols_out >= col_min) & (cols_out <= col_max))[0]
+        filtered_data_dict = {key: value[indices] for key, value in samples_dict.items()}
+        return filtered_data_dict
+
+    def create_output_grid_inds(self, grid_1d_index):
+        # Can be unified
+        # Also am I making a 3D output variables for number of horns ?
+        if self.config.grid_type == 'L1C':
+            grid_shape = GRIDS[self.config.grid_definition]['n_rows'], GRIDS[self.config.grid_definition]['n_cols']
+            # Do we not need scan and earth sample number here? becuase grid_1D index is referenced to the
+            # non cleaned up input samples.
+            row, col = unravel_index(grid_1d_index, grid_shape)
+        elif self.config.grid_type == 'L1R':
+            # Now we need to build the grid from the original size of the swath
+            # from the input product, where do we have this shape saved?
+            grid_shape = self.config.num_target_scans, self.config.num_target_samples
+            # Im not sure grid_1D index is valid because it is referring to the shape once things have been removed
+            # as of yet I dont think anything is being removed, but if I were to for example apply quality control
+            # the size of the input array would change.
+            row, col = unravel_index(grid_1d_index, grid_shape)
+
         return row, col
 
     def regrid_l1c(self, data_dict):
 
         # Get target grid
-        target_grid = self.get_grid(data_dict)
+        if self.config.grid_type == 'L1C':
+            target_grid = self.get_grid()
+        elif self.config.grid_type == 'L1R':
+            target_grid = self.get_grid(data_dict)
 
         data_dict_out = {}
         for band in data_dict:
+            print(f"Regridding band: {band}")
+            if band not in self.config.source_band and self.config.grid_type == 'L1R':
+                continue
             variable_dict = data_dict[band]
             samples_dict, variable_dict = self.sample_selection(variable_dict, target_grid)
 
@@ -191,7 +244,7 @@ class ReGridder:
                         band = band)
 
                     # Add cell_row and cell_col indexes
-                    cell_row, cell_col = self.create_output_grid_inds(samples_dict[scan_direction]['grid_1d_index'])
+                    cell_row, cell_col = self.create_output_grid_inds(grid_1d_index=samples_dict[scan_direction]['grid_1d_index'])
                     variable_dict_out[scan_direction][f'cell_row_{scan_direction}'] = cell_row
                     variable_dict_out[scan_direction][f'cell_col_{scan_direction}'] = cell_col
 
@@ -202,7 +255,8 @@ class ReGridder:
                 # Don't split fore/aft
                 variable_dict_out = self.algos.get(self.config.regridding_algorithm).interp_variable_dict(
                     samples_dict=samples_dict,
-                    variable_dict=variable_dict
+                    variable_dict=variable_dict,
+                    band=band
                 )
 
                 # Add cell_row and cell_col indexes
@@ -211,6 +265,7 @@ class ReGridder:
                 variable_dict_out['cell_col'] = cell_col
 
             data_dict_out[band] = variable_dict_out
+            print(f"Finished regridding band: {band}")
 
         return data_dict_out
 
