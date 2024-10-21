@@ -388,8 +388,8 @@ def interp_beamdata_into_uv(cimr:           dict(),
     grid_points_theta = int(90  / grid_res_theta) 
     grid_points_phi   = int(360 / grid_res_phi) 
 
-    theta = np.linspace(0, 90,  grid_points_theta)
-    phi   = np.linspace(0, 360, grid_points_phi)
+    theta = np.linspace(0, np.pi/2,  grid_points_theta)
+    phi   = np.linspace(0, 2*np.pi, grid_points_phi)
     theta_grid, phi_grid = np.meshgrid(theta, phi)   
 
     # Converting these values into the appropriate x, y values (downdraded u,v
