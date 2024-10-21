@@ -30,7 +30,8 @@
     </ReGridderParams>
     <outputData>
         <saveTodisk>True</saveTodisk>
-	<outputPath>./outputs/L1cProducts/SMAP/RGB/</outputPath>
+	<!--<outputPath>./output/L1cProducts/SMAP/RGB/</outputPath>--> 
+	<outputPath>../output/</outputPath>
     </outputData>
     <LoggingParams>
 	<!-- Log Config File --> 
