@@ -1,14 +1,16 @@
-from numpy import (abs, deg2rad, full, sqrt, logical_and, conj, real, imag,
+from numpy import (abs, deg2rad, full, sqrt, logical_or, logical_and, conj, real, imag,
                    zeros, array, argmax, cross, average, tan, all, any, min, max,
                    concatenate, meshgrid, sin , cos, sign, arccos, zeros_like, stack,
-                   where, pi)
+                   where, pi, flip)
+
+import numpy as np
+import matplotlib.pyplot as plt
+
 from scipy.interpolate import RegularGridInterpolator
 from pyproj import CRS, Transformer
-import h5py
-
 import os
 
-from grid_generator import GridGenerator
+from grid_generator import GridGenerator, GRIDS
 from utils import normalize, generic_transformation_matrix
 
 
@@ -27,6 +29,18 @@ class AntennaPattern:
             elif self.config.polarisation_method == 'mueller':
                 self.mueller_matrix = self.get_mueller_matrix(ap_dict)
 
+            #### test function to see the antenna pattern before projecting.. do not remove for now 
+
+            # dx = 0.1
+            # x,y = np.meshgrid(np.linspace(-dx, dx, 100), np.linspace(-dx, dx, 100))
+            # z = np.sqrt(1 - x**2 - y**2)
+            # theta = np.arccos(z / 1.)
+            # phi = np.sign(y) * np.arccos(x / np.sqrt(x**2+y**2))
+            # phi[phi<0] += 2*pi
+            # print(theta.min(), theta.max(), phi.min(), phi.max())
+            # plt.imshow(foo(phi, theta))
+            # plt.show()
+
         elif self.config == 'gaussian':  #in this case I guess only scalar gain available
 
             self.scalar_gain = self.gaussian_antenna_patterns()
@@ -35,9 +49,10 @@ class AntennaPattern:
 
         return
 
-
     @staticmethod
     def extract_gain_dict(file_path, threshold_dB, theta_max=30):
+
+        import h5py
 
         theta_max = deg2rad(theta_max)
         ap_dict = {}
@@ -62,23 +77,29 @@ class AntennaPattern:
         ap_dict['Gnorm'] = 0.5* (sqrt(abs(ap_dict['Ghco'])**2+abs(ap_dict['Ghcx'])**2)
                                  + sqrt(abs(ap_dict['Gvco'])**2+abs(ap_dict['Gvcx'])**2))
 
-        mask = full(ap_dict['Gnorm'].shape, True)
+        mask = full(ap_dict['Gnorm'].shape, False)
+
         if threshold_dB is not None:
-            mask = logical_and(mask, ap_dict['Gnorm'] < 10**(threshold_dB/10.))
+            # Normalise the gain, as the user needs to scale with the normalised function.
+            # max_gain = max(ap_dict['Gnorm'])
+            # normalised_gain = ap_dict['Gnorm'] / max_gain
+            # mask = logical_or(mask, normalised_gain < 10**(threshold_dB/10.))
+
+            mask = logical_or(mask, ap_dict['Gnorm'] < 10**(threshold_dB/10.))
         if theta_max is not None:
-            mask = logical_and(mask, ap_dict['theta'] <= theta_max)
+            mask = logical_or(mask, ap_dict['theta'] > theta_max)
 
         ap_dict['Ghco'][mask] = 0.
         ap_dict['Ghcx'][mask] = 0.
         ap_dict['Gvco'][mask] = 0.
         ap_dict['Gvcx'][mask] = 0.
         ap_dict['Gnorm'][mask] = 0.
-
+    
         return ap_dict
 
     def load_antenna_patterns(self):
 
-        # We might also totally remove this IF-ELSE, if the user 
+        # JOSEPH: We might also totally remove this IF-ELSE, if the user 
         # is forced to specify the targetBand config parameter also for SMAP
         if self.config.input_data_type == "SMAP":
             ap_dict = {}
@@ -103,6 +124,26 @@ class AntennaPattern:
                             threshold_dB=self.config.antenna_threshold
                         )
         return ap_dict
+
+    @staticmethod
+    def target_gaussian(grid_lons, grid_lats, lon0, lat0, slon=0.05, slat=0.05, rot=0.):
+
+        # This is to avoid complications at the international date line, I might need to
+        # do something similar with 0 deg latitude, but I don't think so.
+        longitudes_360 = (grid_lons + 360) % 360
+        lon0_360 = (lon0 + 360) % 360
+
+        # phi1 = np.deg2rad(grid_lats)
+        # phi2 = np.deg2rad(lat0)
+        # delta_lam = np.deg2rad(longitudes_360 - lon0_360)
+
+        x = longitudes_360 - lon0_360
+        y = grid_lats - lat0
+
+        Z = np.exp(-0.5 * (((x * np.cos(rot) + y * np.sin(rot)) ** 2) / slon ** 2 + (
+                    (-x * np.sin(rot) + y * np.cos(rot)) ** 2) / slat ** 2))
+
+        return Z
 
     def gaussian_antenna_patterns(self):
 
@@ -216,44 +257,207 @@ class AntennaPattern:
         # - average satellite flight altitude (this should be updated to be calculated from
         # the specific grid point). Joseph needs to add this variable to data_ingestion
         # - Once this is done, davide/joseph can update the functionality here to reflect the change.
+        # !!! actually maybe not, computing the grid optimal size could be too much computation, an estimate 
+        # with the average satellite altitude could be enough
 
-        tilt_angle = self.config.antenna_tilt_angle
+        tilt_angle = np.deg2rad(self.config.antenna_tilt_angle)
+
+        if self.config.input_data_type == "SMAP":
+            tilt_angle = pi - tilt_angle # remove this if tilt_angle redefined already in data injestion
+
         satellite_altitude = self.config.max_altitude
 
+        def interesection_with_sphere(alpha, R, H):
+            dx = np.sin(alpha)
+            dz = -np.cos(alpha)
+            a = dx**2 + dz**2
+            b = 2 * dz * (R+H)
+            c = (R+H)**2 - R**2
+            discriminant = b**2 - 4*a*c
+            t1 = (-b - np.sqrt(discriminant)) / (2 * a)
+            t2 = (-b + np.sqrt(discriminant)) / (2 * a)
+            t = t1 if t1 >= 0 else t2
+            x = t * dx
+            y = 0
+            z = R + H + t * dz
+            return (x,y,z)
 
         max_radius = {}
 
         for horn in ap_dict:
             
             Gnorm = ap_dict[horn]['Gnorm']
-            ind_max_theta_non_zero = argmax(average(Gnorm, axis=0))
+
+            ind_max_theta_non_zero = argmax(average(Gnorm, axis=0) <= 0.)
+            if ind_max_theta_non_zero==0:
+                ind_max_theta_non_zero = -1
             max_theta_non_zero = ap_dict[horn]['theta'][ind_max_theta_non_zero]
 
-            # brutal approximation, it's not difficult to make it more accurate
-
-            max_radius[horn] = 1.2 * satellite_altitude * (tan(deg2rad(tilt_angle) + max_theta_non_zero)
-                                                            - tan(deg2rad(tilt_angle)))
+            R = (6378137. + 6356752.)/2. #m
+            angle_tangent = np.arcsin(R / (R + satellite_altitude))
+            angle_max = np.minimum(tilt_angle + max_theta_non_zero, angle_tangent)
+            x1, y1, z1 = interesection_with_sphere(angle_max, R, satellite_altitude)
+            x2, y2, z2 = interesection_with_sphere(tilt_angle, R, satellite_altitude)
+            angle_center_1 = np.arctan(x1/z1)
+            angle_center_2 = np.arctan(x2/z2)
+            arch1 = R * angle_center_1
+            arch2 = R * angle_center_2
+            max_radius[horn] = arch1 - arch2
+            max_radius[horn] *= 1.1 #add 10% margin
 
         return max_radius
 
+    def make_integration_grid_v2(self, longitude, latitude):
+        # This needs sorting out because we also use non-ease grids,
+        # and i dont really like changing the config file on the fly.
+        gdef = self.config.grid_definition
+        self.config.grid_definition = 'EASE2_' + self.config.projection_definition + '3km'
+        gtemp = 'EASE2_' + self.config.projection_definition + '3km'
+
+
+        x_longitude, y_longitude = GridGenerator(self.config).lonlat_to_xy(longitude, latitude)
+
+        # Arc Distance
+        Rearth = (6378137. + 6356752.) / 2.  # m
+        Rcircle = Rearth * np.abs(np.cos(np.deg2rad(latitude.max())))
+        Rpattern = max(list(self.max_ap_radius.values()))
+
+
+        # Convert longitudes to [0, 360] to see if they cross the international date line
+        longitudes_360 = [(lon + 360) if lon < 0 else lon for lon in longitude]
+        lon_min_360 = min(longitudes_360)
+        lon_max_360 = max(longitudes_360)
+
+        # Generate an ease grid to be cut down to the size of the bounding box
+        xs, ys = GridGenerator(self.config).generate_grid_xy()
+        # xs, ys = meshgrid(xs, ys)
+
+        # Convert lats and lons to x and y
+        # add the radius of the pattern
+        # if to high make equal to the highest, same for if too low
+        # if they fall either side of the international date line, you need to do the double bounding
+        # box
+        # Otherwise dont.
+
+        lon_min = longitude.min()
+        lon_max = longitude.max()
+        lat_min = latitude.min()
+        lat_max = latitude.max()
+
+        x_ul, y_ul = GridGenerator(self.config).lonlat_to_xy(lon_min, lat_max)
+        x_lr, y_lr = GridGenerator(self.config).lonlat_to_xy(lon_max, lat_min)
+
+        if y_ul > GRIDS[gtemp]['y_max']:
+            y_ul = GRIDS[gtemp]['y_max']
+        if y_lr < GRIDS[gtemp]['y_max'] - GRIDS[gtemp]['n_rows']*GRIDS[gtemp]['res']:
+            y_lr = GRIDS[gtemp]['y_max'] - GRIDS[gtemp]['n_rows']*GRIDS[gtemp]['res']
+
+        # Check if min and max lon fall either side of the international date line
+        longitudes_360 = [(lon + 360) if lon < 0 else lon for lon in longitude]
+        lon_min_360 = min(longitudes_360)
+        lon_max_360 = max(longitudes_360)
+
+        # Trying to cover every scenario in one
+        # x_ul_check = x_ul - Rpattern
+        # x_lr_check = x_lr + Rpattern
+        #
+        # if x_ul_check < GRIDS[gtemp]['x_min']:
+        #     # Then we need to do a double grid.
+        #
+        #     # Grid 1
+        #     x_ul_1 = GRIDS[gtemp]['x_min']
+        #     x_lr_1 = GRIDS[gtemp]['x_min'] + abs(x_ul_check - GRIDS[gtemp]['x_min'])
+        #
+        #     xs1 = xs[logical_and(xs>x_ul_1, xs<x_lr_1)]
+        #     ys1 = ys[logical_and(ys>y_lr, ys<y_ul)]
+        #
+        #     # Grid 2
+        #     x_ul_2 =6
+        #
+        # y_ul = y_ul + Rpattern
+        # x_lr = x_lr + Rpattern
+        # y_lr = y_lr - Rpattern
+
+        if lon_max_360 - lon_min_360 > 0:
+            # Then we span the IDL and need to do a "wrap around"
+            lon_min = (lon_max_360 - 360)
+            lon_max = lon_min_360
+            lat_max = latitude.max()
+            lat_min = latitude.min()
+
+            # Bounding box 1
+            x_ul, y_ul = GridGenerator(self.config).lonlat_to_xy(-180, lat_max)
+            x_lr, y_lr = GridGenerator(self.config).lonlat_to_xy(lon_min, lat_min)
+
+            x_lr = x_lr + Rpattern
+            y_ul = y_ul + Rpattern
+            y_lr = y_lr - Rpattern
+
+            if y_ul > GRIDS[gtemp]['y_max']:
+                print('Reached upper edge of grid')
+                y_ul = GRIDS[gtemp]['y_max']
+
+            xs1 = xs[logical_and(xs>x_ul, xs<x_lr)]
+            ys1 = ys[logical_and(ys>y_lr, ys<y_ul)]
+
+            lon_1, lat_1 = GridGenerator(self.config).xy_to_lonlat(xs1, ys1)
+
+            # Bounding box 2
+            x_ul, y_ul = GridGenerator(self.config).lonlat_to_xy(lon_max, lat_max)
+            x_lr, y_lr = GridGenerator(self.config).lonlat_to_xy(180, lat_min)
+
+            x_ul = x_ul - Rpattern
+            y_ul = y_ul + Rpattern
+            y_lr = y_lr - Rpattern
+
+            if y_ul > GRIDS[gtemp]['y_max']:
+                print('Reached upper edge of grid')
+                y_ul = GRIDS[gtemp]['y_max']
+
+            xs2 = xs[logical_and(xs > x_ul, xs < x_lr)]
+            ys2 = ys[logical_and(ys > y_lr, ys < y_ul)]
+
+            lon_2, lat_2 = GridGenerator(self.config).xy_to_lonlat(xs2, ys2)
+
+            lon_1 = flip(lon_1)
+            lon_2 = flip(lon_2)
+            lat_1 = flip(lat_1)
+            lat_2 = flip(lat_2)
+
+            int_dom_lons, int_dom_lats =  meshgrid(concatenate((lon_1, lon_2)), concatenate((lat_1, lat_2)))
+            test =0
+
+
+        else:
+            lon_min = longitude.min()
+            lon_max = longitude.max()
+            lat_min = latitude.min()
+            lat_max = latitude.max()
+
+            x_ul, y_ul = GridGenerator(self.config).lonlat_to_xy(lon_min, lat_max)
+            x_lr, y_lr = GridGenerator(self.config).lonlat_to_xy(lon_max, lat_min)
+
+            x_ul_check = x_ul - Rpattern
+
+            x_lr_check = x_lr + Rpattern
+
+            grid_min = GRIDS[gtemp]['x_min']
+            grid_max = GRIDS[gtemp]['x_min'] + GRIDS[gtemp]['n_cols']*GRIDS[gtemp]['res']
+
+            if x_ul_check < grid_min or x_ul_check > grid_max:
+                test =0
+            if x_lr_check < grid_min or x_ul_check > grid_max:
+                test =0
+            else:
+                test
+
+        self.config.grid_definition = gdef
+        return int_dom_lons, int_dom_lats
+
     def make_integration_grid(self, longitude, latitude):
-        # To do:
-        # Davide - remove functionality to change between grids as it is not relevant anymore.
 
         gdef = self.config.grid_definition
-        pdef = self.config.projection_definition
-
-        if all(abs(latitude) <= 75.): # 83.
-            self.config.grid_definition = 'EASE2_G3km'
-            self.config.projection_definition = 'G'
-
-        elif any(latitude > 75.):
-            self.config.grid_definition = 'EASE2_N3km'
-            self.config.projection_definition = 'N'
-
-        elif any(latitude < -75.):
-            self.config.grid_definition = 'EASE2_S3km'
-            self.config.projection_definition = 'S'
+        self.config.grid_definition = 'EASE2_' + self.config.projection_definition + '3km'
 
         xpoints = []
         ypoints = []
@@ -262,61 +466,83 @@ class AntennaPattern:
             xpoints.append(x0)
             ypoints.append(y0)
 
-        margin = max(list(self.max_ap_radius.values()))
-        xmin = min(xpoints) - margin
-        xmax = max(xpoints) + margin
-        ymin = min(ypoints) - margin
-        ymax = max(ypoints) + margin
+        Rearth  = (6378137. + 6356752.)/2. #m
+        Rcircle = Rearth * np.abs(np.cos(np.deg2rad(lat)))
+
+        Rpattern = max(list(self.max_ap_radius.values())) #arch in m
+
+        if not self.config.boresight_shift: # Also only for SMAP, right?
+            shift_factor = 1
+        else:
+            shift_factor = 1
+
+        latmin = lat - shift_factor*np.rad2deg(Rpattern/Rearth)
+        latmax = lat + shift_factor*np.rad2deg(Rpattern/Rearth)
+        lonmin = lon - shift_factor*np.rad2deg(Rpattern/Rcircle)
+        lonmax = lon + shift_factor*np.rad2deg(Rpattern/Rcircle)
+
+        xmin, ymax = GridGenerator(self.config).lonlat_to_xy(lonmin, latmax)
+        xmax, ymin = GridGenerator(self.config).lonlat_to_xy(lonmax, latmin)
 
         xs, ys = GridGenerator(self.config).generate_grid_xy()
+
         xeasemin = xs.min() #should be the cell edge, not the cell center
         xeasemax = xs.max() #should be the cell edge, not the cell center
 
-        if self.config.projection_definition == 'G':
-            xmin1 = xeasemax
-            xmax1 = xeasemin
-            if xmin < xeasemin:
-                xmin1 = xeasemax - (xeasemin - xmin)
-            if xmax > xeasemax:
-                xmax1 = xeasemin + (xmax - xeasemax)
-
-            xs = concatenate((xs[xs > xmin1], xs[logical_and(xs > xmin, xs < xmax)], xs[xs < xmax1]))
-            ys = ys[logical_and(ys > ymin, ys < ymax)]
-
-        else:
-            xs = xs[logical_and(xs > xmin, xs < xmax)]
-            ys = ys[logical_and(ys > ymin, ys < ymax)]
+        xmin1 = xeasemax
+        xmax1 = xeasemin
+        if xmin < xeasemin:
+            xmin1 = xeasemax - (xeasemin - xmin)
+        if xmax > xeasemax:
+            xmax1 = xeasemin + (xmax - xeasemax)
+        xs = concatenate((xs[xs > xmin1], xs[logical_and(xs > xmin, xs < xmax)], xs[xs < xmax1]))
+        ys = ys[logical_and(ys > ymin, ys < ymax)]
 
         Xs, Ys = meshgrid(xs, ys)
+
         lons, lats = GridGenerator(self.config).xy_to_lonlat(Xs, Ys)
 
         self.config.grid_definition = gdef
-        self.config.projection_definition = pdef
 
         return lons, lats
 
     def antenna_pattern_to_earth(self, int_dom_lons, int_dom_lats, x_pos, y_pos,
                                  z_pos, x_vel, y_vel, z_vel, processing_scan_angle,
-                                 feed_horn_number, attitude):
+                                 feed_horn_number, attitude=None,
+                                 lon_l1b=None, lat_l1b=None):
         
         # JOSEPH: add how to retreive the variables
-        # DAVIDE: get the offset angles for each bands .. for now I hardcoded band L just to see if everything works
+        # TODO: add a parameter in the config, to select whether we want to use the re-centering function by passing lon_l1b or lat_l1b
 
-        tilt_angle = self.config.antenna_tilt_angle
+        tilt_angle = np.deg2rad(self.config.antenna_tilt_angle)
+        processing_scan_angle = np.deg2rad(processing_scan_angle)
+
+        if self.config.boresight_shift:
+            lonb, latb = self.boresight_to_earth(x_pos, y_pos, z_pos, x_vel, y_vel, z_vel,
+                                           processing_scan_angle, band, feed_horn_number, attitude)
 
         if self.config.input_data_type == "SMAP":
+            tilt_angle = pi - tilt_angle # maybe we should change this already in the data ingestion!
+            processing_scan_angle = pi/2. - processing_scan_angle
             yax = normalize([x_vel, y_vel, z_vel])
             zax = normalize([x_pos, y_pos, z_pos])
             xax = cross(yax, zax)
-            attitude = generic_transformation_matrix(xax, yax, zax, [1,0,0], [0,1,0], [0,0,1]) #maybe better way to compute it, accounting for roll, pitch and yaw
+            attitude = generic_transformation_matrix(xax, yax, zax, [1,0,0], [0,1,0], [0,0,1])
             feed_offset_phi =   0.  # we can try to infer this by trial and error!
             feed_offset_theta = 0. 
 
         elif self.config.input_data_type == "CIMR":
-            # Davide is attitude in the right shape for you here?
             attitude = attitude.reshape(3,3)
-            feed_offset_phi = deg2rad(-1.31647126)   #hardcoded for band L
-            feed_offset_theta = deg2rad(-2.7457478)  #hardcoded for band L
+            feed_offset_phi = deg2rad(self.config.scan_angle_feed_offsets[self.band][int(feed_horn_number)])
+            feed_offset_theta = np.arcsin(self.config.v0[self.band][int(feed_horn_number)] / (-np.sin(feed_offset_phi))) - tilt_angle
+
+        adjust_lon = 0
+        adjust_lat = 0
+
+        if self.config.boresight_shift:
+            adjust_lon = lonb - lon_l1b
+        if self.config.boresight_shift:
+            adjust_lat = latb - lat_l1b
 
         # zaxis = feedhorn boresight, and xaxis perpendicolar to it and with upvector pointing in the same direction
         antenna_zaxis = array([-sin(tilt_angle+feed_offset_theta)*cos(processing_scan_angle+feed_offset_phi),
@@ -332,7 +558,7 @@ class AntennaPattern:
         transformer = Transformer.from_crs(crs_wgs84, crs_ecef, always_xy=True)
 
         int_dom_alts = zeros_like(int_dom_lons)
-        X, Y, Z = transformer.transform(int_dom_lons, int_dom_lats, int_dom_alts) #m
+        X, Y, Z = transformer.transform(int_dom_lons+adjust_lon, int_dom_lats+adjust_lat, int_dom_alts) #m
 
         semiaxis_a = 6378137. #m
         semiaxis_b = 6356752. #m
@@ -357,7 +583,8 @@ class AntennaPattern:
 
         rot_vec = stack((X, Y, Z), axis=-1)
         shape = rot_vec.shape
-        rot_vec = rot_vec.reshape(-1, 3) @ attitude.T
+
+        rot_vec = np.einsum('ij,jk', rot_vec.reshape(-1, 3), attitude.T) #equivalent to @, which is occasionally crashing for no reason (numpy bug?)
         rot_vec = rot_vec.reshape(shape)
         X = rot_vec[..., 0]
         Y = rot_vec[..., 1]
@@ -379,10 +606,224 @@ class AntennaPattern:
 
         theta = arccos(Zp)
         phi = sign(Yp) * arccos(Xp / sqrt(Xp** 2 + Yp**2))
-
+        
         phi[phi < 0] += 2. * pi
 
-        Ginterp=self.scalar_gain[int(feed_horn_number)](phi[0], theta[0])
+        Ginterp=self.scalar_gain[int(feed_horn_number)](phi, theta)
         Ginterp *= cos_angle_proj
 
-        return Ginterp    
+        return Ginterp 
+
+
+    def boresight_to_earth(self, x_pos, y_pos, z_pos, x_vel, y_vel, z_vel, processing_scan_angle, band,
+                                 feed_horn_number, attitude=None):
+
+        tilt_angle = np.deg2rad(self.config.antenna_tilt_angle)
+
+        if self.config.input_data_type == "SMAP":
+            tilt_angle = pi - tilt_angle                          # should we change this already in the data ingestion?
+            processing_scan_angle = pi/2. - processing_scan_angle # should we change this already in the data ingestion?   
+            yax = normalize([x_vel, y_vel, z_vel])
+            zax = normalize([x_pos, y_pos, z_pos])
+            xax = cross(yax, zax)
+            attitude = generic_transformation_matrix(xax, yax, zax, [1,0,0], [0,1,0], [0,0,1]) #maybe better way to compute it, accounting for roll, pitch and yaw
+            feed_offset_phi   =  0 # np.deg2rad(-2.95)  # I didn't manage to find a value of the offset that work with every point
+            feed_offset_theta = 0 #np.deg2rad(-0.065) 
+
+        elif self.config.input_data_type == "CIMR":
+            attitude = attitude.reshape(3,3)
+            feed_offset_phi = deg2rad(self.config.scan_angle_feed_offsets[band][feed_horn_number])
+            feed_offset_theta = np.arcsin(self.config.v0[band][feed_horn_number] / (-np.sin(feed_offset_phi))) - tilt_angle
+
+        P0 = np.array([x_pos, y_pos, z_pos])
+
+        #boresight in the body frame
+        feedhorn_boresight = np.array([-np.sin(tilt_angle+feed_offset_theta)*np.cos(processing_scan_angle+feed_offset_phi), 
+                                        np.sin(tilt_angle+feed_offset_theta)*np.sin(processing_scan_angle+feed_offset_phi), 
+                                       -np.cos(tilt_angle+feed_offset_theta)])
+
+        feedhorn_boresight = feedhorn_boresight @ attitude + np.array([x_pos, y_pos, z_pos])
+
+        m = feedhorn_boresight - P0
+        q = feedhorn_boresight
+
+        a=6378137.
+        b=6356752.314245
+
+        A = m[0]**2/a**2 + m[1]**2/a**2 + m[2]**2/b**2
+        B = 2*(q[0]*m[0]/a**2 + q[1]*m[1]/a**2 + q[2]*m[2]/b**2)
+        C = q[0]**2/a**2 + q[1]**2/a**2 + q[2]**2/b**2 - 1
+
+        t1 = (-B + np.sqrt(B**2 - 4*A*C))/(2*A)
+        t2 = (-B - np.sqrt(B**2 - 4*A*C))/(2*A)
+    
+        P1 = q + m * t1
+        P2 = q + m * t2
+
+        distance1 = np.linalg.norm(P1-P0)
+        distance2 = np.linalg.norm(P2-P0)
+
+        crs_ecef = CRS.from_epsg(4978)
+        crs_wgs84 = CRS.from_epsg(4326)
+        transformer = Transformer.from_crs(crs_ecef, crs_wgs84, always_xy=True)
+
+        if distance1 < distance2:
+            lon, lat, _ = transformer.transform(P1[0], P1[1], P1[2])
+        else:
+            lon, lat, _ = transformer.transform(P2[0], P2[1], P2[2])
+
+        return lon, lat
+
+################################################## TEST CODE, LEAVE FOR NOW
+#
+# import matplotlib
+# tkagg = matplotlib.use('TkAgg')
+# import matplotlib.pyplot as plt
+# if __name__ == '__main__':
+#
+#
+#     from data_ingestion import DataIngestion
+#     from config_file import ConfigFile
+#
+#     config_path = os.path.join(os.getcwd(), '..', 'config.xml')
+#     config = ConfigFile(config_path)
+#     ingestion_object = DataIngestion(config)
+#     data_dict = ingestion_object.ingest_data()
+# #
+# #     ####### SMAP
+# #     import h5py
+# #     scan_ind = 81038 // 241
+# #     earth_sample_ind = 81038 % 241
+# #     # scan_ind = 100
+# #     # earth_sample_ind = 0
+# #     data = h5py.File('../dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5')
+# #     x_pos = data['Spacecraft_Data']['x_pos'][scan_ind]
+# #     y_pos = data['Spacecraft_Data']['y_pos'][scan_ind]
+# #     z_pos = data['Spacecraft_Data']['z_pos'][scan_ind]
+# #     x_vel = data['Spacecraft_Data']['x_vel'][scan_ind]
+# #     y_vel = data['Spacecraft_Data']['y_vel'][scan_ind]
+# #     z_vel = data['Spacecraft_Data']['z_vel'][scan_ind]
+# #     attitude = None
+# #     lon   = data['Brightness_Temperature']['tb_lon'][scan_ind][earth_sample_ind]
+# #     lat   = data['Brightness_Temperature']['tb_lat'][scan_ind][earth_sample_ind]
+# #     processing_scan_angle = np.deg2rad(data['Brightness_Temperature']['antenna_scan_angle'][scan_ind][earth_sample_ind])
+# #     band = 'L'
+# #     feed_horn_number = 0
+#
+#     ######## CIMR
+#     import netCDF4 as nc
+#     scan_ind = 73
+#     earth_sample_ind = 192
+#     data = nc.Dataset('../dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc')
+#     x_pos = data['L_BAND']['satellite_position'][scan_ind][earth_sample_ind][0]
+#     y_pos = data['L_BAND']['satellite_position'][scan_ind][earth_sample_ind][1]
+#     z_pos = data['L_BAND']['satellite_position'][scan_ind][earth_sample_ind][2]
+#     x_vel = data['L_BAND']['satellite_velocity'][scan_ind][earth_sample_ind][0]
+#     y_vel = data['L_BAND']['satellite_velocity'][scan_ind][earth_sample_ind][1]
+#     z_vel = data['L_BAND']['satellite_velocity'][scan_ind][earth_sample_ind][2]
+#     attitude = data['L_BAND']['SatelliteBody2EarthCenteredInertialFrame'][scan_ind][earth_sample_ind]
+#     lon   = data['L_BAND']['lon'][scan_ind][earth_sample_ind][0]
+#     lat   = data['L_BAND']['lat'][scan_ind][earth_sample_ind][0]
+#     processing_scan_angle = data['L_BAND']['scan_angle'][scan_ind][earth_sample_ind]
+#     band = 'L'
+#     feed_horn_number = 0
+#
+#     AP = AntennaPattern(config, 'L')
+#
+#     int_dom_lons, int_dom_lats = AP.make_integration_grid([lon], [lat])
+#
+#     lon1, lat1 = AP.boresight_to_earth(x_pos, y_pos, z_pos, x_vel, y_vel,
+#                                       z_vel, processing_scan_angle, band, feed_horn_number, attitude)
+#
+#     pattern = AP.antenna_pattern_to_earth(int_dom_lons, int_dom_lats, x_pos, y_pos,
+#                                           z_pos, x_vel, y_vel, z_vel, processing_scan_angle,
+#                                           feed_horn_number, attitude, lon, lat)
+#
+#     print(lon, lat)
+#     print(lon1, lat1)
+#
+#     import matplotlib.pyplot as plt
+#     plt.imshow(pattern); plt.colorbar()
+#     plt.show()
+
+### investigate SMAP offset
+
+# from data_ingestion import DataIngestion
+# from config_file import ConfigFile
+# config_path = os.path.join(os.getcwd(), '..', 'config.xml')
+# config = ConfigFile(config_path)
+# ingestion_object = DataIngestion(config)
+# data_dict = ingestion_object.ingest_data()
+
+# import h5py
+# scan_ind = 81038 // 241
+# #scan_ind = 100
+# data = h5py.File('../dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5')
+# x_pos = data['Spacecraft_Data']['x_pos'][scan_ind]
+# y_pos = data['Spacecraft_Data']['y_pos'][scan_ind]
+# z_pos = data['Spacecraft_Data']['z_pos'][scan_ind]
+# x_vel = data['Spacecraft_Data']['x_vel'][scan_ind]
+# y_vel = data['Spacecraft_Data']['y_vel'][scan_ind]
+# z_vel = data['Spacecraft_Data']['z_vel'][scan_ind]
+# attitude = None
+
+# x_pos1 = data['Spacecraft_Data']['x_pos'][scan_ind+1]
+# y_pos1 = data['Spacecraft_Data']['y_pos'][scan_ind+1]
+# z_pos1 = data['Spacecraft_Data']['z_pos'][scan_ind+1]
+# x_vel1 = data['Spacecraft_Data']['x_vel'][scan_ind+1]
+# y_vel1 = data['Spacecraft_Data']['y_vel'][scan_ind+1]
+# z_vel1 = data['Spacecraft_Data']['z_vel'][scan_ind+1]
+
+# AP = AntennaPattern(config, 'L')
+
+# boresight_l1b = []
+# boresight_proj = []
+# error = []
+
+# for earth_sample_ind in range(0, 241, 5):
+
+#     xp = x_pos1 * earth_sample_ind/240 + x_pos * (240-earth_sample_ind)/240.
+#     yp = y_pos1 * earth_sample_ind/240 + y_pos * (240-earth_sample_ind)/240.
+#     zp = z_pos1 * earth_sample_ind/240 + z_pos * (240-earth_sample_ind)/240.
+#     xv = x_vel1 * earth_sample_ind/240 + x_vel * (240-earth_sample_ind)/240.
+#     yv = y_vel1 * earth_sample_ind/240 + y_vel * (240-earth_sample_ind)/240.
+#     zv = z_vel1 * earth_sample_ind/240 + z_vel * (240-earth_sample_ind)/240.
+
+#     # xp = x_pos
+#     # yp = y_pos
+#     # zp = z_pos
+#     # xv = x_vel
+#     # yv = y_vel
+#     # zv = z_vel
+
+#     lon   = data['Brightness_Temperature']['tb_lon'][scan_ind][earth_sample_ind]
+#     lat   = data['Brightness_Temperature']['tb_lat'][scan_ind][earth_sample_ind]
+#     if lon<-100 or lat<-100:
+#         continue
+#     processing_scan_angle = np.deg2rad(data['Brightness_Temperature']['antenna_scan_angle'][scan_ind][earth_sample_ind])
+#     band = 'L'
+#     feed_horn_number = 0
+
+#     lon1, lat1 = AP.boresight_to_earth(xp, yp, zp, xv, yv, 
+#                             zv, processing_scan_angle, band, feed_horn_number, attitude)
+
+#     boresight_l1b.append((lon, lat))
+#     boresight_proj.append((lon1, lat1))
+#     error.append((np.sqrt((lon-lon1)**2 + (lat-lat1)**2)))
+
+# boresight_l1b = np.array(boresight_l1b)
+# boresight_proj = np.array(boresight_proj)
+
+# fig, ax = plt.subplots(1,2)
+
+# ax[0].scatter(boresight_l1b[:, 0], boresight_l1b[:, 1], s=10)
+# ax[0].scatter(boresight_proj[:, 0], boresight_proj[:, 1], s=10)
+
+# ax[0].scatter(boresight_l1b[0, 0], boresight_l1b[0, 1], s=20, marker='s', c='blue')
+# ax[0].scatter(boresight_proj[0, 0], boresight_proj[0, 1], s=20,  marker='s', c='orange')
+# ax[0].scatter(boresight_l1b[-1, 0], boresight_l1b[-1, 1], s=20,  marker='x', c='blue')
+# ax[0].scatter(boresight_proj[-1, 0], boresight_proj[-1, 1], s=20,  marker='x', c='orange')
+
+# ax[1].scatter(range(len(error)), error)
+
+# plt.show()

@@ -11,7 +11,7 @@ process.
 import re
 
 from numpy import (array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile, repeat, arange,
-                   isnan, delete, where, concatenate, full, newaxis, float32, asarray, any)
+                   isnan, delete, where, concatenate, full, newaxis, float32, asarray, any, atleast_1d)
 
 from rgb_logging    import RGBLogging 
 from config_file    import ConfigFile
@@ -162,9 +162,13 @@ class DataIngestion:
                 coreg_b   = self.amsr2_coreg_extraction(data.attrs['CoRegistrationParameterA2'][0])
                 overlap   = int(data.attrs['OverlapScans'][0])
                 num_scans = int(data.attrs['NumberOfScans'][0])
-                self.config.num_scans = num_scans
-                self.config.AM2_DEF_SNUM_HI = AM2_DEF_SNUM_HI
-                self.config.AM2_DEF_SNUM_LOW = AM2_DEF_SNUM_LOW
+                self.config.num_target_scans = num_scans
+
+                if ['89a', '89b'] in self.config.target_band:
+                    self.config.num_target_samples = AM2_DEF_SNUM_HI
+                else:
+                    self.config.num_target_samples = AM2_DEF_SNUM_LOW
+
 
                 if not num_scans <= self.config.LMT:
                     raise ValueError(
@@ -286,63 +290,106 @@ class DataIngestion:
         from netCDF4 import Dataset
 
         data_dict = {}
-        if self.config.grid_type == "L1C":
-            for band in self.config.target_band:
-                with Dataset(self.config.input_data_path, 'r') as data:
-                    band_data = data[band + '_BAND']
-                    variable_dict = {}
+        bands_to_open = set(self.config.target_band + self.config.source_band)
 
-                    # Extract Feed offsets and u, v to add to config
-                    scan_angle_feeds_offsets = band_data['scan_angle_feeds_offsets'][:]
-                    self.config.scan_angle_feed_offsets[band]=scan_angle_feeds_offsets
-                    self.config.u0[band], self.config.v0[band] = getattr(band_data, 'uo'), getattr(band_data, 'vo')
+        for band in bands_to_open:
+            with Dataset(self.config.input_data_path, 'r') as data:
+                band_data = data[band + '_BAND']
+                variable_dict = {}
 
-                    # Extract variables (This can be tweaked to remove variables for Non-AP algorithms)
+                # Extract Feed offsets and u, v to add to config
+                scan_angle_feeds_offsets = array(band_data['scan_angle_feeds_offsets_relative_to_reflector'][:])
+                self.config.scan_angle_feed_offsets[band]=atleast_1d(scan_angle_feeds_offsets)
+                self.config.u0[band] = atleast_1d(getattr(band_data, 'uo'))
+                self.config.v0[band] = atleast_1d(getattr(band_data, 'vo'))
+
+                # Extract L1r output geometry
+                if self.config.grid_type == 'L1R':
+                    if band in self.config.target_band:
+                        self.config.num_target_scans = len(data.dimensions['n_scans'])
+                        self.config.num_target_samples = len(band_data.dimensions['n_samples_earth'])*self.config.num_horns[band]
+
+
+                # Extract variables (This can be tweaked to remove variables for Non-AP algorithms)
+                if self.config.grid_type == 'L1R':
+                    if band in self.config.target_band:
+                        variables_to_open = ['longitude', 'latitude']
+                    else:
+                        required_variables = ['longitude', 'latitude', 'processing_scan_angle',
+                                          'x_position', 'y_position', 'z_position',
+                                          'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
+                                          'y_velocity', 'z_velocity', 'attitude']
+                        variables_to_open = set(required_variables + self.config.variables_to_regrid)
+
+                elif self.config.grid_type == 'L1C':
                     required_variables = ['longitude', 'latitude', 'processing_scan_angle',
-                                      'x_position', 'y_position', 'z_position',
-                                      'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
-                                      'y_velocity', 'z_velocity', 'attitude']
-
+                                          'x_position', 'y_position', 'z_position',
+                                          'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
+                                          'y_velocity', 'z_velocity', 'attitude']
                     variables_to_open = set(required_variables + self.config.variables_to_regrid)
 
-                    for variable in variables_to_open:
-                        variable_key = self.config.variable_key_map[variable]
-                        data = band_data[variable_key][:]
-                        if variable == 'x_position':
-                            variable_dict[variable] = data[:,:,0]
-                        elif variable == 'y_position':
-                            variable_dict[variable] = data[:,:,1]
-                        elif variable == 'z_position':
-                            variable_dict[variable] = data[:,:,2]
-                        elif variable == 'x_velocity':
-                            variable_dict[variable] = data[:,:,0]
-                        elif variable == 'y_velocity':
-                            variable_dict[variable] = data[:,:,1]
-                        elif variable == 'z_velocity':
-                            variable_dict[variable] = data[:,:,2]
-                        else:
-                            variable_dict[variable] = data
 
-                    # Calculate max altitude for ap_radius calculation (same for all bands)
+                for variable in variables_to_open:
+                    variable_key = self.config.variable_key_map[variable]
+                    data = band_data[variable_key][:]
+                    if variable == 'x_position':
+                        variable_dict[variable] = data[:,:,0]
+                    elif variable == 'y_position':
+                        variable_dict[variable] = data[:,:,1]
+                    elif variable == 'z_position':
+                        variable_dict[variable] = data[:,:,2]
+                    elif variable == 'x_velocity':
+                        variable_dict[variable] = data[:,:,0]
+                    elif variable == 'y_velocity':
+                        variable_dict[variable] = data[:,:,1]
+                    elif variable == 'z_velocity':
+                        variable_dict[variable] = data[:,:,2]
+                    else:
+                        variable_dict[variable] = data
+
+                # Calculate max altitude for ap_radius calculation (same for all bands)
+                if self.config.grid_type == 'L1R':
+                    if band in self.config.target_band:
+                        pass
+                else:
                     if not hasattr(self.config, 'max_altitude'):
                         altitude = sqrt(variable_dict['x_position']**2 + variable_dict['y_position']**2 + variable_dict['z_position']**2)
                         altitude -= 6371000
                         self.config.max_altitude = altitude.max()
 
-                    # Create map between scan number and earth sample number
-                    num_feed_horns = self.config.num_horns[band]
-                    num_scans, num_samples = variable_dict['processing_scan_angle'].shape
+                # Create map between scan number and earth sample number
+                num_feed_horns = self.config.num_horns[band]
+                num_scans, num_samples = variable_dict['longitude'].shape[:2] # Changed from processing scan angle because longitude will ALWAYS be there
 
-                    # Combine Feed horns and Flatten
-                    variable_dict = self.combine_cimr_feeds(variable_dict, num_feed_horns)
-                    variable_dict['scan_number'] = float32(repeat(arange(num_scans)[:, newaxis], num_samples * num_feed_horns,axis=1).flatten('C'))
-                    single_row = tile(arange(num_samples), num_feed_horns)
-                    variable_dict['sample_number'] = float32(tile(single_row, (num_scans, 1)).flatten('C'))
+                # Combine Feed horns and Flatten
+                variable_dict = self.combine_cimr_feeds(variable_dict, num_feed_horns)
+                variable_dict['scan_number'] = float32(repeat(arange(num_scans)[:, newaxis], num_samples * num_feed_horns,axis=1).flatten('C'))
+                single_row = tile(arange(num_samples), num_feed_horns)
+                variable_dict['sample_number'] = float32(tile(single_row, (num_scans, 1)).flatten('C'))
 
-                    # Remove out of bounds here
+                # Remove out of bounds here
+                if self.config.grid_type != 'L1R':
                     variable_dict = self.remove_out_of_bounds(variable_dict)
 
-                    # Split Fore/Aft
+                # Split Fore/Aft
+                if self.config.grid_type == 'L1R':
+                    if band in self.config.target_band:
+                        pass
+                    else:
+                        if self.config.split_fore_aft:
+                            mask_dict = {
+                                'aft': (variable_dict['processing_scan_angle'] >= self.config.aft_angle_min) & (
+                                        variable_dict['processing_scan_angle'] <= self.config.aft_angle_max)}
+                            mask_dict['fore'] = ~mask_dict['aft']
+                            variable_dict_out = {}
+                            for variable in variable_dict:
+                                for scan_direction in ['fore', 'aft']:
+                                    mask = mask_dict[scan_direction].flatten('C')
+                                    variable_dict_out[f"{variable}_{scan_direction}"] = variable_dict[variable][mask]
+
+                            variable_dict = variable_dict_out
+                            del variable_dict_out
+                elif self.config.grid_type == 'L1C':
                     if self.config.split_fore_aft == True:
                         mask_dict = {'aft': (variable_dict['processing_scan_angle'] >= self.config.aft_angle_min) & (
                                 variable_dict['processing_scan_angle'] <= self.config.aft_angle_max)}
@@ -355,14 +402,8 @@ class DataIngestion:
 
                         variable_dict = variable_dict_out
                         del variable_dict_out
-                    data_dict[band] = variable_dict
 
-        if self.config.grid_type == 'L1R':
-            # Need to concatenate the target and source bands.
-            # Actually I don't think that you need a separate statement here, we can just create a
-            # "set" from target and source bands of all band data that needs to be opened.
-            # then again, we only need the lats and lons of the source data.
-            pass
+                data_dict[band] = variable_dict
 
         return data_dict
 
@@ -492,13 +533,19 @@ class DataIngestion:
                     elif self.config.input_data_type == 'AMSR2':
                         # Include AMSR2 specific fill values
                         pass
-                    nan_map |= isnan(variable_dict[variable])
+                    print(variable)
+                    if variable_dict[variable].ndim == 1:
+                        nan_map |= isnan(variable_dict[variable])
+                    # Deadling with the attitude array
+                    elif variable_dict[variable].ndim == 3:
+                        # Needs testing when nans in cimr data
+                        # This line give problems sometimes
+                        nan_map |= any(isnan(variable_dict[variable]), axis=(1, 2))
+                    # nan_map |= isnan(variable_dict[variable])
                 for variable in variable_dict:
                     variable_dict[variable] = delete(variable_dict[variable], where(nan_map)[0], axis=0)
                 data_dict[band] = variable_dict
         return data_dict
-
-
 
     def amsr2_latlon_conversion(self, coreg_a, coreg_b, lons_hi, lats_hi):
         """
@@ -528,10 +575,10 @@ class DataIngestion:
         deg = 180.0 / pi
 
         # Initiate lower frequency channel lat/lon arrays
-        lats_lo = zeros((self.config.num_scans, AM2_DEF_SNUM_LOW))
-        lons_lo = zeros((self.config.num_scans, AM2_DEF_SNUM_LOW))
+        lats_lo = zeros((self.config.num_target_scans, AM2_DEF_SNUM_LOW))
+        lons_lo = zeros((self.config.num_target_scans, AM2_DEF_SNUM_LOW))
 
-        for scan in range(self.config.num_scans):
+        for scan in range(self.config.num_target_scans):
             for sample in range(AM2_DEF_SNUM_LOW):
                 lat_1 = lats_hi[scan, sample * 2 + 0]
                 lat_2 = lats_hi[scan, sample * 2 + 1]
@@ -673,8 +720,9 @@ class DataIngestion:
             data_dict[band]['sample_number'] = float32(tile(arange(num_samples), (num_scans, 1)))
 
         # Remove out of bounds inds
-        for band in data_dict:
-            data_dict[band] = self.remove_out_of_bounds(data_dict[band])
+        if self.config.grid_type != 'L1R':
+            for band in data_dict:
+                data_dict[band] = self.remove_out_of_bounds(data_dict[band])
 
         # Flatten data
         for band in data_dict:
