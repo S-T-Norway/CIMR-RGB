@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<config>
+    <inputData>
+        <type>SMAP</type>
+        <path>../dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>
+        <splitForeAft>True</splitForeAft>
+        <!-- AMSR2 Specific Configuration Parameters -->
+        <sourceBand>89a</sourceBand>
+        <targetBand>10</targetBand> <!-- For CIMR, you can choose a target band/s or all of them -->
+        <LMT>2200</LMT>
+    </inputData>
+    <GridParams>
+        <gridType>L1C</gridType>
+	<gridDefinition>EASE2_G36km</gridDefinition>
+	<projectionDefinition>G</projectionDefinition>
+	<!--<gridDefinition>STEREO_N25km</gridDefinition>-->
+	<!--<gridDefinition>EASE2_G36km</gridDefinition>
+	<projectionDefinition>MERC_G</projectionDefinition>-->  
+    </GridParams>
+    <ReGridderParams>
+        <regriddingAlgorithm>NN</regriddingAlgorithm>
+        <nnDistancecalc>GreatCircle</nnDistancecalc> <!-- Need to add configuration validation, can be euclidian or great circle-->
+        <kernelSize>9</kernelSize>
+        <searchRadius></searchRadius>
+        <max_neighbours>10</max_neighbours>
+        <variables_to_regrid>bt_h bt_v</variables_to_regrid>
+        <antenna_method>real</antenna_method>
+        <polarisation_method>scalar</polarisation_method>
+        <antenna_threshold>10.98</antenna_threshold>
+    </ReGridderParams>
+    <outputData>
+        <saveTodisk>True</saveTodisk>
+	<!--<outputPath>./output/L1cProducts/SMAP/RGB/</outputPath>--> 
+	<outputPath>../output/</outputPath>
+    </outputData>
+    <LoggingParams>
+	<!-- Log Config File --> 
+        <!-- Relative is relative to the main.py, not the config file! 
+	     if it is empty, no logger will be configured 
+        --> 
+        <configPath>../src/logger_config.json</configPath>
+	<!--<configPath></configPath>-->
+	<decorate>True</decorate>
+	<!-- [ RGB, Custom ] -->  
+	<!--<decorator>RGBLogging.track_perf</decorator>--> 	
+    </LoggingParams> 
+</config>
