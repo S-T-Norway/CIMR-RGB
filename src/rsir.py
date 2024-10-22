@@ -103,7 +103,6 @@ class rSIRInterp:
 
             )
 
-
     def interp_variable_dict(self, samples_dict, variable_dict, scan_direction=None, band=None):
 
         if scan_direction:

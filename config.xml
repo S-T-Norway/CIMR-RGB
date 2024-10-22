@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <config>
     <inputData>
-        <type>CIMR</type>
-<!--        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>-->
-        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
+        <type>SMAP</type>
+        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>
+<!--        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>-->
 <!--        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/AMSR2/GW1AM2_202308301033_051D_L1SGBTBR_2220220.h5</path>-->
         <splitForeAft>True</splitForeAft>
         <!-- AMSR2 Specific Configuration Parameters -->
@@ -19,7 +19,7 @@
     </GridParams>
     <ReGridderParams>
         <regriddingAlgorithm>BG</regriddingAlgorithm>
-        <searchRadius></searchRadius>
+        <searchRadius>36</searchRadius>
         <max_neighbours>50</max_neighbours>
         <variables_to_regrid>bt_h</variables_to_regrid>
         <antenna_method>real</antenna_method>

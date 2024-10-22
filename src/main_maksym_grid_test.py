@@ -4,7 +4,7 @@ from numpy import full, nan, array
 
 from data_ingestion import DataIngestion
 from grid_generator import GridGenerator, GRIDS
-from regridder_v2 import ReGridder
+from regridder import ReGridder
 from config_file import ConfigFile
 
 # ---- Testing ----
