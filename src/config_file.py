@@ -162,6 +162,11 @@ class ConfigFile:
             max_neighbours = 'ReGridderParams/max_neighbours',
             regridding_algorithm = self.regridding_algorithm)
 
+        self.boresight_shift = self.validate_boresight_shift(
+            config_object = config_object,
+            boresight_shift = 'ReGridderParams/boresight_shift'
+        )
+
         if self.grid_type == "L1R":
             try:
                 if self.target_band == self.source_band:
@@ -170,6 +175,11 @@ class ConfigFile:
                 print(f"{e}")
                 sys.exit(1)
 
+        if self.grid_type == "L1C":
+            self.reduced_grid_inds = self.validate_reduced_grid_inds(
+                config_object=config_object,
+                reduced_grid_inds='GridParams/reduced_grid_inds'
+            )
 
         # SMAP specific Parameters
         if self.input_data_type == "SMAP":
@@ -431,16 +441,18 @@ class ConfigFile:
         if input_data_type == "CIMR":
             if grid_type == "L1C":
                 valid_input = ['L', 'C', 'X', 'KA', 'KU', 'All']
-                config_input = config_object.find(target_band).text.split()
-                if config_input == ['All']:
-                    return ['L', 'C', 'X', 'KA', 'KU']
-                else:
-                    for i in config_input:
-                        if i not in valid_input:
-                            raise ValueError(
-                                f"Invalid target bands for CIMR L1C remap."
-                                f" Valid target bands are: {valid_input} or any combination of individual bands.")
-                    return config_object.find(target_band).text.split()
+            elif grid_type == "L1R":
+                valid_input = ['L', 'C', 'X', 'KA', 'KU']
+            config_input = config_object.find(target_band).text.split()
+            if config_input == ['All']:
+                return ['L', 'C', 'X', 'KA', 'KU']
+            else:
+                for i in config_input:
+                    if i not in valid_input:
+                        raise ValueError(
+                            f"Invalid target bands for CIMR L1C remap."
+                            f" Valid target bands are: {valid_input} or any combination of individual bands.")
+                return config_object.find(target_band).text.split()
 
 
     @staticmethod
@@ -465,9 +477,9 @@ class ConfigFile:
         if input_data_type == "AMSR2":
             valid_input = ['6', '7', '10', '18', '23', '36', '89a', '89b']
             if config_object.find(source_band).text in valid_input:
-                return config_object.find(source_band).text
+                return config_object.find(source_band).text.split()
             raise ValueError(
-                f"Invalid Target Band, check configuration file. "
+                f"Invalid Source Band, check configuration file. "
                 f"Valid target bands are: {valid_input}"
             )
 
@@ -475,7 +487,14 @@ class ConfigFile:
             pass
 
         if input_data_type == "CIMR":
-            pass
+            valid_input = ['L', 'C', 'X', 'KA', 'KU']
+            if config_object.find(source_band).text in valid_input:
+                return config_object.find(source_band).text.split()
+            raise ValueError(
+                f"Invalid Target Band, check configuration file. "
+                f"Valid target bands are: {valid_input}"
+            )
+
 
 
     @staticmethod
@@ -760,6 +779,40 @@ class ConfigFile:
             )
         else:
             return config_object.find(polarisation_method).text
+
+    @staticmethod
+    def validate_boresight_shift(config_object, boresight_shift):
+        value = config_object.find(boresight_shift).text
+        valid_input = ['True', 'False']
+        if value is None:
+            return False
+        elif value not in valid_input:
+            raise ValueError(
+                f"Invalid boresight shift. Check Configuration File."
+                f" Valid boresight shift are: {valid_input}"
+            )
+        else:
+            if value == 'True':
+                return True
+            else:
+                return False
+
+    @staticmethod
+    def validate_reduced_grid_inds(config_object, reduced_grid_inds):
+        if config_object.find(reduced_grid_inds).text is None:
+            return None
+        else:
+            value = config_object.find(reduced_grid_inds).text.split()
+
+        # I need to add a proper validation here to check
+        # if the indices actually fall within the grid that
+        # the user wants to check. Also need to add L1r
+        grid_row_min = int(value[0])
+        grid_row_max = int(value[1])
+        grid_col_min = int(value[2])
+        grid_col_max = int(value[3])
+        return [grid_row_min, grid_row_max, grid_col_min, grid_col_max]
+
 
 
 
