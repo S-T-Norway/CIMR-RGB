@@ -333,14 +333,13 @@ class DataIngestion:
                         variable_dict[variable] = data
 
                 # Calculate max altitude for ap_radius calculation (same for all bands)
-                if self.config.grid_type == 'L1R':
-                    if band in self.config.target_band:
-                        pass
-                else:
-                    if not hasattr(self.config, 'max_altitude'):
-                        altitude = sqrt(variable_dict['x_position']**2 + variable_dict['y_position']**2 + variable_dict['z_position']**2)
-                        altitude -= 6371000
-                        self.config.max_altitude = altitude.max()
+                if self.config.grid_type == 'L1R' and band in self.config.target_band:
+                    pass
+
+                if not hasattr(self.config, 'max_altitude'):
+                    altitude = sqrt(variable_dict['x_position'] ** 2 + variable_dict['y_position'] ** 2 + variable_dict[
+                        'z_position'] ** 2) - 6371000
+                    self.config.max_altitude = altitude.max()
 
                 # Create map between scan number and earth sample number
                 num_feed_horns = self.config.num_horns[band]
@@ -462,6 +461,8 @@ class DataIngestion:
                 # Get fore and aft array shapes
                 fore_shape, aft_shape = None, None
                 for variable in variable_dict:
+                    if variable_dict[variable].ndim != 1:
+                        continue
                     if fore_shape is None and 'fore' in variable:
                         fore_shape = variable_dict[variable].shape
                     if aft_shape is None and 'aft' in variable:
@@ -501,7 +502,11 @@ class DataIngestion:
                             variable_dict[variable] = delete(variable_dict[variable], where(nan_map)[0], axis=0)
                     data_dict[band] = variable_dict
             else:
-                nan_map = zeros(next(iter(variable_dict.values())).shape, dtype=bool).flatten('C')
+                # This wont work if attitude is the first array in the dictionary
+                for key, value in variable_dict.items():
+                    if key != "attitude":
+                        nan_map = zeros(value.shape, dtype=bool).flatten('C')
+                        break
                 for variable in variable_dict:
                     if self.config.input_data_type == 'SMAP':
                         if variable_dict[variable].dtype == 'float32':
