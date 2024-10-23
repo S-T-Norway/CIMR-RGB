@@ -175,15 +175,15 @@ def get_beamdata(beamfile: pb.Path | str,
             # and complex is numpy.complex128. The other data-types do not have
             # Python equivalents. 
             # """ 
-            G1h = np.full((ny, nx), np.nan, dtype=float)
-            G2h = np.full((ny, nx), np.nan, dtype=float)
-            G3h = np.full((ny, nx), np.nan, dtype=float)
-            G4h = np.full((ny, nx), np.nan, dtype=float)
+            G1h = np.full((ny, nx), 0., dtype=float)
+            G2h = np.full((ny, nx), 0., dtype=float)
+            G3h = np.full((ny, nx), 0., dtype=float)
+            G4h = np.full((ny, nx), 0., dtype=float)
 
-            G1v = np.full((ny, nx), np.nan, dtype=float)
-            G2v = np.full((ny, nx), np.nan, dtype=float)
-            G3v = np.full((ny, nx), np.nan, dtype=float)
-            G4v = np.full((ny, nx), np.nan, dtype=float)
+            G1v = np.full((ny, nx), 0., dtype=float)
+            G2v = np.full((ny, nx), 0., dtype=float)
+            G3v = np.full((ny, nx), 0., dtype=float)
+            G4v = np.full((ny, nx), 0., dtype=float)
             
             # j_ is J in GRASP manual 
             # 
