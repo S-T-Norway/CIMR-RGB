@@ -459,27 +459,16 @@ class AntennaPattern:
         gdef = self.config.grid_definition
         self.config.grid_definition = 'EASE2_' + self.config.projection_definition + '3km'
 
-        xpoints = []
-        ypoints = []
-        for lon, lat in zip(longitude, latitude):
-            x0, y0 = GridGenerator(self.config).lonlat_to_xy(lon, lat)
-            xpoints.append(x0)
-            ypoints.append(y0)
-
         Rearth  = (6378137. + 6356752.)/2. #m
-        Rcircle = Rearth * np.abs(np.cos(np.deg2rad(lat)))
+        Rcircle = Rearth * np.abs(np.cos(np.deg2rad(latitude)))
+        Rcircle = np.max(Rcircle)
 
         Rpattern = max(list(self.max_ap_radius.values())) #arch in m
 
-        if not self.config.boresight_shift: # Also only for SMAP, right?
-            shift_factor = 1
-        else:
-            shift_factor = 1
-
-        latmin = lat - shift_factor*np.rad2deg(Rpattern/Rearth)
-        latmax = lat + shift_factor*np.rad2deg(Rpattern/Rearth)
-        lonmin = lon - shift_factor*np.rad2deg(Rpattern/Rcircle)
-        lonmax = lon + shift_factor*np.rad2deg(Rpattern/Rcircle)
+        latmin = np.min(latitude)  - np.rad2deg(Rpattern/Rearth)
+        latmax = np.max(latitude)  + np.rad2deg(Rpattern/Rearth)
+        lonmin = np.min(longitude) - np.rad2deg(Rpattern/Rcircle)
+        lonmax = np.max(longitude) + np.rad2deg(Rpattern/Rcircle)
 
         xmin, ymax = GridGenerator(self.config).lonlat_to_xy(lonmin, latmax)
         xmax, ymin = GridGenerator(self.config).lonlat_to_xy(lonmax, latmin)
@@ -519,7 +508,7 @@ class AntennaPattern:
 
         if self.config.boresight_shift:
             lonb, latb = self.boresight_to_earth(x_pos, y_pos, z_pos, x_vel, y_vel, z_vel,
-                                           processing_scan_angle, band, feed_horn_number, attitude)
+                                           processing_scan_angle, self.band, feed_horn_number, attitude)
 
         if self.config.input_data_type == "SMAP":
             tilt_angle = pi - tilt_angle # maybe we should change this already in the data ingestion!
