@@ -466,8 +466,8 @@ def interp_beamdata_into_uv(cimr:           dict(),
     # Saving resulting grids 
     cimr["Grid"]['x']     = x 
     cimr["Grid"]['y']     = y    
-    cimr["Grid"]['theta'] = theta    
-    cimr["Grid"]['phi']   = phi    
+    cimr["Grid"]['theta'] = np.rad2deg(theta)    
+    cimr["Grid"]['phi']   = np.rad2deg(phi)
 
     return cimr  
 
