@@ -4,7 +4,7 @@ from numpy import meshgrid, isinf, where, full, nan, unravel_index, all, sqrt
 from nn import NNInterp
 from ids import IDSInterp
 from dib import DIBInterp
-from bg import BGInterp
+from bg_l1r import BGInterp
 from rsir import rSIRInterp
 from grid_generator import GridGenerator, GRIDS
 from pyresample import kd_tree, geometry
@@ -29,7 +29,9 @@ class ReGridder:
     def get_grid(self, data_dict=None):
         # Get target grid
         if self.config.grid_type == 'L1C':
-            target_x, target_y, res = GridGenerator(self.config).generate_grid_xy(
+            target_x, target_y, res = GridGenerator(self.config,
+                                                    projection_definition=self.config.projection_definition,
+                                                    grid_definition=self.config.grid_definition).generate_grid_xy(
                 return_resolution=True
             )
             x_shape = len(target_x)
@@ -38,7 +40,10 @@ class ReGridder:
             target_x = target_x.flatten()
             target_y = target_y.flatten()
 
-            target_lon, target_lat = GridGenerator(self.config).xy_to_lonlat(
+            target_lon, target_lat = GridGenerator(self.config,
+                                                   projection_definition=self.config.projection_definition,
+                                                   grid_definition=self.config.grid_definition
+                                                   ).xy_to_lonlat(
                 x=target_x,
                 y=target_y
             )
@@ -100,7 +105,7 @@ class ReGridder:
         return reduced_distance, reduced_index, original_indices, valid_input_index
 
     # We need data dict or just pass specific variables?
-    def get_l1c_samples(self, variable_dict, target_grid):
+    def get_l1c_samples(self, variable_dict, target_grid): # also need to change the name of this for l1r
 
         samples_dict = {}
 
@@ -215,7 +220,7 @@ class ReGridder:
 
         return row, col
 
-    def regrid_l1c(self, data_dict):
+    def regrid_l1c(self, data_dict): # Need to change the name of this.
 
         # Get target grid
         if self.config.grid_type == 'L1C':
@@ -225,9 +230,10 @@ class ReGridder:
 
         data_dict_out = {}
         for band in data_dict:
-            print(f"Regridding band: {band}")
             if band not in self.config.source_band and self.config.grid_type == 'L1R':
                 continue
+            print(f"Regridding band: {band}")
+
             variable_dict = data_dict[band]
             samples_dict, variable_dict = self.sample_selection(variable_dict, target_grid)
 
@@ -236,12 +242,20 @@ class ReGridder:
                 for scan_direction in ['fore', 'aft']:
                     print(scan_direction)
 
+                    # Create an argument dictionary for interp_variable_dict, not all the algorithms need
+                    # all the arguments.
+                    args = {
+                        'samples_dict': samples_dict[scan_direction],
+                        'variable_dict': variable_dict,
+                        'target_dict': data_dict[self.config.target_band[0]],
+                        'target_grid': target_grid,
+                        'scan_direction': scan_direction,
+                        'band': band
+                    }
+
                     # Regrid Variables
                     variable_dict_out[scan_direction] = self.algos.get(self.config.regridding_algorithm).interp_variable_dict(
-                        samples_dict=samples_dict[scan_direction],
-                        variable_dict=variable_dict,
-                        scan_direction=scan_direction,
-                        band = band)
+                        **args)
 
                     # Add cell_row and cell_col indexes
                     cell_row, cell_col = self.create_output_grid_inds(grid_1d_index=samples_dict[scan_direction]['grid_1d_index'])
@@ -253,10 +267,20 @@ class ReGridder:
                 variable_dict_out = combined_dict
             else:
                 # Don't split fore/aft
+
+                # Create an argument dictionary for interp_variable_dict, not all the algorithms need
+                # all the arguments.
+                args = {
+                    'samples_dict': samples_dict,
+                    'variable_dict': variable_dict,
+                    'target_dict': data_dict[self.config.target_band[0]],
+                    'target_grid': target_grid,
+                    'scan_direction': None,
+                    'band': band
+                }
+
                 variable_dict_out = self.algos.get(self.config.regridding_algorithm).interp_variable_dict(
-                    samples_dict=samples_dict,
-                    variable_dict=variable_dict,
-                    band=band
+                    **args
                 )
 
                 # Add cell_row and cell_col indexes
