@@ -1,9 +1,6 @@
-from numpy.core.multiarray import unravel_index
-from requests.packages import target
-
 from grid_generator import GridGenerator, GRIDS
 from ap_processing import AntennaPattern
-from  numpy import where, nan, take, full, all, sum, zeros, identity, dot, nansum
+from  numpy import where, nan, take, full, all, sum, zeros, identity, dot, nansum, unravel_index
 from numpy.linalg import inv
 from tqdm import tqdm
 
