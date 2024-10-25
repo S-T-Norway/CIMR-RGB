@@ -177,7 +177,7 @@ class BGInterp:
 
         return weights
 
-    def interp_variable_dict(self, samples_dict, variable_dict, target_grid, scan_direction=None, band=None):
+    def interp_variable_dict(self, samples_dict, variable_dict, target_grid, scan_direction=None, band=None, **args):
 
         # This gets opened twice on split fore/aft, maybe changes this to be more efficient. could add to config
         # ap = AntennaPattern(

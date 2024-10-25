@@ -348,14 +348,15 @@ class DataIngestion:
                         variable_dict[variable] = data
 
                 # Calculate max altitude for ap_radius calculation (same for all bands)
-                if self.config.grid_type == 'L1R' and band in self.config.target_band:
-                    pass
-                else:
-                    if not hasattr(self.config, 'max_altitude'):
-                        print(band)
-                        altitude = sqrt(variable_dict['x_position'] ** 2 + variable_dict['y_position'] ** 2 + variable_dict[
-                            'z_position'] ** 2) - 6371000
-                        self.config.max_altitude = altitude.max()
+                if self.config.regridding_algorithm in ['BG']:
+                    if self.config.grid_type == 'L1R' and band in self.config.target_band:
+                        pass
+                    else:
+                        if not hasattr(self.config, 'max_altitude'):
+                            print(band)
+                            altitude = sqrt(variable_dict['x_position'] ** 2 + variable_dict['y_position'] ** 2 + variable_dict[
+                                'z_position'] ** 2) - 6371000
+                            self.config.max_altitude = altitude.max()
 
                 # Create map between scan number and earth sample number
                 num_feed_horns = self.config.num_horns[band]

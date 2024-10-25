@@ -53,6 +53,7 @@ class BGInterp:
             source_ant_patterns.append(sample_pattern)
 
         # Get target patterns
+        target_ant_pattern = None
         if self.config.grid_type == 'L1R':
 
             target_ap = AntennaPattern(config=self.config,
