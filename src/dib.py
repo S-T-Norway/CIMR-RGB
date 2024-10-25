@@ -20,7 +20,7 @@ class DIBInterp:
 
         return average_values
 
-    def interp_variable_dict(self, samples_dict, variable_dict, scan_direction=None, band=None):
+    def interp_variable_dict(self, samples_dict, variable_dict, target_grid, scan_direction=None, band=None):
 
         variable_dict_out = {}
         for variable in variable_dict:

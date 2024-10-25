@@ -29,7 +29,7 @@ class IDSInterp:
 
         return output_temp
 
-    def interp_variable_dict(self, samples_dict, variable_dict, scan_direction=None, band=None):
+    def interp_variable_dict(self, samples_dict, variable_dict, target_grid=None, scan_direction=None, band=None):
 
         variable_dict_out = {}
         for variable in variable_dict:
