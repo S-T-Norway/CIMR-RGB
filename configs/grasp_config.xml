@@ -22,7 +22,7 @@
     <logging>
         <use_rgb_logging>true</use_rgb_logging>
 	<use_rgb_decoration>true</use_rgb_decoration>
-	<logger_config>src/cimr_grasp/logger_config.json</logger_config>
+	<logger_config>src/cimr_rgb/logger_config.json</logger_config>
     </logging>
 </config>
 

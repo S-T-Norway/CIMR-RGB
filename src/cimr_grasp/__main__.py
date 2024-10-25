@@ -28,7 +28,7 @@ rootpath = pb.Path('.').resolve().parents[0]
 syspath = str(rootpath)
 sys.path.append(syspath) 
 #from cimr_grasp.rgb_logging import RGBLogging 
-from cimr_grasp.rgb_logging import RGBLogging 
+from cimr_rgb.rgb_logging import RGBLogging 
 
 
 
@@ -728,7 +728,7 @@ def main():
     start_time_tot = time.perf_counter() 
     # -----------------------------
     # Default value for config file 
-    config_file = "grasp_config.xml"
+    config_file = pb.Path("configs", "grasp_config.xml").resolve()
 
     # Getting the value for parameter file from cmd 
     parser = argparse.ArgumentParser(description = "Update XML configuration parameters.")
@@ -761,9 +761,13 @@ def main():
     use_rgb_decoration = config["use_rgb_decoration"] 
     logger_config      = config["logger_config"]
 
+    
+    logdir = config['outdir'].joinpath("logs")  
+    io.rec_create_dir(logdir)   
+
     # Creating a logger object based on the user preference 
     if use_rgb_logging and logger_config is not None: 
-        rgb_logging    = RGBLogging(log_config = logger_config)
+        rgb_logging    = RGBLogging(logdir = logdir, log_config = logger_config)
         rgb_logger     = rgb_logging.get_logger("rgb") 
 
     # -----------------------------

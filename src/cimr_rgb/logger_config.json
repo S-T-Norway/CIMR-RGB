@@ -22,7 +22,7 @@
         "class": "logging.FileHandler", 
         "level": "INFO", 
         "formatter": "advanced", 
-        "filename": "test.log", 
+        "filename": "cimr.log", 
         "mode": "w"
     }
 },  

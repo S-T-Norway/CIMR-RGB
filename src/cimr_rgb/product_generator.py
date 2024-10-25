@@ -16,7 +16,7 @@ class ProductGenerator:
         self.logger = config.logger  
 
 
-    def generate_l1c_product(self): 
+    def generate_l1c_product(self, data_dict: dict()): 
 
         # TODO: Change the lists into dictionaries and add metadata (as well as
         # proper dimensions to variables, since right now it is only x, y but
@@ -712,10 +712,10 @@ class ProductGenerator:
                 }
 
         # TODO: Remove pickled object and pass in proper dictionary to be saved 
-        file_path = pb.Path("dpr/data_dict_out.pkl")
-        # Open the file in read-binary mode and load the object
-        with open(file_path, 'rb') as file:
-            loaded_object = pickle.load(file)
+        #file_path = pb.Path("dpr/data_dict_out.pkl")
+        ## Open the file in read-binary mode and load the object
+        #with open(file_path, 'rb') as file:
+        #    loaded_object = pickle.load(file)
 
         # <Projection> -> Data -> Measurement -> <Band>
         outfile = pb.Path(f"{self.config.output_path}/test_l1c.nc").resolve()
@@ -740,7 +740,7 @@ class ProductGenerator:
 
                 group = data_group.createGroup(group_field)
 
-                for band_name, band_var in loaded_object.items(): 
+                for band_name, band_var in data_dict.items(): 
 
                     band_group = group.createGroup(f"{band_name}_BAND")
 

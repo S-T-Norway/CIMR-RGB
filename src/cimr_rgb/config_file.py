@@ -49,12 +49,23 @@ class ConfigFile:
 
         config_object, tree  = self.read_config(config_file_path)
 
+        # TODO: Add validation for this parameter 
+        #       Add possibility to create output dirs recursively (nested)
+        self.output_path  = pb.Path(config_object.find("outputData/outputPath").text).resolve() 
+        if not pb.Path(self.output_path).exists(): 
+            pb.Path(self.output_path).mkdir() 
+
 
         # TODO: Put this into its own validation method? 
         # -----------
         # Path to logger_config.json 
         # -----------
         self.logpar_config   = config_object.find("LoggingParams/configPath").text
+
+        # Creating output directory for logs (to save log files there)  
+        logdir  = pb.Path(self.output_path).joinpath("logs")
+        if not pb.Path(logdir).exists(): 
+            pb.Path(logdir).mkdir() 
 
         if self.logpar_config is not None: 
             self.logpar_config = pb.Path(self.logpar_config).resolve()  
@@ -63,7 +74,7 @@ class ConfigFile:
         self.logpar_decorate = bool(config_object.find("LoggingParams/decorate").text) 
 
         # Initialising RGB logging 
-        rgb_logging          = RGBLogging(log_config = self.logpar_config) 
+        rgb_logging          = RGBLogging(logdir = logdir, log_config = self.logpar_config) 
         self.logger          = rgb_logging.get_logger("rgb") 
 
         if self.logpar_config is None: 
@@ -72,7 +83,6 @@ class ConfigFile:
             # library users' logging functionality.  
             self.logger.addHandler(logging.NullHandler())
         # -----------
-
 
 
         self.input_data_type = self.validate_input_data_type(
@@ -137,16 +147,6 @@ class ConfigFile:
             config_object=config_object,
             save_to_disk='outputData/saveTodisk'
         )
-
-
-
-        # TODO: Add validation for this parameter 
-        #       Add possibility to create output dirs recursively (nested)
-        self.output_path  = pb.Path(config_object.find("outputData/outputPath").text).resolve() 
-        if not pb.Path(self.output_path).exists(): 
-            self.logger.info(f"Creating output directory: {self.output_path}")
-            pb.Path(self.output_path).mkdir() 
-
 
 
         self.search_radius = self.validate_search_radius(
