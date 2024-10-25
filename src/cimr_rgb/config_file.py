@@ -10,8 +10,8 @@ from xml.etree.ElementTree import ParseError, parse
 from operator import truediv
 from numpy import sqrt
 
-from grid_generator import GRIDS
-from rgb_logging import RGBLogging 
+from .grid_generator import GRIDS
+from .rgb_logging    import RGBLogging 
 
 
 class ConfigFile:

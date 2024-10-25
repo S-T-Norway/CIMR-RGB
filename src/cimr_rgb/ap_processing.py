@@ -1,17 +1,17 @@
+import os
+
+import numpy as np
 from numpy import (abs, deg2rad, full, sqrt, logical_or, logical_and, conj, real, imag,
                    zeros, array, argmax, cross, average, tan, all, any, min, max,
                    concatenate, meshgrid, sin , cos, sign, arccos, zeros_like, stack,
                    where, pi, flip)
-
-import numpy as np
 import matplotlib.pyplot as plt
 
 from scipy.interpolate import RegularGridInterpolator
 from pyproj import CRS, Transformer
-import os
 
-from grid_generator import GridGenerator, GRIDS
-from utils import normalize, generic_transformation_matrix
+from .grid_generator import GridGenerator, GRIDS
+from .utils          import normalize, generic_transformation_matrix
 
 
 class AntennaPattern:

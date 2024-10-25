@@ -1,8 +1,6 @@
 from numpy.core.multiarray import unravel_index
 
-from grid_generator import GridGenerator, GRIDS
-from ap_processing import AntennaPattern
-from  numpy import where, nan, take, full, all, sum, zeros, identity, dot, nansum
+from numpy import where, nan, take, full, all, sum, zeros, identity, dot, nansum
 from numpy.linalg import inv
 from tqdm import tqdm
 
@@ -10,6 +8,9 @@ from tqdm import tqdm
 import matplotlib
 tkagg = matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+
+from .grid_generator import GridGenerator, GRIDS
+from .ap_processing import AntennaPattern
 
 
 class BGInterp:

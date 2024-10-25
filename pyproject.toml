@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "cimr-rgb"
+version = "0.0.1"
+description = "CIMR RGB"
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["one", "two"] 
+classifiers = ["Programming Language :: Python :: 3"]
+dependencies = [
+    # Add any dependencies here if necessary
+    "numpy", 
+    "scipy", 
+    "pyproj", 
+    "cartopy", 
+    "h5py", 
+    "netCDF4", 
+    "tqdm", 
+    "colorama", 
+    "psutil",
+    "pyresample"
+]
+
+
+[tool.setuptools]
+packages = ["cimr_grasp", "cimr_rgb"]
+package-dir = {"" = "src"}
+
+
+[project.scripts]
+cimr-grasp = "cimr_grasp.__main__:main" 
+cimr-rgb   = "cimr_rgb.__main__:main" 
+

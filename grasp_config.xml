@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+    <paths>
+	<!--<outdir>$HOME/.local/cimr/grasp/output</outdir>--> 
+	<outdir>output/cimr_grasp</outdir>--> 
+	<datadir>dpr/AP</datadir>
+	<!--<datadir>$HOME/dpr/AP</datadir>-->
+    </paths>
+
+    <parameters>
+        <use_bhs>fAlSe</use_bhs>
+        <recenter_beam>true</recenter_beam>
+        <chunk_data>true</chunk_data>
+        <grid_res_phi>0.1</grid_res_phi>
+        <grid_res_theta>0.1</grid_res_theta>
+        <overlap_margin>0.1</overlap_margin>
+        <num_chunks>4</num_chunks>
+        <interp_method>linear</interp_method>
+        <file_version>0.6.2</file_version>
+    </parameters>
+
+    <logging>
+        <use_rgb_logging>true</use_rgb_logging>
+	<use_rgb_decoration>true</use_rgb_decoration>
+	<logger_config>src/cimr_grasp/logger_config.json</logger_config>
+    </logging>
+</config>
+
