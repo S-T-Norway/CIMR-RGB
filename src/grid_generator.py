@@ -83,7 +83,7 @@ class GridGenerator:
         TBD
     """
 
-    def __init__(self, config_object):
+    def __init__(self, config_object, projection_definition, grid_definition):
         """
         Initializes the GridGenerator object with the configuration object.
 
@@ -93,8 +93,9 @@ class GridGenerator:
             Root element of the configuration file
         """
         self.config = config_object
-        if self.config.grid_type == 'L1C':
-            self.projection = PROJECTIONS[config_object.projection_definition]
+        self.projection_definition = projection_definition
+        self.grid_definition = grid_definition
+        self.projection = PROJECTIONS[self.projection_definition]
 
     def generate_grid_xy(self, return_resolution=False):
         """
@@ -116,12 +117,12 @@ class GridGenerator:
             xs (numpy.ndarray of float): Array of x-coordinates.
             ys (numpy.ndarray of float): Array of y-coordinates.
         """
-        res = GRIDS[self.config.grid_definition]['res']
-        n_cols = GRIDS[self.config.grid_definition]['n_cols']
-        n_rows = GRIDS[self.config.grid_definition]['n_rows']
+        res = GRIDS[self.grid_definition]['res']
+        n_cols = GRIDS[self.grid_definition]['n_cols']
+        n_rows = GRIDS[self.grid_definition]['n_rows']
         # EASE Grids are by convention defined from the center of the pixel
-        x_min = GRIDS[self.config.grid_definition]['x_min'] + res / 2
-        y_max = GRIDS[self.config.grid_definition]['y_max'] - res / 2
+        x_min = GRIDS[self.grid_definition]['x_min'] + res / 2
+        y_max = GRIDS[self.grid_definition]['y_max'] - res / 2
         xs = np.zeros((n_cols, 1))
 
         for i in range(n_cols):
@@ -187,7 +188,7 @@ class GridGenerator:
             ((1 - E2) / (2 * E)) * np.log((1 - E) / (1 + E))
         )
 
-        if self.config.projection_definition == 'G':
+        if self.projection_definition == 'G':
             lat_ts_value = float(
                 next(
                     (param.split('=')[1] for param in params if 'lat_ts' in param),
@@ -201,7 +202,7 @@ class GridGenerator:
             y = (MAP_EQUATORIAL_RADIUS * q) / (2 * k0)
             return x, y
 
-        if self.config.projection_definition == 'N':
+        if self.projection_definition == 'N':
             pole_diff = abs(qp - q)
             inds = pole_diff >= epsilon
             rho = MAP_EQUATORIAL_RADIUS * np.sqrt(qp - q) * inds
@@ -210,16 +211,13 @@ class GridGenerator:
             y = -rho * np.cos(lam)
             return x, y
 
-        if self.config.projection_definition == 'S':
+        if self.projection_definition == 'S':
             pole_diff = abs(qp + q)
             inds = pole_diff >= epsilon
             rho = MAP_EQUATORIAL_RADIUS * np.sqrt(qp + q) * inds
             x = rho * np.sin(lam)
             y = rho * np.cos(lam)
             return x, y
-
-        if self.config.projection_definition == 'S':
-            pass
 
     def xy_to_lonlat(self, x, y):
         """
@@ -246,7 +244,7 @@ class GridGenerator:
         beta = None
         lam = None
 
-        if self.config.projection_definition == 'G':
+        if self.projection_definition == 'G':
             lat_ts_value = float(
                 next(
                     (param.split('=')[1] for param in params if 'lat_ts' in param),
@@ -259,12 +257,12 @@ class GridGenerator:
             beta = np.arcsin((2 * y * k0) / (MAP_EQUATORIAL_RADIUS * qp))
             lam = x / (MAP_EQUATORIAL_RADIUS * k0)
 
-        elif self.config.projection_definition == 'N':
+        elif self.projection_definition == 'N':
             rho = np.sqrt(x ** 2 + y ** 2)
             beta = np.arcsin(1 - (rho ** 2 / (MAP_EQUATORIAL_RADIUS ** 2 * qp)))
             lam = np.arctan2(x, -y)
 
-        elif self.config.projection_definition == 'S':
+        elif self.projection_definition == 'S':
             rho = np.sqrt(x ** 2 + y ** 2)
             beta = -1 * np.arcsin(1 - (rho ** 2 / (MAP_EQUATORIAL_RADIUS ** 2 * qp)))
             lam = np.arctan2(x, y)
@@ -278,43 +276,11 @@ class GridGenerator:
         lon = lon_0 + np.rad2deg(lam)
         return lon, lat
 
-    def xy_to_rowcol(self, x, y):
-        """
-        Converts x and y coordinates to row and column indices for a given grid definition.
-
-        Parameters
-        ----------
-        x: (float or numpy.ndarray of float)
-            x-coordinate/s
-        y: (float or numpy.ndarray of float)
-            y-coordinate/s
-
-        Returns
-        -------
-        row: (float or numpy.ndarray of float)
-            Row index/indices
-
-        col: (float or numpy.ndarray of float)
-            Column index/indices
-        """
-        _, _, res = self.generate_grid_xy(return_resolution=True)
-        n_cols = GRIDS[self.config.grid_type]['n_cols']
-        n_rows = GRIDS[self.config.grid_type]['n_rows']
-        r0 = (n_cols - 1) / 2
-        s0 = (n_rows - 1) / 2
-        col = r0 + (x / res)
-        row = s0 - (y / res)
-
-        # Make a check that there are is nothing out of range
-        # TBD
-
-        return row, col
-
     def rowcol_to_lonlat(self, row, col):
         # First conver row col to x, y
-        r0 = GRIDS[self.config.grid_definition]['n_cols'] / 2
-        s0 = GRIDS[self.config.grid_definition]['n_rows'] / 2
-        res = GRIDS[self.config.grid_definition]['res']
+        r0 = GRIDS[self.grid_definition]['n_cols'] / 2
+        s0 = GRIDS[self.grid_definition]['n_rows'] / 2
+        res = GRIDS[self.grid_definition]['res']
 
         # Need to check if the half cell has been added for lat, lon/x, y of the center of the cell
         x = (col - r0)*res
