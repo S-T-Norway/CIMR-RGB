@@ -86,7 +86,9 @@ class DataIngestion:
         y_bound_max = grid['y_max'] + 0.5 * grid['res']
         y_bound_min = grid['y_max'] - grid['n_rows']*grid['res'] - 0.5 * grid['res']
 
-        source_x, source_y = GridGenerator(self.config).lonlat_to_xy(
+        source_x, source_y = GridGenerator(self.config,
+                                           projection_definition=self.config.projection_definition,
+                                           grid_definition=self.config.grid_definition).lonlat_to_xy(
             lon=data_dict['longitude'],
             lat=data_dict['latitude']
         )
@@ -298,19 +300,32 @@ class DataIngestion:
                 # Extract variables (This can be tweaked to remove variables for Non-AP algorithms)
                 if self.config.grid_type == 'L1R':
                     if band in self.config.target_band:
-                        variables_to_open = ['longitude', 'latitude']
+                        if self.config.regridding_algorithm in ['NN', 'IDS', 'DIB']:
+                            variables_to_open = ['longitude', 'latitude']
+                        else:
+                            variables_to_open = ['longitude', 'latitude', 'processing_scan_angle',
+                                          'x_position', 'y_position', 'z_position',
+                                          'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
+                                          'y_velocity', 'z_velocity', 'attitude']
                     else:
-                        required_variables = ['longitude', 'latitude', 'processing_scan_angle',
+                        if self.config.regridding_algorithm in ['NN', 'IDS', 'DIB']:
+                            required_variables = ['longitude', 'latitude', 'processing_scan_angle']
+                        else:
+                            required_variables = ['longitude', 'latitude', 'processing_scan_angle',
                                           'x_position', 'y_position', 'z_position',
                                           'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
                                           'y_velocity', 'z_velocity', 'attitude']
                         variables_to_open = set(required_variables + self.config.variables_to_regrid)
 
                 elif self.config.grid_type == 'L1C':
-                    required_variables = ['longitude', 'latitude', 'processing_scan_angle',
-                                          'x_position', 'y_position', 'z_position',
-                                          'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
-                                          'y_velocity', 'z_velocity', 'attitude']
+                    # We don't need alot of these variables for simple algorithms, can reduce set.
+                    if self.config.regridding_algorithm in ['NN', 'IDS', 'DIB']:
+                        required_variables = ['longitude', 'latitude', 'processing_scan_angle']
+                    else:
+                        required_variables = ['longitude', 'latitude', 'processing_scan_angle',
+                                              'x_position', 'y_position', 'z_position',
+                                              'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
+                                              'y_velocity', 'z_velocity', 'attitude']
                     variables_to_open = set(required_variables + self.config.variables_to_regrid)
 
 
@@ -335,11 +350,12 @@ class DataIngestion:
                 # Calculate max altitude for ap_radius calculation (same for all bands)
                 if self.config.grid_type == 'L1R' and band in self.config.target_band:
                     pass
-
-                if not hasattr(self.config, 'max_altitude'):
-                    altitude = sqrt(variable_dict['x_position'] ** 2 + variable_dict['y_position'] ** 2 + variable_dict[
-                        'z_position'] ** 2) - 6371000
-                    self.config.max_altitude = altitude.max()
+                else:
+                    if not hasattr(self.config, 'max_altitude'):
+                        print(band)
+                        altitude = sqrt(variable_dict['x_position'] ** 2 + variable_dict['y_position'] ** 2 + variable_dict[
+                            'z_position'] ** 2) - 6371000
+                        self.config.max_altitude = altitude.max()
 
                 # Create map between scan number and earth sample number
                 num_feed_horns = self.config.num_horns[band]
