@@ -132,6 +132,8 @@ class ConfigFile:
                 config_object=config_object,
                 reduced_grid_inds='GridParams/reduced_grid_inds'
             )
+        else:
+            self.reduced_grid_inds = None
 
         # SMAP specific Parameters
         if self.input_data_type == "SMAP":
@@ -214,14 +216,41 @@ class ConfigFile:
 
         if self.regridding_algorithm == 'BG' or self.regridding_algorithm=='RSIR':
 
-            self.antenna_method = self.validate_antenna_method(
+            self.source_antenna_method = self.validate_source_antenna_method(
                 config_object = config_object,
-                antenna_method = 'ReGridderParams/antenna_method'
+                source_antenna_method = 'ReGridderParams/source_antenna_method'
             )
 
-            self.antenna_threshold = self.validate_antenna_threshold(
+            if self.source_antenna_method in ['gaussian', 'gaussian_projected']:
+                self.source_gaussian_params = self.validate_source_gaussian_params(
+                    config_object = config_object,
+                    source_gaussian_params = 'ReGridderParams/source_gaussian_params'
+                )
+            else:
+                self.source_gaussian_params = None
+
+            self.target_antenna_method = self.validate_target_antenna_method(
+                config_object = config_object,
+                target_antenna_method = 'ReGridderParams/target_antenna_method'
+            )
+
+            if self.target_antenna_method in ['gaussian', 'gaussian_projected']:
+                self.target_gaussian_params = self.validate_target_gaussian_params(
+                    config_object=config_object,
+                    target_gaussian_params='ReGridderParams/target_gaussian_params'
+                )
+            else:
+                self.target_gaussian_params = None
+
+
+            self.source_antenna_threshold = self.validate_source_antenna_threshold(
                 config_object=config_object,
-                antenna_threshold = 'ReGridderParams/antenna_threshold'
+                source_antenna_threshold = 'ReGridderParams/source_antenna_threshold'
+            )
+
+            self.target_antenna_threshold = self.validate_target_antenna_threshold(
+                config_object=config_object,
+                target_antenna_threshold = 'ReGridderParams/target_antenna_threshold'
             )
 
             self.polarisation_method = self.validate_polarisation_method(
@@ -656,9 +685,9 @@ class ConfigFile:
             return value
 
     @staticmethod
-    def validate_antenna_method(config_object, antenna_method):
-        valid_input = ['gaussian', 'real']
-        value = config_object.find(antenna_method)
+    def validate_source_antenna_method(config_object, source_antenna_method):
+        valid_input = ['gaussian', 'real', 'gaussian_projected']
+        value = config_object.find(source_antenna_method)
         if value is None:
             return 'real'
         elif value.text in valid_input:
@@ -670,14 +699,44 @@ class ConfigFile:
             )
 
     @staticmethod
-    def validate_antenna_threshold(config_object, antenna_threshold):
-        if config_object.find(antenna_threshold).text is None:
+    def validate_target_antenna_method(config_object, target_antenna_method):
+        valid_input = ['gaussian', 'real', 'gaussian_projected']
+        value = config_object.find(target_antenna_method)
+        if value is None:
+            return 'real'
+        elif value.text in valid_input:
+            return value.text
+        else:
+            raise ValueError(
+                f"Invalid antenna method. Check Configuration File."
+                f" Valid antenna methods are: {valid_input}"
+            )
+
+
+    @staticmethod
+    def validate_source_antenna_threshold(config_object, source_antenna_threshold):
+        if config_object.find(source_antenna_threshold).text is None:
+            # We should have a default set of values for each Antenna Pattern
+            # For now, I will just choose 9dB
+            return None
+
+        try:
+            return float(config_object.find(source_antenna_threshold).text)
+        except:
+            raise ValueError(
+                f"Invalid antenna threshold. Check Configuration File."
+                f" Antenna threshold must be a float or integer"
+            )
+
+    @staticmethod
+    def validate_target_antenna_threshold(config_object, target_antenna_threshold):
+        if config_object.find(target_antenna_threshold).text is None:
             # We should have a default set of values for each Antenna Pattern
             # For now, I will just choose 9dB
             return 9.
 
         try:
-            return float(config_object.find(antenna_threshold).text)
+            return float(config_object.find(target_antenna_threshold).text)
         except:
             raise ValueError(
                 f"Invalid antenna threshold. Check Configuration File."
@@ -729,6 +788,45 @@ class ConfigFile:
         grid_col_min = int(value[2])
         grid_col_max = int(value[3])
         return [grid_row_min, grid_row_max, grid_col_min, grid_col_max]
+
+    @staticmethod
+    def validate_source_gaussian_params(config_object, source_gaussian_params):
+        # We should add default values.
+        value = config_object.find(source_gaussian_params).text
+        params = value.split()
+        # Check we only have 3 params
+        if len(params) != 3:
+            raise ValueError(
+                f"Invalid source gaussian parameters. Check Configuration File."
+                f" There should be 3 parameters for the source gaussian"
+            )
+        try:
+            float_params = [float(param) for param in params]
+        except ValueError as e:
+            raise ValueError("Invalid parameter: All parameters must be valid numbers (int or float).") from e
+
+        return float_params
+
+    @staticmethod
+    def validate_target_gaussian_params(config_object, target_gaussian_params):
+        # We should add default values.
+        value = config_object.find(target_gaussian_params).text
+        params = value.split()
+        # Check we only have 3 params
+        if len(params) != 3:
+            raise ValueError(
+                f"Invalid source gaussian parameters. Check Configuration File."
+                f" There should be 3 parameters for the source gaussian"
+            )
+        try:
+            float_params = [float(param) for param in params]
+        except ValueError as e:
+            raise ValueError("Invalid parameter: All parameters must be valid numbers (int or float).") from e
+
+        return float_params
+
+
+
 
 
 
