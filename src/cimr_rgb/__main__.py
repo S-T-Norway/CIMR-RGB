@@ -20,12 +20,12 @@ tkagg = matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 # -----------------
 
-from config_file       import ConfigFile
-from data_ingestion    import DataIngestion
-from grid_generator    import GridGenerator, GRIDS
-from regridder         import ReGridder
-from rgb_logging       import RGBLogging 
-from product_generator import ProductGenerator 
+from .config_file       import ConfigFile
+from .data_ingestion    import DataIngestion
+from .grid_generator    import GridGenerator, GRIDS
+from .regridder         import ReGridder
+from .rgb_logging       import RGBLogging 
+from .product_generator import ProductGenerator 
 
 
 def get_rgb_configuration(parser: argparse.ArgumentParser, 
@@ -149,7 +149,6 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
         element = root.find(key)
 
         if (arg_value and element) is not None: #or str(arg_value).strip() != '': 
-            #par_text = element.text 
             element.text       = arg_value 
             modified_pars[key] = arg_value  
         elif element is None: 
@@ -188,8 +187,7 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
     return rgb_config  
 
 
-
-if __name__ == '__main__':
+def main(): 
     # This is the main function that is called when the script is run
     # It is the entry point of the script
 
@@ -243,9 +241,15 @@ if __name__ == '__main__':
 
         data_dict_out = regridder.regrid_l1c(data_dict)
 
-
     ProductGenerator(rgb_config).generate_l1c_product() 
 
+    
+
+
+if __name__ == '__main__':
+
+
+    main() 
 
     # Intermediate results check
     # Put in the variables you want from the data_dict_out in data_dict.

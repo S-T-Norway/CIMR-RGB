@@ -13,10 +13,10 @@ import re
 from numpy import (array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile, repeat, arange,
                    isnan, delete, where, concatenate, full, newaxis, float32, asarray, any, atleast_1d)
 
-from rgb_logging    import RGBLogging 
-from config_file    import ConfigFile
-from utils          import remove_overlap
-from grid_generator import GRIDS, GridGenerator
+from .rgb_logging    import RGBLogging 
+from .config_file    import ConfigFile
+from .utils          import remove_overlap
+from .grid_generator import GRIDS, GridGenerator
 
 
 # SMAP Constants

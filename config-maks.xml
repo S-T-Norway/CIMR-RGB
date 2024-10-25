@@ -2,7 +2,7 @@
 <config>
     <inputData>
         <type>SMAP</type>
-        <path>../dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>
+        <path>dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>
         <splitForeAft>True</splitForeAft>
         <!-- AMSR2 Specific Configuration Parameters -->
         <sourceBand>89a</sourceBand>
@@ -13,6 +13,7 @@
         <gridType>L1C</gridType>
 	<gridDefinition>EASE2_G36km</gridDefinition>
 	<projectionDefinition>G</projectionDefinition>
+        <reduced_grid_inds></reduced_grid_inds>
 	<!--<gridDefinition>STEREO_N25km</gridDefinition>-->
 	<!--<gridDefinition>EASE2_G36km</gridDefinition>
 	<projectionDefinition>MERC_G</projectionDefinition>-->  
@@ -27,18 +28,19 @@
         <antenna_method>real</antenna_method>
         <polarisation_method>scalar</polarisation_method>
         <antenna_threshold>10.98</antenna_threshold>
+        <boresight_shift></boresight_shift>
     </ReGridderParams>
     <outputData>
         <saveTodisk>True</saveTodisk>
 	<!--<outputPath>./output/L1cProducts/SMAP/RGB/</outputPath>--> 
-	<outputPath>../output/</outputPath>
+	<outputPath>output/cimr_rgb</outputPath>
     </outputData>
     <LoggingParams>
 	<!-- Log Config File --> 
         <!-- Relative is relative to the main.py, not the config file! 
 	     if it is empty, no logger will be configured 
         --> 
-        <configPath>../src/logger_config.json</configPath>
+        <configPath>src/cimr_rgb/logger_config.json</configPath>
 	<!--<configPath></configPath>-->
 	<decorate>True</decorate>
 	<!-- [ RGB, Custom ] -->  

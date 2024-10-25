@@ -712,7 +712,7 @@ class ProductGenerator:
                 }
 
         # TODO: Remove pickled object and pass in proper dictionary to be saved 
-        file_path = pb.Path("../dpr/data_dict_out.pkl")
+        file_path = pb.Path("dpr/data_dict_out.pkl")
         # Open the file in read-binary mode and load the object
         with open(file_path, 'rb') as file:
             loaded_object = pickle.load(file)

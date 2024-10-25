@@ -1,5 +1,7 @@
+import os 
 import pathlib as pb   
 import re 
+import logging 
 
 import numpy as np 
 import h5py 
@@ -200,13 +202,13 @@ def find_repo_root(start_path: pb.Path = None) -> pb.Path:
     raise FileNotFoundError("No .git directory found in any parent directories") 
 
 
-def rec_create_dir(path: pb.Path, logger = None) -> None: 
+def rec_create_dir(path: pb.Path | str, logger = None) -> None: 
     """
     Recursively create directories. 
 
     Parameters:
     -----------
-    path: Path
+    path: Path or str 
         The path to the directory in question. 
     """
 
@@ -219,7 +221,7 @@ def rec_create_dir(path: pb.Path, logger = None) -> None:
     
     # Create the directories if they do not exist
     if not path.exists():
-        path.mkdir(parents=True, exist_ok=True)
+        path.mkdir(parents = True, exist_ok = True)
         logger.debug(f"Directories created: {path}")
     else:
         logger.debug(f"Path already exists: {path}")

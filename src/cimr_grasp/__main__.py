@@ -3,38 +3,33 @@
 """
 # Python STD imports 
 import sys 
+import os 
 import re 
 import pathlib as pb  
-#import glob 
-#import numbers 
 import time 
 import functools 
-import psutil 
+import xml.etree.ElementTree as ET 
+import argparse 
 
 # 3d-party tools 
 import numpy as np 
 import scipy as sp 
 import h5py 
-#import xarray as xr 
-#import dask 
-#import dask.array as da 
-#from dask.diagnostics import ProgressBar
-#from dask.distributed import Client, LocalCluster 
-import matplotlib
-#import matplotlib.pyplot as plt 
 from   colorama import Fore, Style#, Back   
 import tqdm 
 
 # Custom modules 
-import grasp_io as io 
-import grasp_utils as utils 
+import cimr_grasp.grasp_io as io 
+import cimr_grasp.grasp_utils as utils 
 
 # TODO: This should be modified in the future 
 # Add the root of your project to PYTHONPATH
 rootpath = pb.Path('.').resolve().parents[0]
 syspath = str(rootpath)
 sys.path.append(syspath) 
-from rgb_logging import RGBLogging 
+#from cimr_grasp.rgb_logging import RGBLogging 
+from cimr_grasp.rgb_logging import RGBLogging 
+
 
 
 
@@ -122,7 +117,6 @@ def get_beamdata(beamfile: pb.Path | str,
             
             for k in range(line_shift, line_shift+2):
                 
-                #line_numbers = re.findall(r'-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?', info[k])
                 line_numbers = reline_pattern.findall(info[k])
 
                 if k == 3:
@@ -193,8 +187,6 @@ def get_beamdata(beamfile: pb.Path | str,
         
             for j_ in tqdm.tqdm(range(0, ny), desc=f"| {bn}: Working on chunks (1 chunk = IS rows in a file)", unit=" chunk"): 
                 
-                #line_numbers = re.findall(r'-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?',
-                #                          info[j_ + line_shift])
                 line_numbers = reline_pattern.findall(info[j_ + line_shift])
                 
                 
@@ -402,9 +394,10 @@ def is_nested_dict_empty(d):
     return all(is_nested_dict_empty(v) for v in d.values())
 
 
-def main(datadir:            str | pb.Path, 
+def run_cimr_grasp(datadir:  str | pb.Path, 
          outdir:             str | pb.Path, 
          file_version:       str, 
+         beamfiles_paths:    list(), 
          grid_res_phi:       float = 0.1, 
          grid_res_theta:     float = 0.1, 
          chunk_data:         bool  = True, 
@@ -618,63 +611,215 @@ def main(datadir:            str | pb.Path,
 
             logger.info(f"| {Fore.YELLOW}------------------------------{Style.RESET_ALL}") 
 
-    
-if __name__ == '__main__': 
-    
+
+# TODO: Put this stuff inside of this method into io? 
+def resolve_config_path(path_string: pb.Path | str) -> pb.Path:
+    if "~" in str(path_string) and not '$' in str(path_string): 
+        # Use expanduser to handle '~' for home directory if present
+        expanded_path = os.path.expanduser(path_string)
+        return pb.Path(expanded_path).resolve() 
+    elif "$" in str(path_string) and not '~' in str(path_string): 
+        # Use expandvars to replace environment variables like $HOME
+        expanded_path = os.path.expandvars(path_string)
+        return pb.Path(expanded_path).resolve() 
+    elif '$' in str(path_string) and '~' in str(path_string): 
+        error_output = ("`outdir` contains both $ and ~ which " + 
+                       "will result in incorrect path resolution. " + 
+                       f"Check `outdir` variable in {config_file}") 
+        raise ValueError(error_output)
+    else: 
+        # If we have a relative path, we expand it 
+        expanded_path = pb.Path(path_string)
+        if not expanded_path.is_absolute(): 
+            return expanded_path.resolve() 
+        else: 
+            return expanded_path 
+
+
+def get_bool(par_val: str, par_name: str) -> bool: 
+
+    par_val = par_val.lower() 
+
+    if par_val == "true": 
+        par_val = True
+    elif par_val == "false": 
+        par_val = False 
+    else: 
+        raise ValueError(f"Parameter `{par_name}` can either be True or False.")
+
+    return par_val 
+
+
+def load_grasp_config(config_file = "grasp_config.xml"):
+
+    # Parse the XML file
+    tree = ET.parse(config_file)
+    root = tree.getroot()
+
+    config = {}
+
+    # Read the paths
+    # getting value of datadir, and if doesn't exist, returning an error. 
+    config['datadir']   = resolve_config_path(
+            path_string = pb.Path(root.find('paths/datadir').text)
+            ) 
+    if not config['datadir'].is_dir():
+        raise FileNotFoundError(f"The directory '{config['datadir']}' does not exist.")
+    if not any(config['datadir'].iterdir()):
+        raise FileNotFoundError(f"The directory '{config['datadir']}' is empty.")
+
+
+    # getting value of outdir, checking for errors and creating directories
+    # recursively if they do not exist 
+    config['outdir']    = resolve_config_path(
+            path_string = root.find('paths/outdir').text
+            ) 
+    io.rec_create_dir(config['outdir'])   
+
+    # Read the parameters
+    parameters = root.find('parameters')
+
+
+    # Bool params 
+    config['use_bhs']        = get_bool(
+                   par_name  = 'use_bhs', 
+                   par_val   = parameters.find('use_bhs').text
+                   ) 
+    config['recenter_beam']  = get_bool(
+                   par_name  = 'recenter_beam', 
+                   par_val   = parameters.find('recenter_beam').text
+                   ) 
+    config['chunk_data']     = get_bool(
+                   par_name  = 'chunk_data', 
+                   par_val   = parameters.find('chunk_data').text
+                   ) 
+    # Float params 
+    config['grid_res_phi']   = float(parameters.find('grid_res_phi').text)
+    config['grid_res_theta'] = float(parameters.find('grid_res_theta').text)
+    config['overlap_margin'] = float(parameters.find('overlap_margin').text)
+
+    # Int params 
+    config['num_chunks']     = int(parameters.find('num_chunks').text)
+
+    # Str params 
+    config['interp_method']  = parameters.find('interp_method').text
+    config['file_version']   = parameters.find('file_version').text
+
+
+    # Read the logging settings
+    logging = root.find('logging')
+    config['use_rgb_logging']    = get_bool(
+                        par_name = 'use_rgb_logging', 
+                        par_val  = logging.find('use_rgb_logging').text
+                        )  
+    config['use_rgb_decoration'] = get_bool(
+                        par_name = 'use_rgb_logging', 
+                        par_val  = logging.find('use_rgb_decoration').text
+                        )  
+    config['logger_config']      = resolve_config_path(
+            path_string = root.find('logging/logger_config').text
+            ) 
+
+    return config
+
+
+def main():
 
     start_time_tot = time.perf_counter() 
+    # -----------------------------
+    # Default value for config file 
+    config_file = "grasp_config.xml"
 
-    # TODO: 
-    # - Create a parameter file that will take as input this info. 
-    # - Create a logger object and performs proper logging of the functionality.   
+    # Getting the value for parameter file from cmd 
+    parser = argparse.ArgumentParser(description = "Update XML configuration parameters.")
+    # Will use the default value of config_file if none is provided via command line: 
+    # https://docs.python.org/3/library/argparse.html#nargs 
+    parser.add_argument('config_file', type = str, help = "Path to the XML parameter file.", 
+                    nargs = "?", default = config_file)
 
-    # Getting the root of the repo 
-    root_dir = io.find_repo_root() 
+    args = parser.parse_args() 
+    config_file = resolve_config_path(args.config_file) 
 
-    # Params to be put inside parameter file  
-    outdir             = pb.Path(f"{root_dir}/output").resolve()
-    datadir            = pb.Path(f"{root_dir}/dpr/AP").resolve() 
-    use_bhs            = False 
-    recenter_beam      = True    
-    grid_res_phi       = 0.1 
-    grid_res_theta     = 0.1 
-    chunk_data         = True 
-    num_chunks         = 4 
-    overlap_margin     = 0.1 
-    interp_method      = "linear"  
-    file_version       = '0.6.1' 
+    # -----------------------------
+
+    # Params from parameter file 
+    config             = load_grasp_config(config_file = config_file)
+
+    outdir             = config["outdir"]  
+    datadir            = config["datadir"]  
+    use_bhs            = config["use_bhs"]  
+    recenter_beam      = config["recenter_beam"] 
+    grid_res_phi       = config["grid_res_phi"] 
+    grid_res_theta     = config["grid_res_theta"]  
+    chunk_data         = config["chunk_data"] 
+    num_chunks         = config["num_chunks"]  
+    overlap_margin     = config["overlap_margin"] 
+    interp_method      = config["interp_method"]   
+    file_version       = config["file_version"]  
     # Logging functionality 
-    use_rgb_logging    = True  
-    use_rgb_decoration = True 
+    use_rgb_logging    = config["use_rgb_logging"]  
+    use_rgb_decoration = config["use_rgb_decoration"] 
+    logger_config      = config["logger_config"]
 
     # Creating a logger object based on the user preference 
-    if use_rgb_logging: 
-        logger_config = pb.Path(f"{root_dir}/src/logger_config.json") 
-        rgb_logging   = RGBLogging(log_config = logger_config)
-        rgb_logger    = rgb_logging.get_logger("rgb") 
+    if use_rgb_logging and logger_config is not None: 
+        rgb_logging    = RGBLogging(log_config = logger_config)
+        rgb_logger     = rgb_logging.get_logger("rgb") 
 
+    # -----------------------------
 
     rgb_logger.debug(f"Starting the script using the following libraries:")
     rgb_logger.debug(f"numpy      {np.__version__}" ) 
     rgb_logger.debug(f"scipy      {sp.__version__}" ) 
     rgb_logger.debug(f"h5py       {h5py.__version__}") 
     rgb_logger.debug(f"tqdm       {tqdm.__version__}") 
-    rgb_logger.debug(f"matplotlib {matplotlib.__version__}") 
+    #rgb_logger.debug(f"matplotlib {matplotlib.__version__}") 
 
-    if not pb.Path(outdir).exists(): 
-        rgb_logger.info(f"Creating output directory:\n{outdir}")
-        pb.Path(outdir).mkdir()
+    # Parameters with which CIMR GRASP is to be run 
+    rgb_logger.info("---------")
 
-    if not datadir.is_dir():
-        raise FileNotFoundError(f"The directory '{datadir}' does not exist.")
+    rgb_logger.info(f"CIMR GRASP Configuration")
+
+    rgb_logger.info("---------")
+
+    rgb_logger.info(f"Output Directory:        {outdir}") 
+    rgb_logger.info(f"Data Directory:          {datadir}")   
+    rgb_logger.info(f"Use BHS:                 {use_bhs}") 
+    rgb_logger.info(f"Recenter Beam:           {recenter_beam}") 
+    rgb_logger.info(f"Grid Resolution (Phi):   {grid_res_phi}") 
+    rgb_logger.info(f"Grid Resolution (Theta): {grid_res_theta}")       
+    rgb_logger.info(f"Chunk Data:              {chunk_data}") 
+    rgb_logger.info(f"Number of Chunks:        {num_chunks}") 
+    rgb_logger.info(f"Overlap Margin:          {overlap_margin}") 
+    rgb_logger.info(f"Interpolation Method:    {interp_method}")
+    rgb_logger.info(f"File Version:            {file_version}")
+
+    rgb_logger.info(f"Use CIMR RGB Logger :    {use_rgb_logging}")
+    rgb_logger.info(f"Use CIMR RGB Decoration: {use_rgb_decoration}")
+    rgb_logger.info(f"Logger Config:           {logger_config}")
+
+    rgb_logger.info("---------")
+
+    #exit() 
+
+    #if not pb.Path(outdir).exists(): 
+    #    rgb_logger.info(f"Creating output directory:\n{outdir}")
+    #    pb.Path(outdir).mkdir()
+
+    #if not datadir.is_dir():
+    #    raise FileNotFoundError(f"The directory '{datadir}' does not exist.")
 
     # Getting all beam paths inside dpr/AP 
     beamfiles_paths = datadir.glob("*/*")   
+    #for beamfile in beamfiles_paths:
+    #    print(beamfile)
+    #exit() 
 
 
-    main(datadir            = datadir, 
+    run_cimr_grasp(datadir  = datadir, 
          outdir             = outdir, 
          file_version       = file_version,
+         beamfiles_paths    = beamfiles_paths, 
          use_bhs            = use_bhs, 
          recenter_beam      = recenter_beam, 
          grid_res_phi       = grid_res_phi, 
@@ -687,11 +832,18 @@ if __name__ == '__main__':
          use_rgb_decoration = use_rgb_decoration, 
          logger             = rgb_logger 
          )    
-
-    
     end_time_tot = time.perf_counter() - start_time_tot
     rgb_logger.info(f"Finished Script in: {end_time_tot:.2f}s") 
     rgb_logger.info(f"------------------------------") 
+
+
+
+
+if __name__ == '__main__': 
+
+    main() 
+
+    
     
     
     

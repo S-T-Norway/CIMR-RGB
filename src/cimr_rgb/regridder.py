@@ -1,17 +1,16 @@
 import numpy as np
 from numpy import meshgrid, isinf, where, full, nan, unravel_index, all, sqrt
-
-from nn import NNInterp
-from ids import IDSInterp
-from dib import DIBInterp
-from bg import BGInterp
-from rsir import rSIRInterp
-from grid_generator import GridGenerator, GRIDS
-from pyresample import kd_tree, geometry
-
+from pyresample     import kd_tree, geometry
 import matplotlib
 tkagg = matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+
+from .nn             import NNInterp
+from .ids            import IDSInterp
+from .dib            import DIBInterp
+from .bg             import BGInterp
+from .rsir           import rSIRInterp
+from .grid_generator import GridGenerator, GRIDS
 
 
 class ReGridder:

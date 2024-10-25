@@ -1,12 +1,13 @@
-from ap_processing import AntennaPattern
-from  numpy import zeros_like, unravel_index, where, nan, take, full, all, sum, zeros, identity, dot, nansum
+from numpy import zeros_like, unravel_index, where, nan, take, full, all, sum, zeros, identity, dot, nansum
 from tqdm import tqdm
-from grid_generator import GridGenerator, GRIDS
 
 # ---- Testing ----
 import matplotlib
 tkagg = matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+
+from .ap_processing import AntennaPattern
+from .grid_generator import GridGenerator, GRIDS
 
 
 class rSIRInterp:
