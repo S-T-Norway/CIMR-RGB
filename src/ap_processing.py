@@ -16,17 +16,21 @@ from utils import normalize, generic_transformation_matrix
 
 class AntennaPattern:
 
-    def __init__(self, config, band):
+    def __init__(self, config, band, antenna_method, polarisation_method, antenna_threshold, gaussian_params):
         self.config = config
         self.band=band
+        self.antenna_method = antenna_method
+        self.polarisation_method = polarisation_method
+        self.antenna_threshold = antenna_threshold
+        self.gaussian_params = gaussian_params
 
-        if self.config.antenna_method == 'real':
+        if self.antenna_method == 'real':
 
             ap_dict = self.load_antenna_patterns()
 
-            if self.config.polarisation_method == 'scalar':
+            if self.polarisation_method == 'scalar':
                 self.scalar_gain = self.get_scalar_pattern(ap_dict)
-            elif self.config.polarisation_method == 'mueller':
+            elif self.polarisation_method == 'mueller':
                 self.mueller_matrix = self.get_mueller_matrix(ap_dict)
 
             #### test function to see the antenna pattern before projecting.. do not remove for now 
@@ -41,7 +45,7 @@ class AntennaPattern:
             # plt.imshow(foo(phi, theta))
             # plt.show()
 
-        elif self.config == 'gaussian':  #in this case I guess only scalar gain available
+        elif self.antenna_method == 'gaussian':  #in this case I guess only scalar gain available
 
             self.scalar_gain = self.gaussian_antenna_patterns()
 
@@ -85,7 +89,13 @@ class AntennaPattern:
             # normalised_gain = ap_dict['Gnorm'] / max_gain
             # mask = logical_or(mask, normalised_gain < 10**(threshold_dB/10.))
 
-            mask = logical_or(mask, ap_dict['Gnorm'] < 10**(threshold_dB/10.))
+            # mask = logical_or(mask, ap_dict['Gnorm'] < 10**(threshold_dB/10.))
+
+            # Percentage of max gain
+            threshold_power = threshold_dB * np.max(ap_dict['Gnorm'])
+            mask = np.logical_or(mask, ap_dict['Gnorm'] < threshold_power)
+
+
         if theta_max is not None:
             mask = logical_or(mask, ap_dict['theta'] > theta_max)
 
@@ -104,7 +114,7 @@ class AntennaPattern:
         if self.config.input_data_type == "SMAP":
             ap_dict = {}
             ap_dict[0] = self.extract_gain_dict(
-                threshold_dB=self.config.antenna_threshold,
+                threshold_dB=self.antenna_threshold,
                 file_path = self.config.antenna_pattern_path
             )
 
@@ -121,7 +131,7 @@ class AntennaPattern:
                     if horn in file:
                         ap_dict[int(feedhorn)] = self.extract_gain_dict(
                             file_path=os.path.join(path, file),
-                            threshold_dB=self.config.antenna_threshold
+                            threshold_dB=self.antenna_threshold
                         )
         return ap_dict
 
@@ -307,157 +317,11 @@ class AntennaPattern:
 
         return max_radius
 
-    def make_integration_grid_v2(self, longitude, latitude):
-        # This needs sorting out because we also use non-ease grids,
-        # and i dont really like changing the config file on the fly.
-        gdef = self.config.grid_definition
-        self.config.grid_definition = 'EASE2_' + self.config.projection_definition + '3km'
-        gtemp = 'EASE2_' + self.config.projection_definition + '3km'
-
-
-        x_longitude, y_longitude = GridGenerator(self.config).lonlat_to_xy(longitude, latitude)
-
-        # Arc Distance
-        Rearth = (6378137. + 6356752.) / 2.  # m
-        Rcircle = Rearth * np.abs(np.cos(np.deg2rad(latitude.max())))
-        Rpattern = max(list(self.max_ap_radius.values()))
-
-
-        # Convert longitudes to [0, 360] to see if they cross the international date line
-        longitudes_360 = [(lon + 360) if lon < 0 else lon for lon in longitude]
-        lon_min_360 = min(longitudes_360)
-        lon_max_360 = max(longitudes_360)
-
-        # Generate an ease grid to be cut down to the size of the bounding box
-        xs, ys = GridGenerator(self.config).generate_grid_xy()
-        # xs, ys = meshgrid(xs, ys)
-
-        # Convert lats and lons to x and y
-        # add the radius of the pattern
-        # if to high make equal to the highest, same for if too low
-        # if they fall either side of the international date line, you need to do the double bounding
-        # box
-        # Otherwise dont.
-
-        lon_min = longitude.min()
-        lon_max = longitude.max()
-        lat_min = latitude.min()
-        lat_max = latitude.max()
-
-        x_ul, y_ul = GridGenerator(self.config).lonlat_to_xy(lon_min, lat_max)
-        x_lr, y_lr = GridGenerator(self.config).lonlat_to_xy(lon_max, lat_min)
-
-        if y_ul > GRIDS[gtemp]['y_max']:
-            y_ul = GRIDS[gtemp]['y_max']
-        if y_lr < GRIDS[gtemp]['y_max'] - GRIDS[gtemp]['n_rows']*GRIDS[gtemp]['res']:
-            y_lr = GRIDS[gtemp]['y_max'] - GRIDS[gtemp]['n_rows']*GRIDS[gtemp]['res']
-
-        # Check if min and max lon fall either side of the international date line
-        longitudes_360 = [(lon + 360) if lon < 0 else lon for lon in longitude]
-        lon_min_360 = min(longitudes_360)
-        lon_max_360 = max(longitudes_360)
-
-        # Trying to cover every scenario in one
-        # x_ul_check = x_ul - Rpattern
-        # x_lr_check = x_lr + Rpattern
-        #
-        # if x_ul_check < GRIDS[gtemp]['x_min']:
-        #     # Then we need to do a double grid.
-        #
-        #     # Grid 1
-        #     x_ul_1 = GRIDS[gtemp]['x_min']
-        #     x_lr_1 = GRIDS[gtemp]['x_min'] + abs(x_ul_check - GRIDS[gtemp]['x_min'])
-        #
-        #     xs1 = xs[logical_and(xs>x_ul_1, xs<x_lr_1)]
-        #     ys1 = ys[logical_and(ys>y_lr, ys<y_ul)]
-        #
-        #     # Grid 2
-        #     x_ul_2 =6
-        #
-        # y_ul = y_ul + Rpattern
-        # x_lr = x_lr + Rpattern
-        # y_lr = y_lr - Rpattern
-
-        if lon_max_360 - lon_min_360 > 0:
-            # Then we span the IDL and need to do a "wrap around"
-            lon_min = (lon_max_360 - 360)
-            lon_max = lon_min_360
-            lat_max = latitude.max()
-            lat_min = latitude.min()
-
-            # Bounding box 1
-            x_ul, y_ul = GridGenerator(self.config).lonlat_to_xy(-180, lat_max)
-            x_lr, y_lr = GridGenerator(self.config).lonlat_to_xy(lon_min, lat_min)
-
-            x_lr = x_lr + Rpattern
-            y_ul = y_ul + Rpattern
-            y_lr = y_lr - Rpattern
-
-            if y_ul > GRIDS[gtemp]['y_max']:
-                print('Reached upper edge of grid')
-                y_ul = GRIDS[gtemp]['y_max']
-
-            xs1 = xs[logical_and(xs>x_ul, xs<x_lr)]
-            ys1 = ys[logical_and(ys>y_lr, ys<y_ul)]
-
-            lon_1, lat_1 = GridGenerator(self.config).xy_to_lonlat(xs1, ys1)
-
-            # Bounding box 2
-            x_ul, y_ul = GridGenerator(self.config).lonlat_to_xy(lon_max, lat_max)
-            x_lr, y_lr = GridGenerator(self.config).lonlat_to_xy(180, lat_min)
-
-            x_ul = x_ul - Rpattern
-            y_ul = y_ul + Rpattern
-            y_lr = y_lr - Rpattern
-
-            if y_ul > GRIDS[gtemp]['y_max']:
-                print('Reached upper edge of grid')
-                y_ul = GRIDS[gtemp]['y_max']
-
-            xs2 = xs[logical_and(xs > x_ul, xs < x_lr)]
-            ys2 = ys[logical_and(ys > y_lr, ys < y_ul)]
-
-            lon_2, lat_2 = GridGenerator(self.config).xy_to_lonlat(xs2, ys2)
-
-            lon_1 = flip(lon_1)
-            lon_2 = flip(lon_2)
-            lat_1 = flip(lat_1)
-            lat_2 = flip(lat_2)
-
-            int_dom_lons, int_dom_lats =  meshgrid(concatenate((lon_1, lon_2)), concatenate((lat_1, lat_2)))
-            test =0
-
-
-        else:
-            lon_min = longitude.min()
-            lon_max = longitude.max()
-            lat_min = latitude.min()
-            lat_max = latitude.max()
-
-            x_ul, y_ul = GridGenerator(self.config).lonlat_to_xy(lon_min, lat_max)
-            x_lr, y_lr = GridGenerator(self.config).lonlat_to_xy(lon_max, lat_min)
-
-            x_ul_check = x_ul - Rpattern
-
-            x_lr_check = x_lr + Rpattern
-
-            grid_min = GRIDS[gtemp]['x_min']
-            grid_max = GRIDS[gtemp]['x_min'] + GRIDS[gtemp]['n_cols']*GRIDS[gtemp]['res']
-
-            if x_ul_check < grid_min or x_ul_check > grid_max:
-                test =0
-            if x_lr_check < grid_min or x_ul_check > grid_max:
-                test =0
-            else:
-                test
-
-        self.config.grid_definition = gdef
-        return int_dom_lons, int_dom_lats
-
     def make_integration_grid(self, longitude, latitude):
+        int_grid_definition = 'EASE2_G1km'
+        int_projection_definition = 'G'
 
-        gdef = self.config.grid_definition
-        self.config.grid_definition = 'EASE2_' + self.config.projection_definition + '3km'
+        # Need to update for L1r to change to different grids.
 
         Rearth  = (6378137. + 6356752.)/2. #m
         Rcircle = Rearth * np.abs(np.cos(np.deg2rad(latitude)))
@@ -470,10 +334,18 @@ class AntennaPattern:
         lonmin = np.min(longitude) - np.rad2deg(Rpattern/Rcircle)
         lonmax = np.max(longitude) + np.rad2deg(Rpattern/Rcircle)
 
-        xmin, ymax = GridGenerator(self.config).lonlat_to_xy(lonmin, latmax)
-        xmax, ymin = GridGenerator(self.config).lonlat_to_xy(lonmax, latmin)
+        xmin, ymax = GridGenerator(self.config,
+                                   projection_definition=int_projection_definition,
+                                   grid_definition=int_grid_definition).lonlat_to_xy(lonmin, latmax)
 
-        xs, ys = GridGenerator(self.config).generate_grid_xy()
+        xmax, ymin = GridGenerator(self.config,
+                                   projection_definition=int_projection_definition,
+                                   grid_definition=int_grid_definition
+                                   ).lonlat_to_xy(lonmax, latmin)
+
+        xs, ys = GridGenerator(self.config,
+                               projection_definition=int_projection_definition,
+                               grid_definition=int_grid_definition).generate_grid_xy()
 
         xeasemin = xs.min() #should be the cell edge, not the cell center
         xeasemax = xs.max() #should be the cell edge, not the cell center
@@ -489,10 +361,9 @@ class AntennaPattern:
 
         Xs, Ys = meshgrid(xs, ys)
 
-        lons, lats = GridGenerator(self.config).xy_to_lonlat(Xs, Ys)
-
-        self.config.grid_definition = gdef
-
+        lons, lats = GridGenerator(self.config,
+                                   projection_definition=int_projection_definition,
+                                   grid_definition=int_grid_definition).xy_to_lonlat(Xs, Ys)
         return lons, lats
 
     def antenna_pattern_to_earth(self, int_dom_lons, int_dom_lats, x_pos, y_pos,
