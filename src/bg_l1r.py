@@ -98,11 +98,9 @@ class BGInterp:
 
             # Getting the target lon, lat
             if self.config.grid_type == 'L1C':
-                # I get two different results here for target_lon, target_lat. They should be the same
-                # I suspect that there may be an issue with the conversion functions in the grid generator.
-                # THIS SHOULD BE LOOKED INTO AND VERIFIED
-                # MAYBE THE UNRAVEL INDEX SHOULD ACTUALLY BE DONE USING SCAN AND SAMPLE NUMBERS
-                # NO I think thi is that some of the first samples may not have valid neighbors
+                # I need to check the method below, I should be able to get the same lon, lats
+                # with the method in L1R, check this is the case, as this method would be
+                # more efficient.
                 target_row, target_col = unravel_index(samples_dict['grid_1d_index'][target_cell], (GRIDS[self.config.grid_definition]['n_rows'], GRIDS[self.config.grid_definition]['n_cols']))
                 target_lon, target_lat = GridGenerator(self.config,
                                                        projection_definition=self.config.projection_definition,
