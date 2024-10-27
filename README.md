@@ -1,6 +1,6 @@
 # CIMR-RGB
 
-> This project consists of two projects: CIMR GRASP (to parse CIMR in suitable format) and CIMR RGB (to perform analysis). 
+> This repo consists of two projects: CIMR GRASP (to parse CIMR in suitable format) and CIMR RGB (to perform analysis). 
 
 
 
