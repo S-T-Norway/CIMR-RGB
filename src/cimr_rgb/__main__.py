@@ -29,7 +29,7 @@ from .product_generator import ProductGenerator
 
 
 def get_rgb_configuration(parser: argparse.ArgumentParser, 
-                          file_to_write: pb.Path = pb.Path(pb.Path(__file__).parents[1]).joinpath("output/logs/rgb_config.xml") 
+                          #config_file: pb.Path #= pb.Path(pb.Path(__file__).parents[1]).joinpath("output/logs/rgb_config.xml") 
                           ) -> ConfigFile: 
     """
     Parses command line arguments, substitutes the default ones enabled inside
@@ -78,17 +78,13 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
     """
 
     # converting the relative path into absolute one if needed 
-    if not pb.Path(file_to_write).is_absolute(): 
-        config_file_path = pb.Path(config_file_path).resolve() 
+    #if not pb.Path(config_file).is_absolute(): 
+    #    config_file = pb.Path(config_file).resolve() 
 
-    # TODO: Change this to root dir or something of the repo (the way it is done in CIMR GRASP )
-    outputdir = pb.Path("../output").resolve()
-    if not pb.Path(outputdir).exists(): 
-        pb.Path(outputdir).mkdir() 
+    #print(config_file.name)
+    #print(config_file)
+    #exit() 
 
-    logsdir  = pb.Path(outputdir).joinpath("logs")
-    if not pb.Path(logsdir).exists(): 
-        pb.Path(logsdir).mkdir() 
 
     # The command line parameters take the following form: 
     # config_params = {'name': ['p1', 'parameter1', 'type', 'description']} 
@@ -154,10 +150,30 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
         elif element is None: 
             raise ValueError(f"Key '{key}' not found in the XML configuration.")
 
+
+    #print(modified_pars)
+    #print(root.find("outputData/outputPath").text)
+    #exit() 
+    # TODO: Use the function in grasp module that checks the filepath for
+    # correctness 
+
+    # Creating output directory based on the parameter provided via cmd or xml
+    # file. Once this directory created, we also create `logs` folder to store
+    # logs of the run. 
+    outputdir = pb.Path(root.find("outputData/outputPath").text).resolve()
+    if not pb.Path(outputdir).exists(): 
+        pb.Path(outputdir).mkdir() 
+
+
+    # Appending the name of configuration file to the output directory path  
+    file_to_write = outputdir.joinpath(rgb_config_path.name) 
+    #print(file_to_write)
+    #exit() 
         
     # Write the updated XML back to a new file
     tree.write(file_to_write, encoding="utf-8", xml_declaration=True)
 
+    # Open modified file and check all the parameters 
     rgb_config = ConfigFile(file_to_write)
 
     logger     = rgb_config.logger 
@@ -191,17 +207,18 @@ def main():
     # This is the main function that is called when the script is run
     # It is the entry point of the script
 
+    # TODO: Default value should be taken from the installed package probably? 
+    # 
     # Setting the default value of the configuration parameter 
-    rgb_config_path   = pb.Path('..', 'config-maks.xml').resolve() 
+    rgb_config_path   = pb.Path("configs", 'rgb_config.xml').resolve() 
 
-    # TODO: Implementing the parsing of commandline arguments 
     parser = argparse.ArgumentParser(description = "Update XML configuration parameters.")
     # Will use the default value of config_file if none is provided via command line: 
     # https://docs.python.org/3/library/argparse.html#nargs 
     parser.add_argument('config_file', type = str, help = "Path to the XML parameter file.", 
                     nargs="?", default = rgb_config_path)
 
-    rgb_config        = get_rgb_configuration(parser = parser)
+    rgb_config        = get_rgb_configuration(parser = parser)#, config_file = rgb_config_path)
 
     # Ingest and Extract L1B Data
     timed_obj         = RGBLogging.rgb_decorated(
@@ -241,7 +258,7 @@ def main():
 
         data_dict_out = regridder.regrid_l1c(data_dict)
 
-    ProductGenerator(rgb_config).generate_l1c_product() 
+    ProductGenerator(rgb_config).generate_l1c_product(data_dict = data_dict_out) 
 
     
 

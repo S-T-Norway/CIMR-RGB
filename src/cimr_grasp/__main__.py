@@ -1,6 +1,3 @@
-"""
-
-"""
 # Python STD imports 
 import sys 
 import os 
@@ -10,34 +7,26 @@ import time
 import functools 
 import xml.etree.ElementTree as ET 
 import argparse 
+import logging 
 
 # 3d-party tools 
 import numpy as np 
 import scipy as sp 
 import h5py 
-from   colorama import Fore, Style#, Back   
+from   colorama import Fore, Style   
 import tqdm 
 
 # Custom modules 
-import cimr_grasp.grasp_io as io 
+import cimr_grasp.grasp_io    as io 
 import cimr_grasp.grasp_utils as utils 
-
-# TODO: This should be modified in the future 
-# Add the root of your project to PYTHONPATH
-rootpath = pb.Path('.').resolve().parents[0]
-syspath = str(rootpath)
-sys.path.append(syspath) 
-#from cimr_grasp.rgb_logging import RGBLogging 
-from cimr_grasp.rgb_logging import RGBLogging 
-
-
+from   cimr_rgb.rgb_logging import RGBLogging 
 
 
 def get_beamdata(beamfile: pb.Path | str, 
                  half_space: str, 
                  file_version: float, 
-                 cimr: dict(), 
-                 logger) -> dict():  
+                 cimr: dict, 
+                 logger: logging.Logger) -> dict():  
     """
     Parses GRASP `grd` file and returns data as dictionary object. 
 
@@ -54,6 +43,9 @@ def get_beamdata(beamfile: pb.Path | str,
 
     file_version: float  
         Version of a current file iteration. 
+
+    logger: logging.Logger 
+        Logger object to properly parse information. 
 
     Returns:
     --------
@@ -280,7 +272,7 @@ def get_beamdata(beamfile: pb.Path | str,
     return cimr 
     
 
-def recenter_beamdata(cimr: dict(), logger) -> dict(): 
+def recenter_beamdata(cimr: dict, logger: logging.Logger) -> dict: 
     """
     Method to recenter original beam.  
 
@@ -295,6 +287,9 @@ def recenter_beamdata(cimr: dict(), logger) -> dict():
     -----------
     cimr: dict 
         Dictionary that contains beam data to be modified and returned. 
+
+    logger: logging.Logger 
+        Logger object to properly parse information. 
 
     Returns:
     --------
@@ -338,7 +333,6 @@ def recenter_beamdata(cimr: dict(), logger) -> dict():
     # point, so I am cutting it off.  
     u_shift = float(format(np.abs(cimr["Grid"]['xcen'] - u_coordinate), '.15f'))       
     v_shift = float(format(np.abs(cimr["Grid"]['ycen'] - v_coordinate), '.15f'))       
-    #v_shift = np.abs(ycen - v_coordinate)      
     logger.info(f"u_shift = {u_shift}")
     logger.info(f"v_shift = {v_shift}")
     
@@ -354,50 +348,15 @@ def recenter_beamdata(cimr: dict(), logger) -> dict():
     else: 
         cimr['Grid']['v_grid']  = cimr['Grid']['v_grid'] - v_shift 
     
-    # Converting (u,v) into (theta,phi)
-    # 
-    # [Note]: We cannot get unique values for theta and phi (write them down as
-    # vectors), because the converted grid is not rectilinear anymore.
-    # Therefore, we have to interpolate gain values onto rectilinear grid.
-    # Otherwise, scipy functionality will be very slow and limited later on,
-    # when we are dealing with conversion from satellite reference fram to
-    # Earth reference frame (i.e., projection).    
-    #theta_grid, phi_grid = utils.convert_uv_to_tp(u_grid, v_grid) 
-
-    # Updating resulting dictionary  
-    # (to use these values later on)
-    #cimr["Grid"]['u_grid']     = u_grid 
-    #cimr["Grid"]['v_grid']     = v_grid 
-
-    # TODO: Put this statement somewhere else because we do not convert the
-    # original grid to theta phi, but convert the new theta, into the u, v to
-    # enable proper chunking of data later on. 
-    #cimr["Grid"]['theta_grid'] = theta_grid 
-    #cimr["Grid"]['phi_grid']   = phi_grid 
-    
-    #cimr["Gain"]['Ghh']        = Ghh
-    #cimr["Gain"]['Ghv']        = Ghv
-    #cimr["Gain"]['Gvv']        = Gvv
-    #cimr["Gain"]['Gvh']        = Gvh
-
-    #logger.info(cimr["Gain"].keys())
-    #logger.info(cimr["Grid"].keys())
-
     return cimr 
 
 
-# TODO: This method does not work properly if we have a numpy arrays inside
-#       nested dictionaries. BUT, it works for the empty dictionaries  
-def is_nested_dict_empty(d):
-    if not isinstance(d, dict) or not d:  # If it's not a dictionary or the dictionary is empty
-        return not d
-    return all(is_nested_dict_empty(v) for v in d.values())
 
 
 def run_cimr_grasp(datadir:  str | pb.Path, 
          outdir:             str | pb.Path, 
          file_version:       str, 
-         beamfiles_paths:    list(), 
+         beamfiles_paths:    list, 
          grid_res_phi:       float = 0.1, 
          grid_res_theta:     float = 0.1, 
          chunk_data:         bool  = True, 
@@ -408,15 +367,15 @@ def run_cimr_grasp(datadir:  str | pb.Path,
          recenter_beam:      bool  = True, 
          use_rgb_logging:    bool  = False, 
          use_rgb_decoration: bool  = False, 
-         logger = None 
+         logger:    logging.Logger = None 
          ) -> None:     
     """
-    Main method (entry point to the program). It performs the following steps: 
+    Method performs the following steps: 
     
     - Parsing original .grd file and saves into HDF5   
     - Recentering the beam grid to center on the max gain value 
     - Creating (theta, phi) grid with a given resolution and creating its (x,y) respresentation 
-    - Interpolating (in chunks) the original (u,v) grid into coarser (x,y) 
+    - Interpolating (in chunks or in full) the original (u,v) grid into coarser (x,y) 
     - Saving the resulting data into HDF5 file 
 
     [**Note**]: The data format is described in the `CIMR_Antenna_Patterns_Format.ipynb` 
@@ -438,6 +397,38 @@ def run_cimr_grasp(datadir:  str | pb.Path,
 
     use_bhs: bool 
         Parameter that defines whether to parse and preprocess BHS files or not. 
+
+    beamfiles_paths: list 
+        The list of full paths to all beam files for processing.
+
+    grid_res_phi: float 
+        The grid resolution for phi angle. 
+
+    grid_res_theta: float 
+        The grid resolution for theta angle. 
+
+    chunk_data: bool  
+        Whether to perform chunking of the data for interpolation. 
+
+    num_chunks: int   
+        Number of chunks to split data into. 
+
+    overlap_margin: float 
+        The percentage overlap between neighboring chunks.  
+
+    interp_method: str     
+        Interpolation method to use. Possible values are: linear, nearest, and
+        cubic. See scipy docs for more details: 
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html 
+
+    use_rgb_logging: bool  
+        Whether to use RGB Logging configuration. 
+
+    use_rgb_decoration: bool  
+        Whether to use RGB Logging decorator. 
+
+    logger: logging.Logger 
+        Logger object to properly parse information. 
     """
 
     
@@ -515,7 +506,7 @@ def run_cimr_grasp(datadir:  str | pb.Path,
                 outfile_oap = pb.Path(str(parsed_dir) + f"/{parsedfile_prefix}-" + band + horn + f"-{parsedfile_suffix}v{file_version}.h5")   
                 
                 if io.check_outfile_existance(outfile_oap) == True: 
-                     cimr_is_empty = is_nested_dict_empty(cimr) 
+                     cimr_is_empty = io.is_nested_dict_empty(cimr) 
                 else: 
                     
                     logger.info(f"------------------------------") 
@@ -612,55 +603,50 @@ def run_cimr_grasp(datadir:  str | pb.Path,
             logger.info(f"| {Fore.YELLOW}------------------------------{Style.RESET_ALL}") 
 
 
-# TODO: Put this stuff inside of this method into io? 
-def resolve_config_path(path_string: pb.Path | str) -> pb.Path:
-    if "~" in str(path_string) and not '$' in str(path_string): 
-        # Use expanduser to handle '~' for home directory if present
-        expanded_path = os.path.expanduser(path_string)
-        return pb.Path(expanded_path).resolve() 
-    elif "$" in str(path_string) and not '~' in str(path_string): 
-        # Use expandvars to replace environment variables like $HOME
-        expanded_path = os.path.expandvars(path_string)
-        return pb.Path(expanded_path).resolve() 
-    elif '$' in str(path_string) and '~' in str(path_string): 
-        error_output = ("`outdir` contains both $ and ~ which " + 
-                       "will result in incorrect path resolution. " + 
-                       f"Check `outdir` variable in {config_file}") 
-        raise ValueError(error_output)
-    else: 
-        # If we have a relative path, we expand it 
-        expanded_path = pb.Path(path_string)
-        if not expanded_path.is_absolute(): 
-            return expanded_path.resolve() 
-        else: 
-            return expanded_path 
+def load_grasp_config(config_file: str = "grasp_config.xml") -> dict:
+    """
+    Loads configuration data from an XML file and parses it into a dictionary.
 
+    This function reads an XML file specified by `config_file`, parses its content,
+    and returns a dictionary containing the configuration values. 
 
-def get_bool(par_val: str, par_name: str) -> bool: 
+    Parameters:
+    -----------
+    config_file : str
+        The path to the XML configuration file. Defaults to "grasp_config.xml".
 
-    par_val = par_val.lower() 
+    Returns:
+    --------
+    dict
+        A dictionary containing configuration data extracted from the XML file.
+    
+    Exceptions:
+    -----------
+    FileNotFoundError
+        Raised if the specified XML file cannot be found.
+    ET.ParseError
+        Raised if there is an error parsing the XML file.
+    FileNotFoundError
+        Raised if the data directory does not exist.
+    FileNotFoundError
+        Raised if the data directory is empty. 
+    """
 
-    if par_val == "true": 
-        par_val = True
-    elif par_val == "false": 
-        par_val = False 
-    else: 
-        raise ValueError(f"Parameter `{par_name}` can either be True or False.")
+    try: 
+        # Parse the XML file
+        tree = ET.parse(config_file)
+        root = tree.getroot()
 
-    return par_val 
-
-
-def load_grasp_config(config_file = "grasp_config.xml"):
-
-    # Parse the XML file
-    tree = ET.parse(config_file)
-    root = tree.getroot()
+    except FileNotFoundError:
+        raise FileNotFoundError(f"The configuration file {config_file} was not found.")
+    except ET.ParseError:
+        raise ET.ParseError(f"There was an error parsing the configuration file {config_file}.")
 
     config = {}
 
     # Read the paths
     # getting value of datadir, and if doesn't exist, returning an error. 
-    config['datadir']   = resolve_config_path(
+    config['datadir']   = io.resolve_config_path(
             path_string = pb.Path(root.find('paths/datadir').text)
             ) 
     if not config['datadir'].is_dir():
@@ -671,7 +657,7 @@ def load_grasp_config(config_file = "grasp_config.xml"):
 
     # getting value of outdir, checking for errors and creating directories
     # recursively if they do not exist 
-    config['outdir']    = resolve_config_path(
+    config['outdir']    = io.resolve_config_path(
             path_string = root.find('paths/outdir').text
             ) 
     io.rec_create_dir(config['outdir'])   
@@ -681,15 +667,15 @@ def load_grasp_config(config_file = "grasp_config.xml"):
 
 
     # Bool params 
-    config['use_bhs']        = get_bool(
+    config['use_bhs']        = io.get_bool_from_string(
                    par_name  = 'use_bhs', 
                    par_val   = parameters.find('use_bhs').text
                    ) 
-    config['recenter_beam']  = get_bool(
+    config['recenter_beam']  = io.get_bool_from_string(
                    par_name  = 'recenter_beam', 
                    par_val   = parameters.find('recenter_beam').text
                    ) 
-    config['chunk_data']     = get_bool(
+    config['chunk_data']     = io.get_bool_from_string(
                    par_name  = 'chunk_data', 
                    par_val   = parameters.find('chunk_data').text
                    ) 
@@ -708,27 +694,31 @@ def load_grasp_config(config_file = "grasp_config.xml"):
 
     # Read the logging settings
     logging = root.find('logging')
-    config['use_rgb_logging']    = get_bool(
+    config['use_rgb_logging']    = io.get_bool_from_string(
                         par_name = 'use_rgb_logging', 
                         par_val  = logging.find('use_rgb_logging').text
                         )  
-    config['use_rgb_decoration'] = get_bool(
+    config['use_rgb_decoration'] = io.get_bool_from_string(
                         par_name = 'use_rgb_logging', 
                         par_val  = logging.find('use_rgb_decoration').text
                         )  
-    config['logger_config']      = resolve_config_path(
+    config['logger_config']      = io.resolve_config_path(
             path_string = root.find('logging/logger_config').text
             ) 
 
     return config
 
 
+
 def main():
+    """
+    Entry point of the program. 
+    """
 
     start_time_tot = time.perf_counter() 
     # -----------------------------
     # Default value for config file 
-    config_file = "grasp_config.xml"
+    config_file = pb.Path("configs", "grasp_config.xml").resolve()
 
     # Getting the value for parameter file from cmd 
     parser = argparse.ArgumentParser(description = "Update XML configuration parameters.")
@@ -738,7 +728,7 @@ def main():
                     nargs = "?", default = config_file)
 
     args = parser.parse_args() 
-    config_file = resolve_config_path(args.config_file) 
+    config_file = io.resolve_config_path(args.config_file) 
 
     # -----------------------------
 
@@ -761,9 +751,13 @@ def main():
     use_rgb_decoration = config["use_rgb_decoration"] 
     logger_config      = config["logger_config"]
 
+    
+    logdir = config['outdir'].joinpath("logs")  
+    io.rec_create_dir(logdir)   
+
     # Creating a logger object based on the user preference 
     if use_rgb_logging and logger_config is not None: 
-        rgb_logging    = RGBLogging(log_config = logger_config)
+        rgb_logging    = RGBLogging(logdir = logdir, log_config = logger_config)
         rgb_logger     = rgb_logging.get_logger("rgb") 
 
     # -----------------------------
@@ -800,21 +794,8 @@ def main():
 
     rgb_logger.info("---------")
 
-    #exit() 
-
-    #if not pb.Path(outdir).exists(): 
-    #    rgb_logger.info(f"Creating output directory:\n{outdir}")
-    #    pb.Path(outdir).mkdir()
-
-    #if not datadir.is_dir():
-    #    raise FileNotFoundError(f"The directory '{datadir}' does not exist.")
-
     # Getting all beam paths inside dpr/AP 
     beamfiles_paths = datadir.glob("*/*")   
-    #for beamfile in beamfiles_paths:
-    #    print(beamfile)
-    #exit() 
-
 
     run_cimr_grasp(datadir  = datadir, 
          outdir             = outdir, 

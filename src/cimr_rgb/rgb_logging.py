@@ -1,8 +1,9 @@
 import pathlib as pb 
-import time 
+import time, datetime  
 import json 
 import logging.config   
 import functools 
+
 import psutil 
 
 
@@ -11,7 +12,7 @@ import psutil
 
 class RGBLogging:
 
-    def __init__(self, log_config = None): 
+    def __init__(self, logdir: pb.Path, log_config = None) -> None: 
         """
 
         STD docs for logging in python: 
@@ -38,11 +39,22 @@ class RGBLogging:
                     log_config = json.load(json_file) 
 
             elif isinstance(log_config, dict): 
-                pass  
                 print(log_config) 
+                pass  
             else: 
                 raise TypeError("`log_config` can be str, Path or dictionary.")
 
+            #print(log_config['handlers']['file']['filename'])
+            # Getting the name of log file 
+            modified_config_name = pb.Path(log_config['handlers']['file']['filename']).name  
+            # Modifying it to include time signature 
+            modified_config_name = pb.Path(modified_config_name).stem + \
+                                f"_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')}.log" 
+            # Creating absolute path for the log config file 
+            modified_config_name = logdir.joinpath(modified_config_name)
+
+            log_config['handlers']['file']['filename'] = modified_config_name 
+            
             # Setting up RGB Logger configuration based on the provided file 
             self.log_config = logging.config.dictConfig(log_config) 
 
