@@ -1,7 +1,5 @@
-"""
-
-"""
 import time 
+import logging 
 
 import numpy as np 
 import scipy as sp
@@ -127,32 +125,41 @@ def generate_uv_grid(xcen: float,
                      dx:   float, 
                      dy:   float) -> (np.ndarray, np.ndarray): 
     """
-    Returns ... .   
+    Generates (u,v)-grid based on the values provided in antenna pattern files. 
     
     Parameters:
     -----------
     xcen: float  
+        X coordinate of the beam's center. 
 
     ycen: float  
+        Y coordinate of the beam's center. 
 
     xs  : float  
+        Limits of 2D grid (X coordinate).
 
     ys  : float  
+        Limits of 2D grid (Y coordinate). 
 
     nx  : int  
+        The number of grid values. 
 
     ny  : int  
+        The number of grid values. 
 
     dx  : float  
+        Grid step in X.  
 
     dy  : float  
+        Grid step in Y.  
 
     Returns:
     --------
     u_grid : np.ndarray 
+        u coordinates of mesh grid (u,v).  
 
     v_grid : np.ndarray 
-
+        v coordinates of mesh grid (u,v).  
     """ 
 
     # Generating the grid 
@@ -170,7 +177,7 @@ def generate_uv_grid(xcen: float,
     return u_grid, v_grid 
 
 
-def construct_complete_gains(cimr: dict()) -> dict(): 
+def construct_complete_gains(cimr: dict) -> dict: 
     """
     Building the complex array and getting the index that corresponds to its
     maximum value. 
@@ -201,6 +208,50 @@ def interp_gain(X:      np.ndarray,
                 x_down: np.ndarray, 
                 y_down: np.ndarray, 
                 interp_method: str = "linear") -> np.ndarray:
+    """
+    Interpolates gain values over a specified grid using a given interpolation method.
+
+    This function uses `scipy.interpolate.griddata` to interpolate gain values based on
+    provided X, Y coordinate grids and their associated gain values. The interpolation
+    is evaluated at new down-sampled coordinates `(x_down, y_down)` with a specified
+    method.
+
+    Parameters:
+    -----------
+    X : np.ndarray
+        The X-coordinates for the original gain values, matching the dimensions of `Y`
+        and `gain`.
+
+    Y : np.ndarray
+        The Y-coordinates for the original gain values, matching the dimensions of `X`
+        and `gain`.
+
+    gain : np.ndarray
+        The gain values corresponding to each (X, Y) coordinate pair, matching the
+        dimensions of `X` and `Y`.
+
+    x_down : np.ndarray
+        The down-sampled X-coordinates where the interpolated gain values are evaluated.
+
+    y_down : np.ndarray
+        The down-sampled Y-coordinates where the interpolated gain values are evaluated.
+
+    interp_method : str, optional
+        The interpolation method to use, which can be "linear", "nearest", or "cubic".
+        Defaults to "linear".
+
+    Returns:
+    --------
+    gain: np.ndarray
+        An array of interpolated gain values at the specified `(x_down, y_down)`
+        coordinates.
+
+    Exceptions:
+    -----------
+    ValueError
+        Raised if `interp_method` is not one of the supported methods ("linear", 
+        "nearest", "cubic").
+    """
 
     grid_points = np.vstack([X.ravel(), Y.ravel()]).T 
 
@@ -209,26 +260,73 @@ def interp_gain(X:      np.ndarray,
     return gain   
 
 
-def interp_gain_in_chunks(gain: np.ndarray, 
+def interp_gain_in_chunks(gain:   np.ndarray, 
                           n_rows: int, 
                           n_cols: int, 
-                          x_lin: np.ndarray, 
-                          y_lin: np.ndarray, 
-                          X: np.ndarray, 
-                          Y: np.ndarray, 
+                          x_lin:  np.ndarray, 
+                          y_lin:  np.ndarray, 
+                          X:      np.ndarray, 
+                          Y:      np.ndarray, 
                           x_down: np.ndarray, 
                           y_down: np.ndarray,  
-                          logger, 
+                          logger: logging.Logger, 
                           num_chunks: int = 4, 
                           overlap_margin: float = 0.1, 
                           interp_method: str = "linear") -> np.ndarray: 
     """
+    Interpolates gain in chunks. To avoid discontinuities, it defines the overlap
+    margin and chunk our code appropriately The default margin value is 10%.  
 
-    ... 
+    Parameters:
+    -----------
+    n_rows: int 
+        Numbe of u data points (NX). 
 
-    To avoid discontinuities we define the overlap margin and chunk our code appropriately 
-    the margine is 10% for now.  
+    n_cols: int 
+        Numbe of v data points (NY). 
 
+    x_lin: np.ndarray 
+        u data points (not mesh grid). 
+
+    y_lin: np.ndarray 
+        v data points (not mesh grid). 
+
+    X : np.ndarray
+        The X-coordinates for the original gain values, matching the dimensions of `Y`
+        and `gain`.
+    
+    Y : np.ndarray
+        The Y-coordinates for the original gain values, matching the dimensions of `X`
+        and `gain`.
+    
+    gain : np.ndarray
+        The gain values corresponding to each (X, Y) coordinate pair, matching the
+        dimensions of `X` and `Y`.
+    
+    x_down : np.ndarray
+        The down-sampled X-coordinates where the interpolated gain values are evaluated.
+    
+    y_down : np.ndarray
+        The down-sampled Y-coordinates where the interpolated gain values are evaluated.
+
+    overlap_margin: float 
+        The percentage overlap between neighboring chunks.  
+
+    num_chunks: int   
+        Number of chunks to split data into. 
+    
+    interp_method : str, optional
+        The interpolation method to use, which can be "linear", "nearest", or "cubic".
+        Defaults to "linear".
+
+    logger: logging.Logger 
+        Logger object to properly parse information. 
+
+    Returns:
+    --------
+    gain_down: np.ndarray
+        An array of interpolated gain values at the specified `(x_down, y_down)`
+        coordinates.
     """
 
     gain_down = np.zeros_like(x_down, dtype=complex)  
@@ -349,14 +447,14 @@ def interp_gain_in_chunks(gain: np.ndarray,
     return gain_down 
 
 
-def interp_beamdata_into_uv(cimr:           dict(), 
-                            logger, 
+def interp_beamdata_into_uv(cimr:           dict, 
+                            logger: logging.Logger, 
                             grid_res_phi:   float = 0.1, 
                             grid_res_theta: float = 0.1, 
                             chunk_data:     bool  = True, 
                             num_chunks:     int   = 4, 
                             overlap_margin: float = 0.1, 
-                            interp_method:  str   = "linear") -> dict(): 
+                            interp_method:  str   = "linear") -> dict: 
     """
     Method to interpolate the u,v grid into the rectilinear x,y (coarser
     cartesian system) that corresponds to theta, phi. 
