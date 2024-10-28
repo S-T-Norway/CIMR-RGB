@@ -283,8 +283,8 @@ class GridGenerator:
         res = GRIDS[self.grid_definition]['res']
 
         # Need to check if the half cell has been added for lat, lon/x, y of the center of the cell
-        x = (col - r0)*res
-        y = (s0 - row)*res
+        x = (col - r0)*res + res/2
+        y = (s0 - row)*res - res/2
 
         # Convert x, y to lon, lat
         lon, lat = self.xy_to_lonlat(x, y)

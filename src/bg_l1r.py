@@ -96,23 +96,12 @@ class BGInterp:
 
             # Getting the target lon, lat
             if self.config.grid_type == 'L1C':
-                # I need to check the method below, I should be able to get the same lon, lats
-                # with the method in L1R, check this is the case, as this method would be
-                # more efficient.
-                target_row, target_col = unravel_index(samples_dict['grid_1d_index'][target_cell], (GRIDS[self.config.grid_definition]['n_rows'], GRIDS[self.config.grid_definition]['n_cols']))
-                target_lon, target_lat = GridGenerator(self.config,
-                                                       projection_definition=self.config.projection_definition,
-                                                       grid_definition=self.config.grid_definition
-                                                       ).rowcol_to_lonlat(target_row, target_col)
-
-                # target_lon_test, target_lat_test = (target_grid[0].flatten('C')[samples_dict['grid_1d_index'][target_cell]],
-                #                                     target_grid[1].flatten('C')[samples_dict['grid_1d_index'][target_cell]])
+                target_lon, target_lat = (target_grid[0].flatten('C')[samples_dict['grid_1d_index'][target_cell]],
+                                                    target_grid[1].flatten('C')[samples_dict['grid_1d_index'][target_cell]])
 
             elif self.config.grid_type == 'L1R':
-                # Scan Geometry, is it still unravel index? I think so
                 target_lon, target_lat = (target_grid[0][samples_dict['grid_1d_index'][target_cell]],
                                           target_grid[1][samples_dict['grid_1d_index'][target_cell]])
-
 
             # Get Antenna Patterns
             samples = indexes[target_cell, :]
@@ -125,7 +114,7 @@ class BGInterp:
                 target_lon = target_lon,
                 target_lat = target_lat,
                 source_inds=input_samples,
-                target_inds=target_cell
+                target_inds=samples_dict['grid_1d_index'][target_cell]
             )
 
             # BG algorithm
@@ -152,15 +141,15 @@ class BGInterp:
 
     def get_weights(self, band, samples_dict, variable_dict, target_dict, target_grid, scan_direction):
 
+        # Preparing variable_dict
         if scan_direction:
             scan_direction = f"_{scan_direction}"
         else:
             scan_direction = ""
 
-        if f"attitude{scan_direction}" in variable_dict:
-            attitude = variable_dict[f"attitude{scan_direction}"]
-        else:
-            attitude = full(variable_dict[f"longitude{scan_direction}"].shape, None)
+        # Adding a empty attitude variable for SMAP
+        if f"attitude{scan_direction}" not in variable_dict:
+            variable_dict[f'attitude{scan_direction}'] = full(variable_dict[f"longitude{scan_direction}"].shape, None)
 
         variable_dict={key.removesuffix(f'{scan_direction}'): value for key, value in variable_dict.items()}
 

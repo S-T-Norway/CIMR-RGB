@@ -190,7 +190,12 @@ class ReGridder:
         return samples_dict, variable_dict
 
     def reduce_grid_inds(self, samples_dict):
-        grid_shape = GRIDS[self.config.grid_definition]['n_rows'], GRIDS[self.config.grid_definition]['n_cols']
+
+        if self.config.grid_type == 'L1C':
+            grid_shape = GRIDS[self.config.grid_definition]['n_rows'], GRIDS[self.config.grid_definition]['n_cols']
+        elif self.config.grid_type == 'L1R':
+            grid_shape = self.config.scan_geometry[self.config.target_band[0]]
+
         rows_out, cols_out = unravel_index(samples_dict['grid_1d_index'], grid_shape)
         row_min = self.config.reduced_grid_inds[0]
         row_max = self.config.reduced_grid_inds[1]
@@ -198,8 +203,9 @@ class ReGridder:
         col_max = self.config.reduced_grid_inds[3]
         indices = where((rows_out >= row_min) & (rows_out <= row_max) &
                         (cols_out >= col_min) & (cols_out <= col_max))[0]
-        filtered_data_dict = {key: value[indices] for key, value in samples_dict.items()}
-        return filtered_data_dict
+        filtered_samples_dict = {key: value[indices] for key, value in samples_dict.items()}
+
+        return filtered_samples_dict
 
     def create_output_grid_inds(self, grid_1d_index):
         # Can be unified
@@ -225,8 +231,10 @@ class ReGridder:
         # Get target grid
         if self.config.grid_type == 'L1C':
             target_grid = self.get_grid()
+            target_dict = None
         elif self.config.grid_type == 'L1R':
             target_grid = self.get_grid(data_dict)
+            target_dict = data_dict[self.config.target_band[0]]
 
         data_dict_out = {}
         for band in data_dict:
@@ -247,7 +255,7 @@ class ReGridder:
                     args = {
                         'samples_dict': samples_dict[scan_direction],
                         'variable_dict': variable_dict,
-                        'target_dict': data_dict[self.config.target_band[0]],
+                        'target_dict': target_dict,
                         'target_grid': target_grid,
                         'scan_direction': scan_direction,
                         'band': band
