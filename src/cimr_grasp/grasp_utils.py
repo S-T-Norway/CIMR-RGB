@@ -449,6 +449,7 @@ def interp_gain_in_chunks(gain:   np.ndarray,
 
 def interp_beamdata_into_uv(cimr:           dict, 
                             logger: logging.Logger, 
+                            grid_max_theta: float = 90.,
                             grid_res_phi:   float = 0.1, 
                             grid_res_theta: float = 0.1, 
                             chunk_data:     bool  = True, 
@@ -463,6 +464,9 @@ def interp_beamdata_into_uv(cimr:           dict,
     -----------
     cimr: dict 
         Dictionary that contains beam data to be modified and returned. 
+
+    grid_max_theta: float (default value = 90.)
+        Maximum theta of the interpolation grid 
 
     grid_res_phi: float (default value = 0.1) 
         Resolution for the coarser grid  for phi component (in degrees). 
@@ -483,10 +487,10 @@ def interp_beamdata_into_uv(cimr:           dict,
     """
 
     # New grid 
-    grid_points_theta = int(90  / grid_res_theta) 
-    grid_points_phi   = int(360 / grid_res_phi) 
+    grid_points_theta = int(grid_max_theta  / grid_res_theta) 
+    grid_points_phi   = int(360. / grid_res_phi) 
 
-    theta = np.linspace(0, np.pi/2, grid_points_theta)
+    theta = np.linspace(0, np.deg2rad(grid_max_theta), grid_points_theta)
     phi   = np.linspace(0, 2*np.pi, grid_points_phi)
     theta_grid, phi_grid = np.meshgrid(theta, phi)   
 
@@ -531,7 +535,7 @@ def interp_beamdata_into_uv(cimr:           dict,
                                             y_down = y 
                                             ).T  
 
-        cimr['temp'][key] = cimr['temp'][key].reshape(3600, 900) 
+        cimr['temp'][key] = cimr['temp'][key].reshape(grid_points_phi, grid_points_theta) 
 
         if key == 'Ghh': 
             cimr["Gain"]["G1h"], cimr["Gain"]["G2h"] = np.real(cimr["temp"][key]), np.imag(cimr["temp"][key])  

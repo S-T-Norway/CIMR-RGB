@@ -356,7 +356,8 @@ def recenter_beamdata(cimr: dict, logger: logging.Logger) -> dict:
 def run_cimr_grasp(datadir:  str | pb.Path, 
          outdir:             str | pb.Path, 
          file_version:       str, 
-         beamfiles_paths:    list, 
+         beamfiles_paths:    list,
+         grid_max_theta:     float = 90., 
          grid_res_phi:       float = 0.1, 
          grid_res_theta:     float = 0.1, 
          chunk_data:         bool  = True, 
@@ -400,6 +401,9 @@ def run_cimr_grasp(datadir:  str | pb.Path,
 
     beamfiles_paths: list 
         The list of full paths to all beam files for processing.
+
+    grid_max_theta: float 
+        Maximum theta in the output grid (useful to save memory for small antenna patterns) 
 
     grid_res_phi: float 
         The grid resolution for phi angle. 
@@ -501,9 +505,10 @@ def run_cimr_grasp(datadir:  str | pb.Path,
 
                 # Parsing Original GRASP Beam Files 
                 # Output filename 
+                horn_output = str(int(horn) - 1)
                 parsedfile_prefix = f"CIMR-OAP-{half_space}" 
                 parsedfile_suffix = "UV"
-                outfile_oap = pb.Path(str(parsed_dir) + f"/{parsedfile_prefix}-" + band + horn + f"-{parsedfile_suffix}v{file_version}.h5")   
+                outfile_oap = pb.Path(str(parsed_dir) + f"/{parsedfile_prefix}-" + band + horn_output + f"-{parsedfile_suffix}v{file_version}.h5")   
                 
                 if io.check_outfile_existance(outfile_oap) == True: 
                      cimr_is_empty = io.is_nested_dict_empty(cimr) 
@@ -528,7 +533,7 @@ def run_cimr_grasp(datadir:  str | pb.Path,
                 # Performing Beam Recentering and Interpolation on rectilinear grid  
                 preprocfile_prefix = f"CIMR-PAP-{half_space}" 
                 preprocfile_suffix = "TP"
-                outfile_pap = pb.Path(str(preprocessed_dir) + f"/{preprocfile_prefix}-" + band + horn + f"-{preprocfile_suffix}v{file_version}.h5")   
+                outfile_pap = pb.Path(str(preprocessed_dir) + f"/{preprocfile_prefix}-" + band + horn_output + f"-{preprocfile_suffix}v{file_version}.h5")   
                 
                 if io.check_outfile_existance(outfile_pap) == True: 
                     continue 
@@ -584,6 +589,7 @@ def run_cimr_grasp(datadir:  str | pb.Path,
                     
                     cimr = utils.interp_beamdata_into_uv(cimr = cimr, 
                                                          logger = logger, 
+                                                         grid_max_theta = grid_max_theta,
                                                          grid_res_phi   = grid_res_phi, 
                                                          grid_res_theta = grid_res_theta, 
                                                          chunk_data     = chunk_data, 
@@ -680,6 +686,7 @@ def load_grasp_config(config_file: str = "grasp_config.xml") -> dict:
                    par_val   = parameters.find('chunk_data').text
                    ) 
     # Float params 
+    config['grid_max_theta'] = float(parameters.find('grid_max_theta').text)
     config['grid_res_phi']   = float(parameters.find('grid_res_phi').text)
     config['grid_res_theta'] = float(parameters.find('grid_res_theta').text)
     config['overlap_margin'] = float(parameters.find('overlap_margin').text)
@@ -738,7 +745,8 @@ def main():
     outdir             = config["outdir"]  
     datadir            = config["datadir"]  
     use_bhs            = config["use_bhs"]  
-    recenter_beam      = config["recenter_beam"] 
+    recenter_beam      = config["recenter_beam"]
+    grid_max_theta     = config["grid_max_theta"] 
     grid_res_phi       = config["grid_res_phi"] 
     grid_res_theta     = config["grid_res_theta"]  
     chunk_data         = config["chunk_data"] 
@@ -780,6 +788,7 @@ def main():
     rgb_logger.info(f"Data Directory:          {datadir}")   
     rgb_logger.info(f"Use BHS:                 {use_bhs}") 
     rgb_logger.info(f"Recenter Beam:           {recenter_beam}") 
+    rgb_logger.info(f"Grid max Theta:          {grid_max_theta}") 
     rgb_logger.info(f"Grid Resolution (Phi):   {grid_res_phi}") 
     rgb_logger.info(f"Grid Resolution (Theta): {grid_res_theta}")       
     rgb_logger.info(f"Chunk Data:              {chunk_data}") 
@@ -803,6 +812,7 @@ def main():
          beamfiles_paths    = beamfiles_paths, 
          use_bhs            = use_bhs, 
          recenter_beam      = recenter_beam, 
+         grid_max_theta     = grid_max_theta,
          grid_res_phi       = grid_res_phi, 
          grid_res_theta     = grid_res_theta, 
          chunk_data         = chunk_data, 
