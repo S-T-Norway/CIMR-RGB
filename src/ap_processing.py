@@ -464,6 +464,10 @@ class AntennaPattern:
         Yp = X*antenna_yaxis[0] + Y*antenna_yaxis[1] + Z*antenna_yaxis[2]
         Zp = X*antenna_zaxis[0] + Y*antenna_zaxis[1] + Z*antenna_zaxis[2]
 
+        Xp[Xp>1.] = 1.
+        Yp[Yp>1.] = 1.
+        Zp[Zp>1.] = 1.
+
         theta = arccos(Zp)
         phi = sign(Yp) * arccos(Xp / sqrt(Xp** 2 + Yp**2))
         
