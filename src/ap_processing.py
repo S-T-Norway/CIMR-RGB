@@ -127,12 +127,15 @@ class AntennaPattern:
                     self.config.antenna_pattern_path, self.band)
                 horn = self.band + str(feedhorn)
 
-                for file in os.listdir(path):
-                    if horn in file:
-                        ap_dict[int(feedhorn)] = self.extract_gain_dict(
-                            file_path=os.path.join(path, file),
+                horn_files = [ff for ff in os.listdir(path) if horn in ff]
+
+                assert(len(set(horn_files))==1), "There are zero or more than one antenna pattern files for feedhorn " + horn
+
+                ap_dict[int(feedhorn)] = self.extract_gain_dict(
+                            file_path=os.path.join(path, horn_files[0]),
                             threshold_dB=self.antenna_threshold
                         )
+
         return ap_dict
 
     @staticmethod
