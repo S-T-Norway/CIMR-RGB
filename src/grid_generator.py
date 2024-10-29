@@ -96,6 +96,7 @@ class GridGenerator:
         self.projection_definition = projection_definition
         self.grid_definition = grid_definition
         self.projection = PROJECTIONS[self.projection_definition]
+        self.resolution = GRIDS[grid_definition]['res'] #m
 
     def generate_grid_xy(self, return_resolution=False):
         """

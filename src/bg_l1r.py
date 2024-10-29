@@ -1,6 +1,6 @@
 from grid_generator import GridGenerator, GRIDS
 from ap_processing import AntennaPattern
-from  numpy import where, nan, take, full, all, sum, zeros, identity, dot, nansum, unravel_index
+from  numpy import where, nan, take, full, all, sum, zeros, identity, dot, nansum, unravel_index, rad2deg
 from numpy.linalg import inv
 from tqdm import tqdm
 
@@ -15,7 +15,7 @@ class BGInterp:
         self.config = config
 
 
-    def get_antenna_patterns(self, band, variable_dict, target_dict, target_lon, target_lat, source_inds, target_inds):
+    def get_antenna_patterns(self, band, variable_dict, target_dict, target_lon, target_lat, source_inds, target_inds, target_cell_size=None):
 
         # Initiate Source Pattern
         source_ap = AntennaPattern(config=self.config,
@@ -52,6 +52,10 @@ class BGInterp:
             sample_pattern /= sum(sample_pattern)
             source_ant_patterns.append(sample_pattern)
 
+            plt.figure()
+            plt.imshow(sample_pattern)
+            plt.show()
+
         # Get target patterns
         target_ant_pattern = None
         if self.config.grid_type == 'L1R':
@@ -80,9 +84,18 @@ class BGInterp:
             )
             target_ant_pattern /= sum(target_ant_pattern)
 
+            plt.figure()
+            plt.imshow(target_ant_pattern)
+            plt.show()
+
         elif self.config.grid_type == 'L1C':
-            pass
-            # What to do here.
+            sigma_lon, sigma_lat = target_cell_size
+            target_ant_pattern = AntennaPattern.target_gaussian(int_dom_lons, int_dom_lats, target_lon, target_lat, 
+                                                                sigma_lon, sigma_lat, rot=0.)
+
+            plt.figure()
+            plt.imshow(target_ant_pattern)
+            plt.show()
 
         return source_ant_patterns, target_ant_pattern
 
@@ -97,9 +110,16 @@ class BGInterp:
             # Getting the target lon, lat
             if self.config.grid_type == 'L1C':
                 target_lon, target_lat = (target_grid[0].flatten('C')[samples_dict['grid_1d_index'][target_cell]],
-                                                    target_grid[1].flatten('C')[samples_dict['grid_1d_index'][target_cell]])
+                                          target_grid[1].flatten('C')[samples_dict['grid_1d_index'][target_cell]])
+
+                # TODO: this works only with EASE 9km grid.. for other grids, the size of the cell should be estimated in grid_generator
+                Rearth  = (6378137. + 6356752.)/2. #m
+                resolution = GridGenerator(self.config, self.config.projection_definition, self.config.grid_definition).resolution
+                angle   = rad2deg(resolution/Rearth)
+                target_cell_size = [angle, angle]
 
             elif self.config.grid_type == 'L1R':
+                target_cell_size = None
                 target_lon, target_lat = (target_grid[0][samples_dict['grid_1d_index'][target_cell]],
                                           target_grid[1][samples_dict['grid_1d_index'][target_cell]])
 
@@ -114,7 +134,8 @@ class BGInterp:
                 target_lon = target_lon,
                 target_lat = target_lat,
                 source_inds=input_samples,
-                target_inds=samples_dict['grid_1d_index'][target_cell]
+                target_inds=samples_dict['grid_1d_index'][target_cell], 
+                target_cell_size=target_cell_size
             )
 
             # BG algorithm
