@@ -52,10 +52,6 @@ class BGInterp:
             sample_pattern /= sum(sample_pattern)
             source_ant_patterns.append(sample_pattern)
 
-            plt.figure()
-            plt.imshow(sample_pattern)
-            plt.show()
-
         # Get target patterns
         target_ant_pattern = None
         if self.config.grid_type == 'L1R':
@@ -84,18 +80,10 @@ class BGInterp:
             )
             target_ant_pattern /= sum(target_ant_pattern)
 
-            plt.figure()
-            plt.imshow(target_ant_pattern)
-            plt.show()
-
         elif self.config.grid_type == 'L1C':
             sigma_lon, sigma_lat = target_cell_size
             target_ant_pattern = AntennaPattern.target_gaussian(int_dom_lons, int_dom_lats, target_lon, target_lat, 
                                                                 sigma_lon, sigma_lat, rot=0.)
-
-            plt.figure()
-            plt.imshow(target_ant_pattern)
-            plt.show()
 
         return source_ant_patterns, target_ant_pattern
 

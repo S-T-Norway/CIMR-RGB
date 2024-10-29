@@ -54,7 +54,7 @@ class AntennaPattern:
         return
 
     @staticmethod
-    def extract_gain_dict(file_path, threshold_dB, theta_max=30):
+    def extract_gain_dict(file_path, threshold_dB, theta_max=40):
 
         import h5py
 
@@ -195,10 +195,10 @@ class AntennaPattern:
             phi = ap_dict[horn]['phi']
             theta = ap_dict[horn]['theta']
 
-            f_gain_hco = RegularGridInterpolator((phi, theta), ap_dict[horn]['Ghco'])
-            f_gain_hcx = RegularGridInterpolator((phi, theta), ap_dict[horn]['Ghcx'])
-            f_gain_vco = RegularGridInterpolator((phi, theta), ap_dict[horn]['Gvco'])
-            f_gain_vcx = RegularGridInterpolator((phi, theta), ap_dict[horn]['Gvcx'])
+            f_gain_hco = RegularGridInterpolator((phi, theta), ap_dict[horn]['Ghco'], bounds_error=False, fill_value=0.)
+            f_gain_hcx = RegularGridInterpolator((phi, theta), ap_dict[horn]['Ghcx'], bounds_error=False, fill_value=0.)
+            f_gain_vco = RegularGridInterpolator((phi, theta), ap_dict[horn]['Gvco'], bounds_error=False, fill_value=0.)
+            f_gain_vcx = RegularGridInterpolator((phi, theta), ap_dict[horn]['Gvcx'], bounds_error=False, fill_value=0.)
             
             def f_scalar_gain(phi, theta):
                 Ghco_norm = abs(f_gain_hco((phi, theta)))
@@ -223,10 +223,10 @@ class AntennaPattern:
             phi = ap_dict[horn]['phi']
             theta = ap_dict[horn]['theta']
 
-            f_gain_hco = RegularGridInterpolator((phi, theta), ap_dict[horn]['Ghco'])
-            f_gain_hcx = RegularGridInterpolator((phi, theta), ap_dict[horn]['Ghcx'])
-            f_gain_vco = RegularGridInterpolator((phi, theta), ap_dict[horn]['Gvco'])
-            f_gain_vcx = RegularGridInterpolator((phi, theta), ap_dict[horn]['Gvcx'])
+            f_gain_hco = RegularGridInterpolator((phi, theta), ap_dict[horn]['Ghco'], bounds_error=False, fill_value=0.)
+            f_gain_hcx = RegularGridInterpolator((phi, theta), ap_dict[horn]['Ghcx'], bounds_error=False, fill_value=0.)
+            f_gain_vco = RegularGridInterpolator((phi, theta), ap_dict[horn]['Gvco'], bounds_error=False, fill_value=0.)
+            f_gain_vcx = RegularGridInterpolator((phi, theta), ap_dict[horn]['Gvcx'], bounds_error=False, fill_value=0.)
 
             def f_mueller_matrix(phi, theta):
 
