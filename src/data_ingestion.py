@@ -236,8 +236,6 @@ class DataIngestion:
                 variable_dict['sample_number'] = float32(tile(arange(num_samples), (num_scans, 1)))
                 variable_dict['feed_horn_number'] = float32(zeros((num_scans, num_samples)))
 
-                # Add attitude variable
-
                 # Turn the 1D (once per scan) variables into 2D variables
                 for variable in variable_dict:
                     if len(variable_dict[variable].shape) == 1:
@@ -247,7 +245,7 @@ class DataIngestion:
                 variable_dict = self.remove_out_of_bounds(variable_dict)
 
                 # Split Fore/Aft and Flatten
-                if self.config.split_fore_aft == True:
+                if self.config.split_fore_aft:
                     variable_dict_out = {}
                     mask_dict = {'aft': (variable_dict['processing_scan_angle'] >= self.config.aft_angle_min) & (
                             variable_dict['processing_scan_angle'] <= self.config.aft_angle_max)}
@@ -328,7 +326,6 @@ class DataIngestion:
                                               'y_velocity', 'z_velocity', 'attitude']
                     variables_to_open = set(required_variables + self.config.variables_to_regrid)
 
-
                 for variable in variables_to_open:
                     variable_key = self.config.variable_key_map[variable]
                     data = band_data[variable_key][:]
@@ -348,7 +345,7 @@ class DataIngestion:
                         variable_dict[variable] = data
 
                 # Calculate max altitude for ap_radius calculation (same for all bands)
-                if self.config.regridding_algorithm in ['BG']:
+                if self.config.regridding_algorithm in ['BG', 'RSIR']:
                     if self.config.grid_type == 'L1R' and band in self.config.target_band:
                         pass
                     else:
@@ -391,7 +388,7 @@ class DataIngestion:
                             variable_dict = variable_dict_out
                             del variable_dict_out
                 elif self.config.grid_type == 'L1C':
-                    if self.config.split_fore_aft == True:
+                    if self.config.split_fore_aft:
                         mask_dict = {'aft': (variable_dict['processing_scan_angle'] >= self.config.aft_angle_min) & (
                                 variable_dict['processing_scan_angle'] <= self.config.aft_angle_max)}
                         mask_dict['fore'] = ~mask_dict['aft']
