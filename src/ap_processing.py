@@ -337,22 +337,17 @@ class AntennaPattern:
         lonmin = np.min(longitude) - np.rad2deg(Rpattern/Rcircle)
         lonmax = np.max(longitude) + np.rad2deg(Rpattern/Rcircle)
 
-        xmin, ymax = GridGenerator(self.config,
+        integration_grid = GridGenerator(self.config,
                                    projection_definition=int_projection_definition,
-                                   grid_definition=int_grid_definition).lonlat_to_xy(lonmin, latmax)
+                                   grid_definition=int_grid_definition)
 
-        xmax, ymin = GridGenerator(self.config,
-                                   projection_definition=int_projection_definition,
-                                   grid_definition=int_grid_definition
-                                   ).lonlat_to_xy(lonmax, latmin)
+        xmin, ymax = integration_grid.lonlat_to_xy(lonmin, latmax)
+        xmax, ymin = integration_grid.lonlat_to_xy(lonmax, latmin)
+        xs, ys = integration_grid.generate_grid_xy()
 
-        xs, ys = GridGenerator(self.config,
-                               projection_definition=int_projection_definition,
-                               grid_definition=int_grid_definition).generate_grid_xy()
-
-        xeasemin = xs.min() #should be the cell edge, not the cell center
-        xeasemax = xs.max() #should be the cell edge, not the cell center
-
+        xeasemin = integration_grid.x_min
+        xeasemax = integration_grid.x_max
+        
         xmin1 = xeasemax
         xmax1 = xeasemin
         if xmin < xeasemin:

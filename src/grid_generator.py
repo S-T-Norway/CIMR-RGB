@@ -97,6 +97,13 @@ class GridGenerator:
         self.grid_definition = grid_definition
         self.projection = PROJECTIONS[self.projection_definition]
         self.resolution = GRIDS[grid_definition]['res'] #m
+        self.n_cols = GRIDS[grid_definition]['n_cols'] 
+        self.n_rows = GRIDS[grid_definition]['n_rows'] 
+        self.x_min = GRIDS[grid_definition]['x_min']
+        self.x_max = GRIDS[grid_definition]['x_min'] + self.resolution*self.n_cols
+        self.y_min = GRIDS[grid_definition]['y_max'] - self.resolution*self.n_rows 
+        self.y_max = GRIDS[grid_definition]['y_max']
+
 
     def generate_grid_xy(self, return_resolution=False):
         """
