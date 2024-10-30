@@ -5,31 +5,33 @@
 <!--        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>-->
         <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
 <!--        <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/AMSR2/GW1AM2_202308301033_051D_L1SGBTBR_2220220.h5</path>-->
-        <splitForeAft>True</splitForeAft>
+        <splitForeAft>False</splitForeAft>
         <!-- AMSR2 Specific Configuration Parameters -->
         <sourceBand>C</sourceBand>
-        <targetBand>L</targetBand> <!-- For CIMR, you can choose a target band/s or all of them -->
+        <targetBand>C</targetBand> <!-- For CIMR, you can choose a target band/s or all of them -->
         <LMT>2200</LMT>
     </inputData>
     <GridParams>
-            <gridType>L1R</gridType>
+            <gridType>L1C</gridType>
             <gridDefinition>EASE2_G9km</gridDefinition>
             <projectionDefinition>G</projectionDefinition>
-            <reduced_grid_inds></reduced_grid_inds>
+            <reduced_grid_inds>550 600 880 950</reduced_grid_inds>
     </GridParams>
     <ReGridderParams>
-        <regriddingAlgorithm>BG</regriddingAlgorithm>
+        <regriddingAlgorithm>RSIR</regriddingAlgorithm>
         <searchRadius>36</searchRadius>
-        <max_neighbours>50</max_neighbours>
+        <max_neighbours>100</max_neighbours>
         <variables_to_regrid>bt_h</variables_to_regrid>
         <source_antenna_method>real</source_antenna_method>
         <target_antenna_method>real</target_antenna_method>
         <polarisation_method>scalar</polarisation_method>
-        <source_antenna_threshold>0.01</source_antenna_threshold>
-        <target_antenna_threshold>0.01</target_antenna_threshold>
+        <source_antenna_threshold>0.1</source_antenna_threshold>
+        <target_antenna_threshold>0.1</target_antenna_threshold>
+        <MRF_resolution>3</MRF_resolution>
         <source_gaussian_params>0 1.2 6</source_gaussian_params>
         <target_gaussian_params>0.23 8 9</target_gaussian_params>
-        <boresight_shift></boresight_shift>
+        <boresight_shift>False</boresight_shift>
+        <rsir_iteration>1</rsir_iteration>
     </ReGridderParams>
     <outputData>
         <saveTodisk>True</saveTodisk>

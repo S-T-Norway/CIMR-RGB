@@ -127,13 +127,10 @@ class ConfigFile:
                 print(f"{e}")
                 sys.exit(1)
 
-        if self.grid_type == "L1C":
-            self.reduced_grid_inds = self.validate_reduced_grid_inds(
-                config_object=config_object,
-                reduced_grid_inds='GridParams/reduced_grid_inds'
-            )
-        else:
-            self.reduced_grid_inds = None
+        self.reduced_grid_inds = self.validate_reduced_grid_inds(
+            config_object=config_object,
+            reduced_grid_inds='GridParams/reduced_grid_inds'
+        )
 
         # SMAP specific Parameters
         if self.input_data_type == "SMAP":
@@ -173,6 +170,16 @@ class ConfigFile:
                 '89b': (None, 'Brightness Temperature (89.0GHz-B,')
             }
             self.kernel_size = config_object.find('ReGridderParams/kernelSize').text
+            self.scan_geometry = {
+                '6': (1, 1),
+                '7': (1, 1),
+                '10': (1, 1),
+                '18': (1, 1),
+                '23': (1, 1),
+                '36': (1, 1),
+                '89a': (1, 1),
+                '89b': (1, 1)
+            }
 
         # CIMR Specific Parameters
         if self.input_data_type == "CIMR":
@@ -206,6 +213,14 @@ class ConfigFile:
             self.scan_angle_feed_offsets = {}
             self.u0 = {}
             self.v0 = {}
+            # Scan Geometry Hard Coding for now
+            self.scan_geometry = {
+                'L': (74, 691),
+                'C': (74, 2747*4),
+                'X': (74, 2807*4),
+                'KA': (74, 10395*8),
+                'KU': (74, 7692*8)
+            }
 
 
         self.variables_to_regrid = self.validate_variables_to_regrid(
@@ -258,6 +273,11 @@ class ConfigFile:
                 polarisation_method='ReGridderParams/polarisation_method'
             )
 
+            self.MRF_resolution = self.validate_MRF_resolution(
+                config_object=config_object,
+                MRF_resolution='ReGridderParams/MRF_resolution'
+            )
+
 
             if self.input_data_type == 'SMAP':
                 # Antenna Pattern Path
@@ -275,6 +295,13 @@ class ConfigFile:
                 self.antenna_pattern_path = path.normpath(path.join(getcwd(), relative_path))
 
                 self.antenna_tilt_angle = 46.886 # update to read from file
+
+        if self.regridding_algorithm == 'RSIR':
+            self.rsir_iteration = self.validate_rsir_iteration(
+                config_object=config_object,
+                rsir_iteration='ReGridderParams/rsir_iteration'
+            )
+
     @staticmethod
     def read_config(config_file_path):
         """
@@ -824,6 +851,22 @@ class ConfigFile:
             raise ValueError("Invalid parameter: All parameters must be valid numbers (int or float).") from e
 
         return float_params
+
+    @staticmethod
+    def validate_rsir_iteration(config_object, rsir_iteration):
+            value = config_object.find(rsir_iteration).text
+            return int(value)
+
+    @staticmethod
+    def validate_MRF_resolution(config_object, MRF_resolution):
+        value = config_object.find(MRF_resolution).text
+        valid_input = ['1', '3', '9', '36']
+        if value not in valid_input:
+            raise ValueError(
+                f"Invalid MRF resolution. Check Configuration File."
+                f" Valid MRF resolutions are: {valid_input}"
+            )
+        return value
 
 
 
