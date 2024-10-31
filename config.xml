@@ -8,7 +8,7 @@
         <splitForeAft>False</splitForeAft>
         <!-- AMSR2 Specific Configuration Parameters -->
         <sourceBand>C</sourceBand>
-        <targetBand>C</targetBand> <!-- For CIMR, you can choose a target band/s or all of them -->
+        <targetBand>L</targetBand> <!-- For CIMR, you can choose a target band/s or all of them -->
         <LMT>2200</LMT>
     </inputData>
     <GridParams>
@@ -20,7 +20,7 @@
     <ReGridderParams>
         <regriddingAlgorithm>BG</regriddingAlgorithm>
         <searchRadius>36</searchRadius>
-        <max_neighbours>100</max_neighbours>
+        <max_neighbours>6</max_neighbours>
         <variables_to_regrid>bt_h</variables_to_regrid>
         <source_antenna_method>real</source_antenna_method>
         <target_antenna_method>real</target_antenna_method>
