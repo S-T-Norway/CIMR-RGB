@@ -321,8 +321,8 @@ class AntennaPattern:
         return max_radius
 
     def make_integration_grid(self, longitude, latitude):
-        int_grid_definition = int_grid_definition = f'EASE2_G{self.config.MRF_resolution}km'
-        int_projection_definition = 'G'
+        int_projection_definition = self.config.projection_definition
+        int_grid_definition = self.config.MRF_grid_definition
 
         # Need to update for L1r to change to different grids.
 
