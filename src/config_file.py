@@ -273,9 +273,9 @@ class ConfigFile:
                 polarisation_method='ReGridderParams/polarisation_method'
             )
 
-            self.MRF_resolution = self.validate_MRF_resolution(
+            self.MRF_grid_definition = self.validate_MRF_grid_definition(
                 config_object=config_object,
-                MRF_resolution='ReGridderParams/MRF_resolution'
+                MRF_grid_definition='ReGridderParams/MRF_grid_definition'
             )
 
 
@@ -858,15 +858,18 @@ class ConfigFile:
             return int(value)
 
     @staticmethod
-    def validate_MRF_resolution(config_object, MRF_resolution):
-        value = config_object.find(MRF_resolution).text
-        valid_input = ['1', '3', '9', '36']
-        if value not in valid_input:
-            raise ValueError(
-                f"Invalid MRF resolution. Check Configuration File."
-                f" Valid MRF resolutions are: {valid_input}"
-            )
-        return value
+    def validate_MRF_grid_definition(config_object, MRF_grid_definition):
+        value = config_object.find(MRF_grid_definition).text
+        valid_input = ['EASE2_G3km', 'EASE2_G1km' ,'EASE2_G9km', 'EASE2_N9km', 'EASE2_S9km',
+                       'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km',
+                       'STEREO_N25km', 'STEREO_S25km']
+        if value in valid_input:
+            return value
+        raise ValueError(
+            f"Invalid Grid Definition, check configuration file. "
+            f"Valid grid definitions are: {valid_input}"
+        )
+
 
 
 

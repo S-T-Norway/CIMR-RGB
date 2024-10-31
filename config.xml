@@ -15,10 +15,10 @@
             <gridType>L1C</gridType>
             <gridDefinition>EASE2_G9km</gridDefinition>
             <projectionDefinition>G</projectionDefinition>
-            <reduced_grid_inds>550 600 880 950</reduced_grid_inds>
+            <reduced_grid_inds>550 600 880 950</reduced_grid_inds> #550 600 880 950
     </GridParams>
     <ReGridderParams>
-        <regriddingAlgorithm>RSIR</regriddingAlgorithm>
+        <regriddingAlgorithm>BG</regriddingAlgorithm>
         <searchRadius>36</searchRadius>
         <max_neighbours>100</max_neighbours>
         <variables_to_regrid>bt_h</variables_to_regrid>
@@ -27,7 +27,7 @@
         <polarisation_method>scalar</polarisation_method>
         <source_antenna_threshold>0.1</source_antenna_threshold>
         <target_antenna_threshold>0.1</target_antenna_threshold>
-        <MRF_resolution>3</MRF_resolution>
+        <MRF_grid_definition>EASE2_G3km</MRF_grid_definition>
         <source_gaussian_params>0 1.2 6</source_gaussian_params>
         <target_gaussian_params>0.23 8 9</target_gaussian_params>
         <boresight_shift>False</boresight_shift>
