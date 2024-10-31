@@ -4,7 +4,7 @@ from numpy import meshgrid, isinf, where, full, nan, unravel_index, all, sqrt
 from nn import NNInterp
 from ids import IDSInterp
 from dib import DIBInterp
-from bg_l1r import BGInterp
+from bg import BGInterp
 from rsir import rSIRInterp
 from grid_generator import GridGenerator, GRIDS
 from pyresample import kd_tree, geometry
@@ -18,12 +18,16 @@ class ReGridder:
     def __init__(self, config):
         self.config = config
         self.algos = {
-            'NN': NNInterp(self.config),
-            'DIB': DIBInterp(self.config),
-            'IDS': IDSInterp(self.config),
-            'BG': BGInterp(self.config),
-            'RSIR': rSIRInterp(self.config)
+            'NN': lambda band=None: NNInterp(self.config),
+            'DIB': lambda band=None: DIBInterp(self.config),
+            'IDS': lambda band=None: IDSInterp(self.config),
+            'BG': lambda band: BGInterp(self.config, band),
+            'RSIR': lambda band: rSIRInterp(self.config, band)
         }
+
+    def get_algorithm(self, algorithm_name, band=None):
+        algo = self.algos.get(algorithm_name)
+        return algo(band)
 
     # Check if you need the full data dict once the function is complete
     def get_grid(self, data_dict=None):
@@ -262,8 +266,9 @@ class ReGridder:
                     }
 
                     # Regrid Variables
-                    variable_dict_out[scan_direction] = self.algos.get(self.config.regridding_algorithm).interp_variable_dict(
-                        **args)
+                    algorithm = self.get_algorithm(algorithm_name=self.config.regridding_algorithm,
+                                                   band=band)
+                    variable_dict_out[scan_direction] = algorithm.interp_variable_dict(**args)
 
                     # Add cell_row and cell_col indexes
                     cell_row, cell_col = self.create_output_grid_inds(grid_1d_index=samples_dict[scan_direction]['grid_1d_index'])
@@ -287,9 +292,10 @@ class ReGridder:
                     'band': band
                 }
 
-                variable_dict_out = self.algos.get(self.config.regridding_algorithm).interp_variable_dict(
-                    **args
-                )
+                # Regrid Variables
+                algorithm = self.get_algorithm(algorithm_name=self.config.regridding_algorithm,
+                                               band=band)
+                variable_dict_out = algorithm.interp_variable_dict(**args)
 
                 # Add cell_row and cell_col indexes
                 cell_row, cell_col = self.create_output_grid_inds(samples_dict['grid_1d_index'])
