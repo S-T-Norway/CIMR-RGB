@@ -286,7 +286,7 @@ class ReGridder:
                 args = {
                     'samples_dict': samples_dict,
                     'variable_dict': variable_dict,
-                    'target_dict': data_dict[self.config.target_band[0]],
+                    'target_dict': target_dict,
                     'target_grid': target_grid,
                     'scan_direction': None,
                     'band': band

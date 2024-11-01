@@ -532,7 +532,6 @@ class DataIngestion:
                     elif self.config.input_data_type == 'AMSR2':
                         # Include AMSR2 specific fill values
                         pass
-                    print(variable)
                     if variable_dict[variable].ndim == 1:
                         nan_map |= isnan(variable_dict[variable])
                     # Deadling with the attitude array
