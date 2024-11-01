@@ -278,6 +278,11 @@ class ConfigFile:
                 MRF_grid_definition='ReGridderParams/MRF_grid_definition'
             )
 
+            self.MRF_projection_definition = self.validate_MRF_projection_definition(
+                config_object=config_object,
+                MRF_projection_definition='ReGridderParams/MRF_projection_definition'
+            )
+
 
             if self.input_data_type == 'SMAP':
                 # Antenna Pattern Path
@@ -507,7 +512,9 @@ class ConfigFile:
 
         valid_input = ['EASE2_G9km', 'EASE2_N9km', 'EASE2_S9km',
                        'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km',
-                       'STEREO_N25km', 'STEREO_S25km']
+                       'STEREO_N25km', 'STEREO_S25km', 'STEREO_N6.25km',
+                       'STEREO_N12.5km', 'STEREO_S6.25km', 'STEREO_S12.5km',
+                       'STEREO_S25km']
         if config_object.find(grid_definition).text in valid_input:
             return config_object.find(grid_definition).text
         raise ValueError(
@@ -539,7 +546,7 @@ class ConfigFile:
                 valid_input = ['G', 'N', 'S']
 
             elif 'STEREO' in grid_definition:
-                valid_input = ['SN', 'SS']
+                valid_input = ['PS_N', 'PS_S']
 
             if config_object.find(projection_definition).text in valid_input:
                 return config_object.find(projection_definition).text
@@ -862,12 +869,23 @@ class ConfigFile:
         value = config_object.find(MRF_grid_definition).text
         valid_input = ['EASE2_G3km', 'EASE2_G1km' ,'EASE2_G9km', 'EASE2_N9km', 'EASE2_S9km',
                        'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km',
-                       'STEREO_N25km', 'STEREO_S25km']
+                       'STEREO_N25km', 'STEREO_S25km', 'EASE2_N3km', 'EASE2_S3km']
         if value in valid_input:
             return value
         raise ValueError(
             f"Invalid Grid Definition, check configuration file. "
             f"Valid grid definitions are: {valid_input}"
+        )
+
+    @staticmethod
+    def validate_MRF_projection_definition(config_object, MRF_projection_definition):
+        value = config_object.find(MRF_projection_definition).text
+        valid_input = ['G', 'N', 'S']
+        if value in valid_input:
+            return value
+        raise ValueError(
+            f"Invalid Projection Definition, check configuration file."
+            f" Valid projection definitions are: {valid_input}"
         )
 
 

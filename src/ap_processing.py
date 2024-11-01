@@ -321,7 +321,7 @@ class AntennaPattern:
         return max_radius
 
     def make_integration_grid(self, longitude, latitude):
-        int_projection_definition = self.config.projection_definition
+        int_projection_definition = self.config.MRF_projection_definition
         int_grid_definition = self.config.MRF_grid_definition
 
         # Need to update for L1r to change to different grids.
@@ -344,6 +344,12 @@ class AntennaPattern:
         xmin, ymax = integration_grid.lonlat_to_xy(lonmin, latmax)
         xmax, ymin = integration_grid.lonlat_to_xy(lonmax, latmin)
         xs, ys = integration_grid.generate_grid_xy()
+
+        test_x, test_y = GridGenerator(self.config,
+                                   projection_definition=int_projection_definition,
+                                   grid_definition=int_grid_definition).lonlat_to_xy(lonmin, latmax)
+
+
 
         xeasemin = integration_grid.x_min
         xeasemax = integration_grid.x_max
