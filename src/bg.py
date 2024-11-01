@@ -1,6 +1,6 @@
 from grid_generator import GridGenerator, GRIDS
 from ap_processing import AntennaPattern
-from  numpy import where, nan, take, full, all, sum, zeros, identity, dot, nansum, unravel_index, rad2deg
+from  numpy import where, nan, take, full, all, sum, zeros, identity, dot, nansum, unravel_index, rad2deg, sqrt
 from numpy.linalg import inv
 from tqdm import tqdm
 
@@ -82,6 +82,7 @@ class BGInterp:
             target_ant_pattern /= sum(target_ant_pattern)
 
         elif self.config.grid_type == 'L1C':
+            #Here area is needed
             sigma_lon, sigma_lat = target_cell_size
             target_ant_pattern = AntennaPattern.target_gaussian(int_dom_lons, int_dom_lats, target_lon, target_lat, 
                                                                 sigma_lon, sigma_lat, rot=0.)
@@ -93,6 +94,7 @@ class BGInterp:
         indexes = samples_dict['indexes']
         fill_value = len(variable_dict['longitude'])
         weights = full((indexes.shape[0], indexes.shape[1]), nan)
+        grid_area = GridGenerator(self.config, self.config.projection_definition, self.config.grid_definition).get_grid_area()
 
         for target_cell in tqdm(range(indexes.shape[0])):
 
@@ -101,9 +103,12 @@ class BGInterp:
                 target_lon, target_lat = (target_grid[0].flatten('C')[samples_dict['grid_1d_index'][target_cell]],
                                           target_grid[1].flatten('C')[samples_dict['grid_1d_index'][target_cell]])
 
+
+
                 # TODO: this works only with EASE 9km grid.. for other grids, the size of the cell should be estimated in grid_generator
                 Rearth  = (6378137. + 6356752.)/2. #m
-                resolution = GridGenerator(self.config, self.config.projection_definition, self.config.grid_definition).resolution
+                cell_area = grid_area.flatten('C')[samples_dict['grid_1d_index'][target_cell]]
+                resolution = sqrt(cell_area)
                 angle   = rad2deg(resolution/Rearth)
                 target_cell_size = [angle, angle]
 
