@@ -141,6 +141,8 @@ class AntennaPattern:
     @staticmethod
     def target_gaussian(grid_lons, grid_lats, lon0, lat0, slon=0.05, slat=0.05, rot=0.):
 
+        # This target gaussian can be also be used for the source samples.
+
         # This is to avoid complications at the international date line, I might need to
         # do something similar with 0 deg latitude, but I don't think so.
         longitudes_360 = (grid_lons + 360) % 360
@@ -155,6 +157,10 @@ class AntennaPattern:
 
         Z = np.exp(-0.5 * (((x * np.cos(rot) + y * np.sin(rot)) ** 2) / slon ** 2 + (
                     (-x * np.sin(rot) + y * np.cos(rot)) ** 2) / slat ** 2))
+
+        Z /= Z.sum()
+
+        # Need to apply the target gaussian threshold.
 
         return Z
 
@@ -344,12 +350,6 @@ class AntennaPattern:
         xmin, ymax = integration_grid.lonlat_to_xy(lonmin, latmax)
         xmax, ymin = integration_grid.lonlat_to_xy(lonmax, latmin)
         xs, ys = integration_grid.generate_grid_xy()
-
-        test_x, test_y = GridGenerator(self.config,
-                                   projection_definition=int_projection_definition,
-                                   grid_definition=int_grid_definition).lonlat_to_xy(lonmin, latmax)
-
-
 
         xeasemin = integration_grid.x_min
         xeasemax = integration_grid.x_max
