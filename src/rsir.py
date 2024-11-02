@@ -257,7 +257,7 @@ class rSIRInterp:
             if variable.removesuffix(f"{scan_direction}") not in ['bt_h', 'bt_v', 'bt_3', 'bt_4']:
                 continue
 
-            variable_dict_out[variable] = self.rsir(
+            variable_dict_out[f"{variable}{scan_direction}"] = self.rsir(
                 band=band,
                 variable = variable,
                 samples_dict=samples_dict,
