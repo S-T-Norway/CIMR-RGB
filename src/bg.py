@@ -31,7 +31,7 @@ class BGInterp:
             target_ap = None
 
 
-    def get_antenna_patterns(self, band, variable_dict, target_dict, target_lon, target_lat, source_inds, target_inds, target_cell_size=None):
+    def get_antenna_patterns(self, variable_dict, target_dict, target_lon, target_lat, source_inds, target_inds, target_cell_size=None):
 
         # Make integration grid
         int_dom_lons, int_dom_lats = self.source_ap.make_integration_grid(
@@ -41,55 +41,65 @@ class BGInterp:
 
         # Project source patterns to grid
         source_ant_patterns = []
-        for sample in source_inds: # CHECK SAMPLE
-            sample_pattern=self.source_ap.antenna_pattern_to_earth(
-                int_dom_lons=int_dom_lons,
-                int_dom_lats=int_dom_lats,
-                x_pos=variable_dict['x_position'][sample],
-                y_pos=variable_dict['y_position'][sample],
-                z_pos=variable_dict['z_position'][sample],
-                x_vel=variable_dict['x_velocity'][sample],
-                y_vel=variable_dict['y_velocity'][sample],
-                z_vel=variable_dict['z_velocity'][sample],
-                processing_scan_angle=variable_dict['processing_scan_angle'][sample],
-                feed_horn_number=variable_dict['feed_horn_number'][sample],
-                attitude=variable_dict['attitude'][sample],
-                lon_l1b = variable_dict['longitude'][sample],
-                lat_l1b = variable_dict['latitude'][sample]
-            )
-            sample_pattern /= sum(sample_pattern)
-            source_ant_patterns.append(sample_pattern)
+        for sample in source_inds:
+            if self.config.source_antenna_method in ['real', 'gaussian_projected']:
+                sample_pattern=self.source_ap.antenna_pattern_to_earth(
+                    int_dom_lons=int_dom_lons,
+                    int_dom_lats=int_dom_lats,
+                    x_pos=variable_dict['x_position'][sample],
+                    y_pos=variable_dict['y_position'][sample],
+                    z_pos=variable_dict['z_position'][sample],
+                    x_vel=variable_dict['x_velocity'][sample],
+                    y_vel=variable_dict['y_velocity'][sample],
+                    z_vel=variable_dict['z_velocity'][sample],
+                    processing_scan_angle=variable_dict['processing_scan_angle'][sample],
+                    feed_horn_number=variable_dict['feed_horn_number'][sample],
+                    attitude=variable_dict['attitude'][sample],
+                    lon_l1b = variable_dict['longitude'][sample],
+                    lat_l1b = variable_dict['latitude'][sample]
+                )
+                sample_pattern /= sum(sample_pattern)
+                source_ant_patterns.append(sample_pattern)
+            else:
+                # Project a half power antenna pattern to the approximate using a gaussian
+                pass
+
 
         # Get target patterns
         target_ant_pattern = None
         if self.config.grid_type == 'L1R':
-
-            target_ant_pattern = self.target_ap.antenna_pattern_to_earth(
-                int_dom_lons=int_dom_lons,
-                int_dom_lats=int_dom_lats,
-                x_pos=target_dict['x_position'][target_inds],
-                y_pos=target_dict['y_position'][target_inds],
-                z_pos=target_dict['z_position'][target_inds],
-                x_vel=target_dict['x_velocity'][target_inds],
-                y_vel=target_dict['y_velocity'][target_inds],
-                z_vel=target_dict['z_velocity'][target_inds],
-                processing_scan_angle=target_dict['processing_scan_angle'][target_inds],
-                feed_horn_number=target_dict['feed_horn_number'][target_inds],
-                attitude=target_dict['attitude'][target_inds],
-                lon_l1b=target_lon,
-                lat_l1b=target_lat
-            )
-            target_ant_pattern /= sum(target_ant_pattern)
+            if self.config.target_pattern_method in ['real', 'gaussian_projected']:
+                target_ant_pattern = self.target_ap.antenna_pattern_to_earth(
+                    int_dom_lons=int_dom_lons,
+                    int_dom_lats=int_dom_lats,
+                    x_pos=target_dict['x_position'][target_inds],
+                    y_pos=target_dict['y_position'][target_inds],
+                    z_pos=target_dict['z_position'][target_inds],
+                    x_vel=target_dict['x_velocity'][target_inds],
+                    y_vel=target_dict['y_velocity'][target_inds],
+                    z_vel=target_dict['z_velocity'][target_inds],
+                    processing_scan_angle=target_dict['processing_scan_angle'][target_inds],
+                    feed_horn_number=target_dict['feed_horn_number'][target_inds],
+                    attitude=target_dict['attitude'][target_inds],
+                    lon_l1b=target_lon,
+                    lat_l1b=target_lat
+                )
+                target_ant_pattern /= sum(target_ant_pattern)
+            else:
+                # Project a half power antenna pattern to the approximate using a gaussian
+                pass
 
         elif self.config.grid_type == 'L1C':
             #Here area is needed
+            # target cell size can be investigated can be a sharp one the size of the cell or it could be the
+            # approximate size of a half power footprint centered at that location
             sigma_lon, sigma_lat = target_cell_size
             target_ant_pattern = AntennaPattern.target_gaussian(int_dom_lons, int_dom_lats, target_lon, target_lat, 
                                                                 sigma_lon, sigma_lat, rot=0.)
 
         return source_ant_patterns, target_ant_pattern
 
-    def BG(self, band, samples_dict, variable_dict, target_dict, target_grid):
+    def BG(self, samples_dict, variable_dict, target_dict, target_grid):
 
         indexes = samples_dict['indexes']
         fill_value = len(variable_dict['longitude'])
@@ -122,7 +132,6 @@ class BGInterp:
             input_samples = samples[samples != fill_value]
             # print(f"input_samples: {input_samples}")
             source_ant_patterns, target_ant_pattern = self.get_antenna_patterns(
-                band=band,
                 variable_dict=variable_dict,
                 target_dict=target_dict,
                 target_lon = target_lon,
@@ -154,7 +163,7 @@ class BGInterp:
 
         return weights
 
-    def get_weights(self, band, samples_dict, variable_dict, target_dict, target_grid, scan_direction):
+    def get_weights(self, samples_dict, variable_dict, target_dict, target_grid, scan_direction):
 
         # Preparing variable_dict
         if scan_direction:
@@ -169,7 +178,6 @@ class BGInterp:
         variable_dict={key.removesuffix(f'{scan_direction}'): value for key, value in variable_dict.items()}
 
         weights = self.BG(
-            band=band,
             samples_dict=samples_dict,
             variable_dict=variable_dict,
             target_dict=target_dict,
@@ -201,7 +209,6 @@ class BGInterp:
             variable_dict = {key: value for key, value in variable_dict.items() if key.endswith(scan_direction)}
 
         weights = self.get_weights(
-            band=band,
             samples_dict=samples_dict,
             variable_dict=variable_dict,
             target_dict=target_dict,
