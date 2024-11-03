@@ -153,8 +153,12 @@ class BGInterp:
                 for j in range(num_input_samples):
                     g[i, j] = sum(source_ant_patterns[i] * source_ant_patterns[j])
 
-            k = 0. # Regularisation Factor
-            g = g + k*identity(num_input_samples)
+            # Regularisation Factor
+            k = self.config.bg_smoothing
+            # Error Covariance Matrix
+            E = identity(num_input_samples)
+
+            g = g + k*E
             ginv = inv(g)
 
             # Weights
@@ -185,6 +189,9 @@ class BGInterp:
         )
 
         return weights
+
+    def get_nedt(self, weights):
+        pass
 
     def interp_variable_dict(self, **kwargs):
 
@@ -221,6 +228,9 @@ class BGInterp:
             # Check if you want to regrid this variable
             if variable.removesuffix(f"_{scan_direction}") not in self.config.variables_to_regrid:
                 continue
+
+            if 'nedt' in variable:
+                nedt = self.get_nedt(weights)
 
             # Apply weights to the variable you want to regrid
             fill_value = len(variable_dict[variable])
