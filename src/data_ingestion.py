@@ -327,22 +327,28 @@ class DataIngestion:
                     variables_to_open = set(required_variables + self.config.variables_to_regrid)
 
                 for variable in variables_to_open:
-                    variable_key = self.config.variable_key_map[variable]
-                    data = band_data[variable_key][:]
-                    if variable == 'x_position':
-                        variable_dict[variable] = data[:,:,0]
-                    elif variable == 'y_position':
-                        variable_dict[variable] = data[:,:,1]
-                    elif variable == 'z_position':
-                        variable_dict[variable] = data[:,:,2]
-                    elif variable == 'x_velocity':
-                        variable_dict[variable] = data[:,:,0]
-                    elif variable == 'y_velocity':
-                        variable_dict[variable] = data[:,:,1]
-                    elif variable == 'z_velocity':
-                        variable_dict[variable] = data[:,:,2]
+                    if 'nedt' in variable:
+                        # Synthetically create NEDT in the absence of L1b field and/or MACRAD LUTs
+                        shape = band_data[self.config.variable_key_map['longitude']][:].shape
+                        nedt = self.config.nedt[band]
+                        variable_dict[variable] = tile(nedt, shape)
                     else:
-                        variable_dict[variable] = data
+                        variable_key = self.config.variable_key_map[variable]
+                        data = band_data[variable_key][:]
+                        if variable == 'x_position':
+                            variable_dict[variable] = data[:,:,0]
+                        elif variable == 'y_position':
+                            variable_dict[variable] = data[:,:,1]
+                        elif variable == 'z_position':
+                            variable_dict[variable] = data[:,:,2]
+                        elif variable == 'x_velocity':
+                            variable_dict[variable] = data[:,:,0]
+                        elif variable == 'y_velocity':
+                            variable_dict[variable] = data[:,:,1]
+                        elif variable == 'z_velocity':
+                            variable_dict[variable] = data[:,:,2]
+                        else:
+                            variable_dict[variable] = data
 
                 # Calculate max altitude for ap_radius calculation (same for all bands)
                 if self.config.regridding_algorithm in ['BG', 'RSIR']:
@@ -364,6 +370,8 @@ class DataIngestion:
                 variable_dict['scan_number'] = float32(repeat(arange(num_scans)[:, newaxis], num_samples * num_feed_horns,axis=1).flatten('C'))
                 single_row = tile(arange(num_samples), num_feed_horns)
                 variable_dict['sample_number'] = float32(tile(single_row, (num_scans, 1)).flatten('C'))
+
+
 
                 # Remove out of bounds here
                 if self.config.grid_type != 'L1R':
