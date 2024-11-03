@@ -30,7 +30,6 @@ class DIBInterp:
                 elif variable.removesuffix(f'_{scan_direction}') not in self.config.variables_to_regrid:
                     continue
                 else:
-                    print(variable)
                     variable_dict_out[variable] = self.DIB(
                         samples_dict=samples_dict,
                         variable=variable_dict[variable]
