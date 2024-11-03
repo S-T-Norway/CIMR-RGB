@@ -152,7 +152,12 @@ class ConfigFile:
                 'z_velocity': 'z_vel',
                 'sub_satellite_lon': 'sc_nadir_lon',
                 'sub_satellite_lat': 'sc_nadir_lat',
-                'altitude': 'sc_geodetic_alt_ellipsoid'
+                'altitude': 'sc_geodetic_alt_ellipsoid',
+                'faraday_rot_angle': 'faraday_rotation_angle',
+                'nedt_h': 'nedt_h',
+                'nedt_v': 'nedt_v',
+                'nedt_3': 'nedt_3',
+                'nedt_4': 'nedt_4'
             }
 
         # AMSR2 specific parameters
@@ -200,6 +205,10 @@ class ConfigFile:
                 'sub_satellite_lon': 'sub_satellite_lon',
                 'sub_satellite_lat': 'sub_satellite_lat',
                 'attitude': 'SatelliteBody2EarthCenteredInertialFrame',
+                'nedt_h': 'nedt_h',
+                'nedt_v': 'nedt_v',
+                'nedt_3': 'nedt_3',
+                'nedt_4': 'nedt_4'
             }
             self.aft_angle_min = 180
             self.aft_angle_max = 360
@@ -220,6 +229,13 @@ class ConfigFile:
                 'X': (74, 2807*4),
                 'KA': (74, 10395*8),
                 'KU': (74, 7692*8)
+            }
+            self.nedt = {
+                'L': 0.3,
+                'C': 0.2,
+                'X': 0.3,
+                'KA': 0.4,
+                'KU': 0.7
             }
 
 
@@ -305,6 +321,12 @@ class ConfigFile:
             self.rsir_iteration = self.validate_rsir_iteration(
                 config_object=config_object,
                 rsir_iteration='ReGridderParams/rsir_iteration'
+            )
+
+        if self.regridding_algorithm == 'BG':
+            self.bg_smoothing = self.validate_bg_smoothing(
+                config_object=config_object,
+                bg_smoothing='ReGridderParams/bg_smoothing'
             )
 
     @staticmethod
@@ -680,7 +702,8 @@ class ConfigFile:
         value = config_object.find(variables_to_regrid).text
         if input_data_type == 'SMAP':
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
-                         'processing_scan_angle', 'longitude', 'latitude']
+                         'processing_scan_angle', 'longitude', 'latitude', 'faraday_rot_angle', 'nedt_h',
+                           'nedt_v', 'nedt_3', 'nedt_4']
             default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                             'processing_scan_angle', 'longitude', 'latitude']
 
@@ -689,7 +712,7 @@ class ConfigFile:
 
         elif input_data_type == 'CIMR':
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
-                           'processing_scan_angle', 'longitude', 'latitude']
+                           'processing_scan_angle', 'longitude', 'latitude', 'nedt_h', 'nedt_v', 'nedt_3', 'nedt_4']
             default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                             'processing_scan_angle', 'longitude', 'latitude']
 
@@ -887,6 +910,15 @@ class ConfigFile:
             f"Invalid Projection Definition, check configuration file."
             f" Valid projection definitions are: {valid_input}"
         )
+
+    @staticmethod
+    def validate_bg_smoothing(config_object, bg_smoothing):
+        value = config_object.find(bg_smoothing).text
+        if value is not None:
+            value = float(value)
+        else:
+            value = 0
+        return value
 
 
 
