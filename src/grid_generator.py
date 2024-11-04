@@ -246,14 +246,14 @@ class GridGenerator:
             ys (numpy.ndarray of float): Array of y-coordinates.
         """
 
-        if "EASE2" in self.config.grid_definition:
+        if "EASE2" in self.grid_definition:
             result = self.generate_grid_xy_ease2(return_resolution=return_resolution)
 
-        elif "" in self.config.grid_definition:
+        elif "" in self.grid_definition:
             result = self.generate_grid_xy_stereo(return_resolution=return_resolution)
 
         else:
-            raise NotImplementedError(f"Grid {self.config.grid_definition} is not implemented.")
+            raise NotImplementedError(f"Grid {self.grid_definition} is not implemented.")
 
 
         if return_resolution:
@@ -469,35 +469,35 @@ class GridGenerator:
             y-coordinate/s
         """
 
-        if self.config.projection_definition == 'G':
+        if self.projection_definition == 'G':
 
             x, y = self.lonlat_to_xy_cea(lon=lon, lat=lat)
 
-        elif self.config.projection_definition == 'N':
+        elif self.projection_definition == 'N':
 
             x, y = self.lonlat_to_xy_laea(lon=lon, lat=lat, pole='N')
 
-        elif self.config.projection_definition == 'S':
+        elif self.projection_definition == 'S':
 
             x, y = self.lonlat_to_xy_laea(lon=lon, lat=lat, pole='S')
 
-        elif self.config.projection_definition == 'PS_N':
+        elif self.projection_definition == 'PS_N':
 
             x, y = self.lonlat_to_xy_stereo(lon=lon, lat=lat, pole='N')
 
-        elif self.config.projection_definition == 'PS_S':
+        elif self.projection_definition == 'PS_S':
 
             x, y = self.lonlat_to_xy_stereo(lon=lon, lat=lat, pole='S')
 
-        elif self.config.projection_definition == 'UPS_N':
+        elif self.projection_definition == 'UPS_N':
 
             x, y = self.lonlat_to_xy_ups(lon=lon, lat=lat, pole='N')
 
-        elif self.config.projection_definition == 'UPS_S':
+        elif self.projection_definition == 'UPS_S':
 
             x, y = self.lonlat_to_xy_ups(lon=lon, lat=lat, pole='S')
 
-        elif self.config.projection_definition == 'MERC_G':
+        elif self.projection_definition == 'MERC_G':
 
             x, y = self.lonlat_to_xy_merc(lon=lon, lat=lat)
 
@@ -547,7 +547,7 @@ class GridGenerator:
     #        ((1 - E2) / (2 * E)) * np.log((1 - E) / (1 + E))
     #    )
 
-    #    if self.config.projection_definition == 'G':
+    #    if self.projection_definition == 'G':
     #        lat_ts_value = float(
     #            next(
     #                (param.split('=')[1] for param in params if 'lat_ts' in param),
@@ -562,7 +562,7 @@ class GridGenerator:
 
     #        return x, y
 
-    #    if self.config.projection_definition == 'N':
+    #    if self.projection_definition == 'N':
     #        pole_diff = abs(qp - q)
     #        inds = pole_diff >= epsilon
     #        rho = MAP_EQUATORIAL_RADIUS * np.sqrt(qp - q) * inds
@@ -572,7 +572,7 @@ class GridGenerator:
 
     #        return x, y
 
-    #    if self.config.projection_definition == 'S':
+    #    if self.projection_definition == 'S':
     #        pole_diff = abs(qp + q)
     #        inds = pole_diff >= epsilon
     #        rho = MAP_EQUATORIAL_RADIUS * np.sqrt(qp + q) * inds
@@ -581,7 +581,7 @@ class GridGenerator:
 
     #        return x, y
 
-    #    if self.config.projection_definition == 'S':
+    #    if self.projection_definition == 'S':
     #        pass
 
     # -------------------------------------------------------------------------
@@ -763,35 +763,35 @@ class GridGenerator:
             Latitude/s in decimal degrees
         """
 
-        if self.config.projection_definition == 'G':
+        if self.projection_definition == 'G':
 
             lon, lat = self.xy_to_lonlat_cea(x=x, y=y)
 
-        elif self.config.projection_definition == 'N':
+        elif self.projection_definition == 'N':
 
             lon, lat = self.xy_to_lonlat_laea(x=x, y=y, pole='N')
 
-        elif self.config.projection_definition == 'S':
+        elif self.projection_definition == 'S':
 
             lon, lat = self.xy_to_lonlat_laea(x=x, y=y, pole='S')
 
-        elif self.config.projection_definition == 'PS_N':
+        elif self.projection_definition == 'PS_N':
 
             lon, lat = self.xy_to_lonlat_stereo(x=x, y=y, pole='N')
 
-        elif self.config.projection_definition == 'PS_S':
+        elif self.projection_definition == 'PS_S':
 
             lon, lat = self.xy_to_lonlat_stereo(x=x, y=y, pole='S')
 
-        elif self.config.projection_definition == 'UPS_N':
+        elif self.projection_definition == 'UPS_N':
 
             lon, lat = self.xy_to_lonlat_ups(x=x, y=y, pole='N')
 
-        elif self.config.projection_definition == 'UPS_S':
+        elif self.projection_definition == 'UPS_S':
 
             lon, lat = self.xy_to_lonlat_ups(x=x, y=y, pole='S')
 
-        elif self.config.projection_definition == 'MERC_G':
+        elif self.projection_definition == 'MERC_G':
 
             lon, lat = self.xy_to_lonlat_merc(x=x, y=y)
 
@@ -829,7 +829,7 @@ class GridGenerator:
     #    beta = None
     #    lam = None
 
-    #    if self.config.projection_definition == 'G':
+    #    if self.projection_definition == 'G':
     #        lat_ts_value = float(
     #            next(
     #                (param.split('=')[1] for param in params if 'lat_ts' in param),
@@ -842,12 +842,12 @@ class GridGenerator:
     #        beta = np.arcsin((2 * y * k0) / (MAP_EQUATORIAL_RADIUS * qp))
     #        lam = x / (MAP_EQUATORIAL_RADIUS * k0)
 
-    #    elif self.config.projection_definition == 'N':
+    #    elif self.projection_definition == 'N':
     #        rho = np.sqrt(x ** 2 + y ** 2)
     #        beta = np.arcsin(1 - (rho ** 2 / (MAP_EQUATORIAL_RADIUS ** 2 * qp)))
     #        lam = np.arctan2(x, -y)
 
-    #    elif self.config.projection_definition == 'S':
+    #    elif self.projection_definition == 'S':
     #        rho = np.sqrt(x ** 2 + y ** 2)
     #        beta = -1 * np.arcsin(1 - (rho ** 2 / (MAP_EQUATORIAL_RADIUS ** 2 * qp)))
     #        lam = np.arctan2(x, y)
@@ -882,8 +882,8 @@ class GridGenerator:
             Column index/indices
         """
         _, _, res = self.generate_grid_xy(return_resolution=True)
-        n_cols = GRIDS[self.config.grid_type]['n_cols']
-        n_rows = GRIDS[self.config.grid_type]['n_rows']
+        n_cols = GRIDS[self.grid_type]['n_cols']
+        n_rows = GRIDS[self.grid_type]['n_rows']
         r0 = (n_cols - 1) / 2
         s0 = (n_rows - 1) / 2
         col = r0 + (x / res)
