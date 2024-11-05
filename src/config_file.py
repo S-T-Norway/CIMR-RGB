@@ -117,6 +117,7 @@ class ConfigFile:
         self.boresight_shift = self.validate_boresight_shift(
             config_object = config_object,
             boresight_shift = 'ReGridderParams/boresight_shift'
+            input_data_type = self.input_data_type
         )
 
         if self.grid_type == "L1R":
@@ -814,7 +815,10 @@ class ConfigFile:
             return config_object.find(polarisation_method).text
 
     @staticmethod
-    def validate_boresight_shift(config_object, boresight_shift):
+    def validate_boresight_shift(config_object, boresight_shift, input_data_type):
+        if input_data_type != 'SMAP':
+            return False
+
         value = config_object.find(boresight_shift).text
         valid_input = ['True', 'False']
         if value is None:
