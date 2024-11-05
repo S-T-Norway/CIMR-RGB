@@ -116,7 +116,7 @@ class ConfigFile:
 
         self.boresight_shift = self.validate_boresight_shift(
             config_object = config_object,
-            boresight_shift = 'ReGridderParams/boresight_shift'
+            boresight_shift = 'ReGridderParams/boresight_shift',
             input_data_type = self.input_data_type
         )
 

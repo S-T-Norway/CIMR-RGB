@@ -1,6 +1,7 @@
 from grid_generator import GridGenerator, GRIDS
 from ap_processing import AntennaPattern
-from  numpy import where, nan, take, full, all, sum, zeros, identity, dot, nansum, unravel_index, rad2deg, sqrt, newaxis, eye, einsum
+from  numpy import (where, nan, take, full, all, sum, zeros, identity, dot, nansum, 
+                    unravel_index, rad2deg, sqrt, newaxis, eye, einsum, concatenate)
 from numpy.linalg import inv
 from tqdm import tqdm
 
@@ -33,10 +34,13 @@ class BGInterp:
 
     def get_antenna_patterns(self, variable_dict, target_dict, target_lon, target_lat, source_inds, target_inds, target_cell_size=None):
 
+        ap_lons_int_grid = concatenate((variable_dict['longitude'][source_inds], [target_lon]))
+        ap_lats_int_grid = concatenate((variable_dict['latitude'][source_inds] , [target_lat]))
+
         # Make integration grid
         int_dom_lons, int_dom_lats = self.source_ap.make_integration_grid(
-            longitude=variable_dict['longitude'][source_inds],
-            latitude=variable_dict['latitude'][source_inds]
+            longitude=ap_lons_int_grid,
+            latitude=ap_lats_int_grid
         )
 
         # Project source patterns to grid
