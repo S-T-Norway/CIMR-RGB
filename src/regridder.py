@@ -1,5 +1,5 @@
 import numpy as np
-from numpy import meshgrid, isinf, where, full, nan, unravel_index, all, sqrt
+from numpy import meshgrid, isinf, where, full, nan, unravel_index, all, sqrt, sum, ones
 
 from nn import NNInterp
 from ids import IDSInterp
@@ -275,6 +275,14 @@ class ReGridder:
                     variable_dict_out[scan_direction][f'cell_row_{scan_direction}'] = cell_row
                     variable_dict_out[scan_direction][f'cell_col_{scan_direction}'] = cell_col
 
+                    # Add regridding_n_samples
+                    if 'regridding_n_samples' in self.config.variables_to_regrid:
+                        if samples_dict[scan_direction]['distances'].ndim == 1:
+                            variable_dict_out[scan_direction]["regridding_n_samples"] = ones(len(samples_dict[scan_direction]['distances']), dtype=int)
+                        else:
+                            variable_dict_out[scan_direction][f"regridding_n_samples_{scan_direction}"] = (
+                                sum(~isinf(samples_dict[scan_direction]['distances']), axis=1))
+
                 # Combine fore and aft variables into single dictionary
                 combined_dict = {**variable_dict_out['fore'], **variable_dict_out['aft']}
                 variable_dict_out = combined_dict
@@ -301,6 +309,13 @@ class ReGridder:
                 cell_row, cell_col = self.create_output_grid_inds(samples_dict['grid_1d_index'])
                 variable_dict_out['cell_row'] = cell_row
                 variable_dict_out['cell_col'] = cell_col
+
+                # Add regridding_n_samples
+                if 'regridding_n_samples' in self.config.variables_to_regrid:
+                    if samples_dict['distances'].ndim == 1:
+                        variable_dict_out["regridding_n_samples"] = ones(len(samples_dict['distances']), dtype=int)
+                    else:
+                        variable_dict_out["regridding_n_samples"] = sum(~isinf(samples_dict['distances']), axis=1)
 
             data_dict_out[band] = variable_dict_out
             print(f"Finished regridding band: {band}")
