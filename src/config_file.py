@@ -137,6 +137,9 @@ class ConfigFile:
         if self.input_data_type == "SMAP":
             self.aft_angle_min = 90
             self.aft_angle_max = 270
+            self.scan_geometry = {
+                'L': (779, 241)
+            }
             self.variable_key_map = {
                 'bt_h': 'tb_h',
                 'bt_v': 'tb_v',
@@ -159,7 +162,8 @@ class ConfigFile:
                 'nedt_v': 'nedt_v',
                 'nedt_3': 'nedt_3',
                 'nedt_4': 'nedt_4',
-                'regridding_n_samples': 'regridding_n_samples'
+                'regridding_n_samples': 'regridding_n_samples',
+                'regridding_l1b_orphans': 'regridding_l1b_orphans'
             }
 
         # AMSR2 specific parameters
@@ -211,7 +215,8 @@ class ConfigFile:
                 'nedt_v': 'nedt_v',
                 'nedt_3': 'nedt_3',
                 'nedt_4': 'nedt_4',
-                'regridding_n_samples': 'regridding_n_samples'
+                'regridding_n_samples': 'regridding_n_samples',
+                'regridding_l1b_orphans': 'regridding_l1b_orphans'
             }
             self.aft_angle_min = 180
             self.aft_angle_max = 360
@@ -704,7 +709,7 @@ class ConfigFile:
         if input_data_type == 'SMAP':
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                          'processing_scan_angle', 'longitude', 'latitude', 'faraday_rot_angle', 'nedt_h',
-                           'nedt_v', 'nedt_3', 'nedt_4', 'regridding_n_samples']
+                           'nedt_v', 'nedt_3', 'nedt_4', 'regridding_n_samples', 'regridding_l1b_orphans']
             default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                             'processing_scan_angle', 'longitude', 'latitude']
 
@@ -714,7 +719,7 @@ class ConfigFile:
         elif input_data_type == 'CIMR':
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                            'processing_scan_angle', 'longitude', 'latitude', 'nedt_h', 'nedt_v', 'nedt_3', 'nedt_4',
-                           'regridding_n_samples']
+                           'regridding_n_samples', 'regridding_l1b_orphans']
             default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                             'processing_scan_angle', 'longitude', 'latitude']
 

@@ -230,7 +230,7 @@ class DataIngestion:
                             continue
                         variable_dict[variable] = spacecraft_data[variable_key][:]
                     else:
-                        # regridding_n_samples
+                        # regridding_n_samples, regridding_l1b_orphans
                         continue
 
                 # Create a map between scan number, earth sample number and feed_horn number
@@ -335,7 +335,9 @@ class DataIngestion:
                         shape = band_data[self.config.variable_key_map['longitude']][:].shape
                         nedt = self.config.nedt[band]
                         variable_dict[variable] = tile(nedt, shape)
-                    if 'regridding_n_samples' in variable:
+                    elif 'regridding_n_samples' in variable:
+                        continue
+                    elif 'regridding_l1b_orphans' in variable:
                         continue
                     else:
                         variable_key = self.config.variable_key_map[variable]
