@@ -7,6 +7,7 @@ from tqdm import tqdm
 from grid_generator import GridGenerator, GRIDS
 from pyresample import kd_tree, geometry
 from scipy.spatial import KDTree
+from ids import IDSInterp
 
 # ---- Testing ----
 import matplotlib
@@ -33,7 +34,7 @@ class rSIRInterp:
                                               gaussian_params=self.config.target_gaussian_params)
         else:
             target_ap = None
-
+        self.ids_weights = None
 
     def get_antenna_patterns(self, band, variable_dict, target_dict, target_lon, target_lat, source_inds, target_inds):
         target_ant_pattern = None
@@ -101,7 +102,6 @@ class rSIRInterp:
             _, target_idx = tree.query([target_lon, target_lat])
 
         return source_ant_patterns, target_ant_pattern, target_idx
-
 
     def rsir_algorithm(self, source_ant_patterns, target_ant_pattern, earth_samples, K=5):
         a0 = zeros_like(source_ant_patterns[0]).flatten()
@@ -211,6 +211,48 @@ class rSIRInterp:
             T_out.append(t_out)
         return array(T_out)
 
+    def IDS(self, samples_dict, variable):
+        # First approximation is to use IDS weights to calculate NEDT
+        if self.ids_weights is None:
+            distances = samples_dict['distances']
+            self.ids_weights = IDSInterp(config=self.config).get_weights(distances=distances)
+            weights = self.ids_weights
+        else:
+            weights = self.ids_weights
+
+        # Get variable data
+        indexes_out = samples_dict['indexes']
+        max_index = len(variable) - 1
+        valid_indices_mask = indexes_out < max_index
+        extracted_values = take(variable, indexes_out.clip(0, max_index))
+        extracted_values = where(valid_indices_mask, extracted_values, nan)
+
+        # Apply IDS
+        output_var = extracted_values * weights
+        output_var = nansum(output_var, axis=1) / nansum(weights, axis=1)
+
+        return output_var
+
+    def get_nedt(self, samples_dict, nedt):
+
+        if self.ids_weights is None:
+            distances = samples_dict['distances']
+            self.ids_weights = IDSInterp(config=self.config).get_weights(distances=distances)
+            weights = self.ids_weights
+        else:
+            weights = self.ids_weights
+
+        # Get NEDT data
+        indexes_out = samples_dict['indexes']
+        max_index = len(nedt) - 1
+        valid_indices_mask = indexes_out < max_index
+        extracted_values = take(nedt, indexes_out.clip(0, max_index))
+        extracted_values = where(valid_indices_mask, extracted_values, nan)
+
+        weights_sq = weights ** 2
+        nedt = nansum(weights_sq * extracted_values, axis=1) / (nansum(weights, axis=1) ** 2)
+
+        return nedt
 
     def interp_variable_dict(self, **kwargs):
 
@@ -253,17 +295,28 @@ class rSIRInterp:
             if variable.removesuffix(f"{scan_direction}") not in self.config.variables_to_regrid:
                 continue
 
-            # rSIR only works  with Brightness Temperatures
+            # rSIR only works  with Brightness Temperatures, we use IDS for the rest
             if variable.removesuffix(f"{scan_direction}") not in ['bt_h', 'bt_v', 'bt_3', 'bt_4']:
-                continue
-
-            variable_dict_out[f"{variable}{scan_direction}"] = self.rsir(
-                band=band,
-                variable = variable,
-                samples_dict=samples_dict,
-                variable_dict=variable_dict,
-                target_dict=target_dict,
-                target_grid=target_grid,
-            )
+                print(variable)
+                if 'nedt' in variable:
+                    variable_dict_out[f"{variable}{scan_direction}"] = self.get_nedt(
+                        samples_dict=samples_dict,
+                        nedt=variable_dict[variable]
+                    )
+                else:
+                    variable_dict_out[f"{variable}{scan_direction}"] = self.IDS(
+                        samples_dict=samples_dict,
+                        variable=variable_dict[variable]
+                    )
+            else:
+                # Perform rSIR
+                variable_dict_out[f"{variable}{scan_direction}"] = self.rsir(
+                    band=band,
+                    variable = variable,
+                    samples_dict=samples_dict,
+                    variable_dict=variable_dict,
+                    target_dict=target_dict,
+                    target_grid=target_grid,
+                )
 
         return variable_dict_out

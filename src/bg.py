@@ -1,6 +1,6 @@
 from grid_generator import GridGenerator, GRIDS
 from ap_processing import AntennaPattern
-from  numpy import where, nan, take, full, all, sum, zeros, identity, dot, nansum, unravel_index, rad2deg, sqrt
+from  numpy import where, nan, take, full, all, sum, zeros, identity, dot, nansum, unravel_index, rad2deg, sqrt, newaxis, eye, einsum
 from numpy.linalg import inv
 from tqdm import tqdm
 
@@ -190,8 +190,17 @@ class BGInterp:
 
         return weights
 
-    def get_nedt(self, weights):
-        pass
+    def get_nedt(self, weights, samples_dict, nedt):
+        fill_value = len(nedt)
+        indexes = samples_dict['indexes']
+        mask = (indexes == fill_value)
+        vars = full(indexes.shape, nan)
+        vars[~mask] = nedt[indexes[~mask]]
+        vars_scaled = vars[:, :, newaxis] * eye(weights.shape[1])
+        nedt = einsum('ij,ijk,ik->i', weights, vars_scaled, weights)
+
+        return nedt
+
 
     def interp_variable_dict(self, **kwargs):
 
@@ -230,7 +239,8 @@ class BGInterp:
                 continue
 
             if 'nedt' in variable:
-                nedt = self.get_nedt(weights)
+                print(variable)
+                variable_dict_out[variable] = self.get_nedt(weights, samples_dict, variable_dict[variable])
 
             # Apply weights to the variable you want to regrid
             fill_value = len(variable_dict[variable])
