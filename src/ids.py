@@ -28,10 +28,10 @@ class IDSInterp:
         extracted_values = where(valid_indices_mask, extracted_values, nan)
 
         # Apply IDS
-        output_temp = extracted_values * weights
-        output_temp = nansum(output_temp, axis =1)/ nansum(weights, axis=1)
+        output_var = extracted_values * weights
+        output_var = nansum(output_var, axis =1)/ nansum(weights, axis=1)
 
-        return output_temp
+        return output_var
 
     def get_nedt(self, samples_dict, variable):
         indexes_out = samples_dict['indexes']
