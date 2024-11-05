@@ -246,7 +246,6 @@ class ConfigFile:
                 'KU': 0.7
             }
 
-
         self.variables_to_regrid = self.validate_variables_to_regrid(
             config_object = config_object,
             input_data_type = self.input_data_type,
