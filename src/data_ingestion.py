@@ -229,6 +229,9 @@ class DataIngestion:
                             self.config.max_altitude = spacecraft_data[variable_key][:].max()
                             continue
                         variable_dict[variable] = spacecraft_data[variable_key][:]
+                    else:
+                        # regridding_n_samples
+                        continue
 
                 # Create a map between scan number, earth sample number and feed_horn number
                 num_scans, num_samples = variable_dict['longitude'].shape
@@ -332,6 +335,8 @@ class DataIngestion:
                         shape = band_data[self.config.variable_key_map['longitude']][:].shape
                         nedt = self.config.nedt[band]
                         variable_dict[variable] = tile(nedt, shape)
+                    if 'regridding_n_samples' in variable:
+                        continue
                     else:
                         variable_key = self.config.variable_key_map[variable]
                         data = band_data[variable_key][:]

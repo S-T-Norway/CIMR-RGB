@@ -158,7 +158,8 @@ class ConfigFile:
                 'nedt_h': 'nedt_h',
                 'nedt_v': 'nedt_v',
                 'nedt_3': 'nedt_3',
-                'nedt_4': 'nedt_4'
+                'nedt_4': 'nedt_4',
+                'regridding_n_samples': 'regridding_n_samples'
             }
 
         # AMSR2 specific parameters
@@ -209,7 +210,8 @@ class ConfigFile:
                 'nedt_h': 'nedt_h',
                 'nedt_v': 'nedt_v',
                 'nedt_3': 'nedt_3',
-                'nedt_4': 'nedt_4'
+                'nedt_4': 'nedt_4',
+                'regridding_n_samples': 'regridding_n_samples'
             }
             self.aft_angle_min = 180
             self.aft_angle_max = 360
@@ -702,16 +704,17 @@ class ConfigFile:
         if input_data_type == 'SMAP':
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                          'processing_scan_angle', 'longitude', 'latitude', 'faraday_rot_angle', 'nedt_h',
-                           'nedt_v', 'nedt_3', 'nedt_4']
+                           'nedt_v', 'nedt_3', 'nedt_4', 'regridding_n_samples']
             default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                             'processing_scan_angle', 'longitude', 'latitude']
 
         elif input_data_type == 'AMSR2':
-            valid_input = ['bt_h', 'bt_v', 'longitude', 'latitude']
+            valid_input = ['bt_h', 'bt_v', 'longitude', 'latitude', 'regridding_n_samples']
 
         elif input_data_type == 'CIMR':
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
-                           'processing_scan_angle', 'longitude', 'latitude', 'nedt_h', 'nedt_v', 'nedt_3', 'nedt_4']
+                           'processing_scan_angle', 'longitude', 'latitude', 'nedt_h', 'nedt_v', 'nedt_3', 'nedt_4',
+                           'regridding_n_samples']
             default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                             'processing_scan_angle', 'longitude', 'latitude']
 
