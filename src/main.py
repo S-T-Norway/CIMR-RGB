@@ -43,8 +43,8 @@ if __name__ == '__main__':
     if config.input_data_type == 'CIMR':
             data_dict_out = ReGridder(config).regrid_l1c(data_dict)
 
-    l1c_path = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1C/SMAP/NASA_BG/SMAP_L1C_TB_E_47185_D_20231201T212059_R19240_002.h5'
-    compare_smap_l1c(config, l1c_path).plot_diff(data_dict_out, 'bt_h_fore')
+#     l1c_path = '../dpr/L1C/SMAP/NASA_BG/SMAP_L1C_TB_E_47185_D_20231201T212059_R19240_002.h5'
+#     compare_smap_l1c(config, l1c_path).plot_diff(data_dict_out, 'bt_h_fore')
 
     # Intermediate results check
     # Put in the variables you want from the data_dict_out in data_dict.

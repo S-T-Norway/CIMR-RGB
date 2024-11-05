@@ -1,5 +1,4 @@
-from numpy.lib.shape_base import column_stack
-from requests.packages import target
+from numpy import column_stack
 
 from ap_processing import AntennaPattern
 from  numpy import zeros_like, array, exp, sin, meshgrid,nanmean, cos, ravel_multi_index, ogrid,  unravel_index, where, nan, take, full, all, sum, zeros, identity, dot, nansum, nan_to_num, sqrt

@@ -347,27 +347,80 @@ class AntennaPattern:
                                    projection_definition=int_projection_definition,
                                    grid_definition=int_grid_definition)
 
-        xmin, ymax = integration_grid.lonlat_to_xy(lonmin, latmax)
-        xmax, ymin = integration_grid.lonlat_to_xy(lonmax, latmin)
-        xs, ys = integration_grid.generate_grid_xy()
+        if lonmin < -180. and lonmax > 180.:
+            lonmin = -180.
+            lonmax = 180.
+        elif lonmin < -180.:
+            lonmin = 360. + lonmin
+        elif lonmax > 180.:
+            lonmax = lonmax - 360.
 
-        xeasemin = integration_grid.x_min
-        xeasemax = integration_grid.x_max
-        
-        xmin1 = xeasemax
-        xmax1 = xeasemin
-        if xmin < xeasemin:
-            xmin1 = xeasemax - (xeasemin - xmin)
-        if xmax > xeasemax:
-            xmax1 = xeasemin + (xmax - xeasemax)
-        xs = concatenate((xs[xs > xmin1], xs[logical_and(xs > xmin, xs < xmax)], xs[xs < xmax1]))
-        ys = ys[logical_and(ys > ymin, ys < ymax)]
+        if int_projection_definition == 'G':
 
-        Xs, Ys = meshgrid(xs, ys)
+            _, easelatmin = integration_grid.xy_to_lonlat(integration_grid.x_min, integration_grid.y_min)
+            _, easelatmax = integration_grid.xy_to_lonlat(integration_grid.x_max, integration_grid.y_max)
+
+            latmin = np.maximum(latmin, easelatmin)
+            latmax = np.minimum(latmax, easelatmax)
+
+            xmin, ymin = integration_grid.lonlat_to_xy(lonmin, latmin)
+            xmax, ymax = integration_grid.lonlat_to_xy(lonmax, latmax)
+
+            xs, ys = integration_grid.generate_grid_xy()
+
+            if xmax > xmin:
+                xs = xs[logical_and(xs > xmin, xs < xmax)]
+            else:
+                xs = concatenate((xs[xs > xmin], xs[xs < xmax]))
+
+            ys = ys[logical_and(ys > ymin, ys < ymax)]
+
+            Xs, Ys = meshgrid(xs, ys)
+
+        elif int_projection_definition == 'N':
+
+            if latmax > 90.:
+                latmax = 180. - latmax
+
+            x0, y0 = integration_grid.lonlat_to_xy(lonmin, latmin)
+            x1, y1 = integration_grid.lonlat_to_xy(lonmin, latmax)
+            x2, y2 = integration_grid.lonlat_to_xy(lonmax, latmin)
+            x3, y3 = integration_grid.lonlat_to_xy(lonmax, latmax)
+
+            xmin = np.min([x0, x1, x2, x3])
+            xmax = np.max([x0, x1, x2, x3])
+            ymin = np.min([y0, y1, y2, y3])
+            ymax = np.max([y0, y1, y2, y3])
+            
+            xs, ys = integration_grid.generate_grid_xy()
+            xs = xs[logical_and(xs > xmin, xs < xmax)]
+            ys = ys[logical_and(ys > ymin, ys < ymax)]
+            Xs, Ys = meshgrid(xs, ys)
+
+        elif int_projection_definition == 'S':
+
+            if latmax < -90.:
+                latmax = -180. - latmax
+            
+            x0, y0 = integration_grid.lonlat_to_xy(lonmin, latmin)
+            x1, y1 = integration_grid.lonlat_to_xy(lonmin, latmax)
+            x2, y2 = integration_grid.lonlat_to_xy(lonmax, latmin)
+            x3, y3 = integration_grid.lonlat_to_xy(lonmax, latmax)
+
+            xmin = np.min([x0, x1, x2, x3])
+            xmax = np.max([x0, x1, x2, x3])
+            ymin = np.min([y0, y1, y2, y3])
+            ymax = np.max([y0, y1, y2, y3])
+            
+            xs, ys = integration_grid.generate_grid_xy()
+            xs = xs[logical_and(xs > xmin, xs < xmax)]
+            ys = ys[logical_and(ys > ymin, ys < ymax)]
+            Xs, Ys = meshgrid(xs, ys)
 
         lons, lats = GridGenerator(self.config,
                                    projection_definition=int_projection_definition,
                                    grid_definition=int_grid_definition).xy_to_lonlat(Xs, Ys)
+
         return lons, lats
 
     def antenna_pattern_to_earth(self, int_dom_lons, int_dom_lats, x_pos, y_pos,
@@ -541,157 +594,3 @@ class AntennaPattern:
             lon, lat, _ = transformer.transform(P2[0], P2[1], P2[2])
 
         return lon, lat
-
-################################################## TEST CODE, LEAVE FOR NOW
-#
-# import matplotlib
-# tkagg = matplotlib.use('TkAgg')
-# import matplotlib.pyplot as plt
-# if __name__ == '__main__':
-#
-#
-#     from data_ingestion import DataIngestion
-#     from config_file import ConfigFile
-#
-#     config_path = os.path.join(os.getcwd(), '..', 'config.xml')
-#     config = ConfigFile(config_path)
-#     ingestion_object = DataIngestion(config)
-#     data_dict = ingestion_object.ingest_data()
-# #
-# #     ####### SMAP
-# #     import h5py
-# #     scan_ind = 81038 // 241
-# #     earth_sample_ind = 81038 % 241
-# #     # scan_ind = 100
-# #     # earth_sample_ind = 0
-# #     data = h5py.File('../dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5')
-# #     x_pos = data['Spacecraft_Data']['x_pos'][scan_ind]
-# #     y_pos = data['Spacecraft_Data']['y_pos'][scan_ind]
-# #     z_pos = data['Spacecraft_Data']['z_pos'][scan_ind]
-# #     x_vel = data['Spacecraft_Data']['x_vel'][scan_ind]
-# #     y_vel = data['Spacecraft_Data']['y_vel'][scan_ind]
-# #     z_vel = data['Spacecraft_Data']['z_vel'][scan_ind]
-# #     attitude = None
-# #     lon   = data['Brightness_Temperature']['tb_lon'][scan_ind][earth_sample_ind]
-# #     lat   = data['Brightness_Temperature']['tb_lat'][scan_ind][earth_sample_ind]
-# #     processing_scan_angle = np.deg2rad(data['Brightness_Temperature']['antenna_scan_angle'][scan_ind][earth_sample_ind])
-# #     band = 'L'
-# #     feed_horn_number = 0
-#
-#     ######## CIMR
-#     import netCDF4 as nc
-#     scan_ind = 73
-#     earth_sample_ind = 192
-#     data = nc.Dataset('../dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc')
-#     x_pos = data['L_BAND']['satellite_position'][scan_ind][earth_sample_ind][0]
-#     y_pos = data['L_BAND']['satellite_position'][scan_ind][earth_sample_ind][1]
-#     z_pos = data['L_BAND']['satellite_position'][scan_ind][earth_sample_ind][2]
-#     x_vel = data['L_BAND']['satellite_velocity'][scan_ind][earth_sample_ind][0]
-#     y_vel = data['L_BAND']['satellite_velocity'][scan_ind][earth_sample_ind][1]
-#     z_vel = data['L_BAND']['satellite_velocity'][scan_ind][earth_sample_ind][2]
-#     attitude = data['L_BAND']['SatelliteBody2EarthCenteredInertialFrame'][scan_ind][earth_sample_ind]
-#     lon   = data['L_BAND']['lon'][scan_ind][earth_sample_ind][0]
-#     lat   = data['L_BAND']['lat'][scan_ind][earth_sample_ind][0]
-#     processing_scan_angle = data['L_BAND']['scan_angle'][scan_ind][earth_sample_ind]
-#     band = 'L'
-#     feed_horn_number = 0
-#
-#     AP = AntennaPattern(config, 'L')
-#
-#     int_dom_lons, int_dom_lats = AP.make_integration_grid([lon], [lat])
-#
-#     lon1, lat1 = AP.boresight_to_earth(x_pos, y_pos, z_pos, x_vel, y_vel,
-#                                       z_vel, processing_scan_angle, band, feed_horn_number, attitude)
-#
-#     pattern = AP.antenna_pattern_to_earth(int_dom_lons, int_dom_lats, x_pos, y_pos,
-#                                           z_pos, x_vel, y_vel, z_vel, processing_scan_angle,
-#                                           feed_horn_number, attitude, lon, lat)
-#
-#     print(lon, lat)
-#     print(lon1, lat1)
-#
-#     import matplotlib.pyplot as plt
-#     plt.imshow(pattern); plt.colorbar()
-#     plt.show()
-
-### investigate SMAP offset
-
-# from data_ingestion import DataIngestion
-# from config_file import ConfigFile
-# config_path = os.path.join(os.getcwd(), '..', 'config.xml')
-# config = ConfigFile(config_path)
-# ingestion_object = DataIngestion(config)
-# data_dict = ingestion_object.ingest_data()
-
-# import h5py
-# scan_ind = 81038 // 241
-# #scan_ind = 100
-# data = h5py.File('../dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5')
-# x_pos = data['Spacecraft_Data']['x_pos'][scan_ind]
-# y_pos = data['Spacecraft_Data']['y_pos'][scan_ind]
-# z_pos = data['Spacecraft_Data']['z_pos'][scan_ind]
-# x_vel = data['Spacecraft_Data']['x_vel'][scan_ind]
-# y_vel = data['Spacecraft_Data']['y_vel'][scan_ind]
-# z_vel = data['Spacecraft_Data']['z_vel'][scan_ind]
-# attitude = None
-
-# x_pos1 = data['Spacecraft_Data']['x_pos'][scan_ind+1]
-# y_pos1 = data['Spacecraft_Data']['y_pos'][scan_ind+1]
-# z_pos1 = data['Spacecraft_Data']['z_pos'][scan_ind+1]
-# x_vel1 = data['Spacecraft_Data']['x_vel'][scan_ind+1]
-# y_vel1 = data['Spacecraft_Data']['y_vel'][scan_ind+1]
-# z_vel1 = data['Spacecraft_Data']['z_vel'][scan_ind+1]
-
-# AP = AntennaPattern(config, 'L')
-
-# boresight_l1b = []
-# boresight_proj = []
-# error = []
-
-# for earth_sample_ind in range(0, 241, 5):
-
-#     xp = x_pos1 * earth_sample_ind/240 + x_pos * (240-earth_sample_ind)/240.
-#     yp = y_pos1 * earth_sample_ind/240 + y_pos * (240-earth_sample_ind)/240.
-#     zp = z_pos1 * earth_sample_ind/240 + z_pos * (240-earth_sample_ind)/240.
-#     xv = x_vel1 * earth_sample_ind/240 + x_vel * (240-earth_sample_ind)/240.
-#     yv = y_vel1 * earth_sample_ind/240 + y_vel * (240-earth_sample_ind)/240.
-#     zv = z_vel1 * earth_sample_ind/240 + z_vel * (240-earth_sample_ind)/240.
-
-#     # xp = x_pos
-#     # yp = y_pos
-#     # zp = z_pos
-#     # xv = x_vel
-#     # yv = y_vel
-#     # zv = z_vel
-
-#     lon   = data['Brightness_Temperature']['tb_lon'][scan_ind][earth_sample_ind]
-#     lat   = data['Brightness_Temperature']['tb_lat'][scan_ind][earth_sample_ind]
-#     if lon<-100 or lat<-100:
-#         continue
-#     processing_scan_angle = np.deg2rad(data['Brightness_Temperature']['antenna_scan_angle'][scan_ind][earth_sample_ind])
-#     band = 'L'
-#     feed_horn_number = 0
-
-#     lon1, lat1 = AP.boresight_to_earth(xp, yp, zp, xv, yv, 
-#                             zv, processing_scan_angle, band, feed_horn_number, attitude)
-
-#     boresight_l1b.append((lon, lat))
-#     boresight_proj.append((lon1, lat1))
-#     error.append((np.sqrt((lon-lon1)**2 + (lat-lat1)**2)))
-
-# boresight_l1b = np.array(boresight_l1b)
-# boresight_proj = np.array(boresight_proj)
-
-# fig, ax = plt.subplots(1,2)
-
-# ax[0].scatter(boresight_l1b[:, 0], boresight_l1b[:, 1], s=10)
-# ax[0].scatter(boresight_proj[:, 0], boresight_proj[:, 1], s=10)
-
-# ax[0].scatter(boresight_l1b[0, 0], boresight_l1b[0, 1], s=20, marker='s', c='blue')
-# ax[0].scatter(boresight_proj[0, 0], boresight_proj[0, 1], s=20,  marker='s', c='orange')
-# ax[0].scatter(boresight_l1b[-1, 0], boresight_l1b[-1, 1], s=20,  marker='x', c='blue')
-# ax[0].scatter(boresight_proj[-1, 0], boresight_proj[-1, 1], s=20,  marker='x', c='orange')
-
-# ax[1].scatter(range(len(error)), error)
-
-# plt.show()
