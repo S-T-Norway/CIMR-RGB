@@ -1,5 +1,5 @@
 import numpy as np
-from numpy import meshgrid, isinf, where, full, nan, unravel_index, all, sqrt, sum, ones
+from numpy import meshgrid, isinf, where, full, nan, zeros, unravel_index, all, sqrt, sum, ones, unique
 
 from nn import NNInterp
 from ids import IDSInterp
@@ -283,6 +283,38 @@ class ReGridder:
                             variable_dict_out[scan_direction][f"regridding_n_samples_{scan_direction}"] = (
                                 sum(~isinf(samples_dict[scan_direction]['distances']), axis=1))
 
+                    # Add regridding_l1b_orphans
+                    if 'regridding_l1b_orphans' in self.config.variables_to_regrid:
+                        fill_value = len(variable_dict[f"longitude_{scan_direction}"])
+                        unique_indexes = unique(samples_dict[scan_direction]['indexes'][
+                                                    samples_dict[scan_direction]['indexes'] != fill_value])
+                        used_scans = variable_dict[f'scan_number_{scan_direction}'][unique_indexes].astype(int)
+                        used_samples = variable_dict[f'sample_number_{scan_direction}'][unique_indexes].astype(int)
+
+                        if self.config.input_data_type == 'SMAP':
+                            # Create output array the same size as the input data
+                            l1b_orphans = zeros(self.config.scan_geometry[band])
+                            l1b_orphans[used_scans, used_samples] = 1
+
+                        elif self.config.input_data_type == 'CIMR':
+                            scan_geometry = self.config.scan_geometry[band]
+                            num_feed_horns = self.config.num_horns[band]
+                            l1b_orphans = zeros((scan_geometry[0], int(scan_geometry[1]/num_feed_horns), num_feed_horns))
+                            feed_horn_number = variable_dict[f'feed_horn_number_{scan_direction}']
+                            used_feed_horn_number = feed_horn_number[unique_indexes].astype(int)
+                            for feed_horn in range(num_feed_horns):
+                                feed_horn_inds = where(used_feed_horn_number == feed_horn)[0]
+                                feed_horn_scans = used_scans[feed_horn_inds]
+                                feed_horn_samples = used_samples[feed_horn_inds]
+                                l1b_orphans[feed_horn_scans, feed_horn_samples, feed_horn] = 1
+
+                        variable_dict_out[scan_direction][f'regridding_l1b_orphans_{scan_direction}'] = l1b_orphans
+
+
+
+
+
+
                 # Combine fore and aft variables into single dictionary
                 combined_dict = {**variable_dict_out['fore'], **variable_dict_out['aft']}
                 variable_dict_out = combined_dict
@@ -316,6 +348,34 @@ class ReGridder:
                         variable_dict_out["regridding_n_samples"] = ones(len(samples_dict['distances']), dtype=int)
                     else:
                         variable_dict_out["regridding_n_samples"] = sum(~isinf(samples_dict['distances']), axis=1)
+
+                # Add regridding_l1b_orphans
+                if 'regridding_l1b_orphans' in self.config.variables_to_regrid:
+                    fill_value = len(variable_dict["longitude"])
+                    unique_indexes = unique(samples_dict['indexes'][
+                                                samples_dict['indexes'] != fill_value])
+                    used_scans = variable_dict[f'scan_number'][unique_indexes].astype(int)
+                    used_samples = variable_dict[f'sample_number'][unique_indexes].astype(int)
+
+                    if self.config.input_data_type == 'SMAP':
+                        # Create output array the same size as the input data
+                        l1b_orphans = zeros(self.config.scan_geometry[band])
+                        l1b_orphans[used_scans, used_samples] = 1
+
+                    elif self.config.input_data_type == 'CIMR':
+                        scan_geometry = self.config.scan_geometry[band]
+                        num_feed_horns = self.config.num_horns[band]
+                        l1b_orphans = zeros(
+                            (scan_geometry[0], int(scan_geometry[1] / num_feed_horns), num_feed_horns))
+                        feed_horn_number = variable_dict['feed_horn_number']
+                        used_feed_horn_number = feed_horn_number[unique_indexes].astype(int)
+                        for feed_horn in range(num_feed_horns):
+                            feed_horn_inds = where(used_feed_horn_number == feed_horn)[0]
+                            feed_horn_scans = used_scans[feed_horn_inds]
+                            feed_horn_samples = used_samples[feed_horn_inds]
+                            l1b_orphans[feed_horn_scans, feed_horn_samples, feed_horn] = 1
+
+                    variable_dict_out['regridding_l1b_orphans'] = l1b_orphans
 
             data_dict_out[band] = variable_dict_out
             print(f"Finished regridding band: {band}")
