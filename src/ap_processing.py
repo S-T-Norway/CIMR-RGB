@@ -112,8 +112,8 @@ class AntennaPattern:
         if self.config.input_data_type == "SMAP":
             ap_dict = {}
             ap_dict[0] = self.extract_gain_dict(
-                threshold_dB=self.antenna_threshold,
-                file_path = self.config.antenna_pattern_path
+                file_path = self.config.antenna_pattern_path,
+                antenna_threshold=self.antenna_threshold
             )
 
         elif self.config.input_data_type == "CIMR":

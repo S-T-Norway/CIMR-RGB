@@ -73,7 +73,7 @@ class BGInterp:
             sigmay = self.config.target_gaussian_params[1]
             pattern_radii = concatenate((pattern_radii, [self.target_ap.estimate_max_ap_radius(sigmax, sigmay)]))            
         else:
-            pattern_radii = concatenate((pattern_radii, [self.target_ap.max_ap_radius[int(variable_dict['feed_horn_number'][target_inds])]]))
+            pattern_radii = concatenate((pattern_radii, [self.target_ap.max_ap_radius[int(target_dict['feed_horn_number'][target_inds])]]))
 
         int_dom_lons, int_dom_lats = make_integration_grid(
             int_projection_definition=self.config.MRF_projection_definition,
