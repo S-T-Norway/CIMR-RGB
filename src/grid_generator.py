@@ -20,25 +20,25 @@ E = 0.081819190843  # EASEv2 Map Eccentricity
 E2 = E ** 2
 
 GRIDS = {'EASE2_G1km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83,
-                        'res': 1000.9, 'n_cols': 34704, 'n_rows': 14616},
+                        'res': 1000.9, 'n_cols': 34704, 'n_rows': 14616, 'lat_min': -86, 'lat_max': 86},
          'EASE2_G3km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83,
-                        'res': 3002.69, 'n_cols': 11568, 'n_rows': 4872},
+                        'res': 3002.69, 'n_cols': 11568, 'n_rows': 4872, 'lat_min': -86, 'lat_max': 86},
          'EASE2_G9km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83,
-                        'res': 9008.05, 'n_cols': 3856, 'n_rows': 1624},
+                        'res': 9008.05, 'n_cols': 3856, 'n_rows': 1624, 'lat_min': -86, 'lat_max': 86},
          'EASE2_N3km': {'epsg': 6931, 'x_min': -9000000.0, 'y_max': 9000000.0,
-                        'res': 3000, 'n_cols': 6000, 'n_rows': 6000},
+                        'res': 3000, 'n_cols': 6000, 'n_rows': 6000, 'lat_min': 0},
          'EASE2_N9km': {'epsg': 6931, 'x_min': -9000000.0, 'y_max': 9000000.0,
-                        'res': 9000.0, 'n_cols': 2000, 'n_rows': 2000},
+                        'res': 9000.0, 'n_cols': 2000, 'n_rows': 2000, 'lat_min': 0},
          'EASE2_S3km': {'epsg': 6932, 'x_min': -9000000.0, 'y_max': 9000000.0,
-                        'res': 3000, 'n_cols': 6000, 'n_rows': 6000},
+                        'res': 3000, 'n_cols': 6000, 'n_rows': 6000, 'lat_min': 0, 'lat_min': 0},
          'EASE2_S9km': {'epsg': 6932, 'x_min': -9000000.0, 'y_max': 9000000.0,
-                        'res': 9000.0, 'n_cols': 2000, 'n_rows': 2000},
+                        'res': 9000.0, 'n_cols': 2000, 'n_rows': 2000, 'lat_min': 0},
          'EASE2_G36km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83,
-                         'res': 36032.22, 'n_cols': 964, 'n_rows': 406},
+                         'res': 36032.22, 'n_cols': 964, 'n_rows': 406, 'lat_min': -86, 'lat_max': 86},
          'EASE2_N36km': {'epsg': 6931, 'x_min': -9000000.0, 'y_max': 9000000.0,
-                         'res': 36000.0, 'n_cols': 500, 'n_rows': 500},
+                         'res': 36000.0, 'n_cols': 500, 'n_rows': 500, 'lat_min': 0},
          'EASE2_S36km': {'epsg': 6932, 'x_min': -9000000.0, 'y_max': 9000000.0,
-                         'res': 36000.0, 'n_cols': 500, 'n_rows': 500},
+                         'res': 36000.0, 'n_cols': 500, 'n_rows': 500, 'lat_min': 0},
          # Polar Stereographic Projection Grids
          'STEREO_N6.25km': {'epsg': 3413, 'x_min': -3850000, 'y_max': 5850000,
                             'res': 6250, 'n_cols': 1216, 'n_rows': 1792},
@@ -590,7 +590,7 @@ class GridGenerator:
     def xy_to_lonlat_laea(self,
                           x: np.ndarray | float,
                           y: np.ndarray | float,
-                          pole: str = 'N'
+                          pole: str
                           ) -> (np.ndarray | float, np.ndarray | float):
         """
         Inverse of Lambert's Azimuthal Equal Area (North and South) projection
