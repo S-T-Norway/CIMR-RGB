@@ -14,6 +14,7 @@ from numpy import (array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile,
 from config_file import ConfigFile
 from utils import remove_overlap
 from grid_generator import GRIDS, GridGenerator
+from datetime import datetime, timezone, timedelta
 
 # SMAP Constants
 SMAP_FILL_FLOAT_32 = -9999.0
@@ -100,15 +101,13 @@ class DataIngestion:
             lat=data_dict['latitude']
         )
 
-        out_of_bound_xy = where((source_y < y_bound_min) | (source_y > y_bound_max))
-
-        out_of_bounds_combined = (
-            concatenate([out_of_bound_xy[0], out_of_bounds_lat[0]]),
-            concatenate([out_of_bound_xy[1], out_of_bounds_lat[1]])
-        )
+        out_of_bounds_xy = where((source_y < y_bound_min) | (source_y > y_bound_max))
 
         for variable in data_dict:
-            data_dict[variable][out_of_bounds_combined] = nan
+            if len(out_of_bounds_lat[0]) != 0:
+                data_dict[variable][out_of_bounds_xy] = nan
+            if len(out_of_bounds_xy[0]) != 0:
+                data_dict[variable][out_of_bounds_lat] = nan
 
         return data_dict
 
@@ -240,8 +239,19 @@ class DataIngestion:
                         if variable == 'altitude':
                             # Only need the maximum altitude for ap_max_radius calculation
                             self.config.max_altitude = spacecraft_data[variable_key][:].max()
-                            continue
-                        variable_dict[variable] = spacecraft_data[variable_key][:]
+                            variable_dict[variable] = spacecraft_data[variable_key][:]
+
+                        if variable == 'acq_time_utc':
+                            datetime_obj = []
+                            for timestamp in spacecraft_data[variable_key][:]:
+                                timestamp_str = timestamp.decode('utf-8')
+                                timestamp_str = timestamp_str.replace('Z', '+00:00')
+                                dt_obj = datetime.fromisoformat(timestamp_str)
+                                datetime_obj.append(dt_obj.timestamp())
+                            variable_dict[variable] = array(datetime_obj)
+
+                        else:
+                            variable_dict[variable] = spacecraft_data[variable_key][:]
                     else:
                         # regridding_n_samples, regridding_l1b_orphans
                         continue
@@ -354,21 +364,39 @@ class DataIngestion:
                         continue
                     else:
                         variable_key = self.config.variable_key_map[variable]
-                        data = band_data[variable_key][:]
-                        if variable == 'x_position':
-                            variable_dict[variable] = data[:,:,0]
-                        elif variable == 'y_position':
-                            variable_dict[variable] = data[:,:,1]
-                        elif variable == 'z_position':
-                            variable_dict[variable] = data[:,:,2]
-                        elif variable == 'x_velocity':
-                            variable_dict[variable] = data[:,:,0]
-                        elif variable == 'y_velocity':
-                            variable_dict[variable] = data[:,:,1]
-                        elif variable == 'z_velocity':
-                            variable_dict[variable] = data[:,:,2]
+                        if variable == 'acq_time_utc':
+                            utc_time = band_data[variable_key]
+                            days = array(utc_time['days'][:])
+                            seconds = array(utc_time['seconds'][:])
+                            micro_seconds = array(utc_time['microseconds'][:])
+                            days_flat = days.flatten()
+                            seconds_flat = seconds.flatten()
+                            microseconds_flat = micro_seconds.flatten()
+                            base_date = datetime(2000, 1, 1, tzinfo=timezone.utc)
+
+                            timestamps = [
+                                (base_date + timedelta(days=int(d), seconds=int(s), microseconds=int(us))).timestamp()
+                                for d, s, us in zip(days_flat, seconds_flat, microseconds_flat)
+                            ]
+
+                            variable_dict[variable] = array(timestamps).reshape(days.shape)
+
                         else:
-                            variable_dict[variable] = data
+                            data = band_data[variable_key][:]
+                            if variable == 'x_position':
+                                variable_dict[variable] = data[:,:,0]
+                            elif variable == 'y_position':
+                                variable_dict[variable] = data[:,:,1]
+                            elif variable == 'z_position':
+                                variable_dict[variable] = data[:,:,2]
+                            elif variable == 'x_velocity':
+                                variable_dict[variable] = data[:,:,0]
+                            elif variable == 'y_velocity':
+                                variable_dict[variable] = data[:,:,1]
+                            elif variable == 'z_velocity':
+                                variable_dict[variable] = data[:,:,2]
+                            else:
+                                variable_dict[variable] = data
 
                 # Calculate max altitude for ap_radius calculation (same for all bands)
                 if self.config.regridding_algorithm in ['BG', 'RSIR']:
