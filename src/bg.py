@@ -113,7 +113,7 @@ class BGInterp:
                     lon_l1b = variable_dict['longitude'][sample],
                     lat_l1b = variable_dict['latitude'][sample] 
                 )
-
+            sample_pattern /= sum(sample_pattern)
             source_ant_patterns.append(sample_pattern)
 
         # Get target patterns
@@ -155,6 +155,8 @@ class BGInterp:
                 lon_l1b=target_lon,
                 lat_l1b=target_lat
             )
+        target_ant_pattern /= sum(target_ant_pattern)
+
 
         return source_ant_patterns, target_ant_pattern
 
