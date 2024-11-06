@@ -1,7 +1,7 @@
 from grid_generator import GridGenerator, GRIDS
-from ap_processing import AntennaPattern
+from ap_processing import AntennaPattern, GaussianAntennaPattern, make_integration_grid
 from  numpy import (where, nan, take, full, all, sum, zeros, identity, dot, nansum, 
-                    unravel_index, rad2deg, sqrt, newaxis, eye, einsum, concatenate)
+                    unravel_index, rad2deg, sqrt, newaxis, eye, einsum, concatenate, array)
 from numpy.linalg import inv
 from tqdm import tqdm
 
@@ -15,39 +15,90 @@ class BGInterp:
     def __init__(self, config, band):
         self.config = config
         self.band = band
-        self.source_ap = AntennaPattern(config=self.config,
-                                        band=self.band,
-                                        antenna_method=self.config.source_antenna_method,
-                                        polarisation_method=self.config.polarisation_method,
-                                        antenna_threshold=self.config.source_antenna_threshold,
-                                        gaussian_params=self.config.source_gaussian_params)
+
+        if self.config.source_antenna_method == 'gaussian':
+            self.source_ap = GaussianAntennaPattern(config=self.config, 
+                                                    antenna_threshold=self.config.source_antenna_threshold)
+
+        else:
+            self.source_ap = AntennaPattern(config=self.config,
+                                            band=self.band,
+                                            antenna_method=self.config.source_antenna_method,
+                                            polarisation_method=self.config.polarisation_method,
+                                            antenna_threshold=self.config.source_antenna_threshold,
+                                            gaussian_params=self.config.source_gaussian_params)
+
         if self.config.grid_type == 'L1R':
-            self.target_ap = AntennaPattern(config=self.config,
+
+            if self.config.target_antenna_method == 'gaussian':
+                self.target_ap = GaussianAntennaPattern(config=self.config, 
+                                                    antenna_threshold=self.config.target_antenna_threshold)   
+
+            else:            
+                self.target_ap = AntennaPattern(config=self.config,
                                             band=self.config.target_band[0],
                                             antenna_method=self.config.target_antenna_method,
                                             polarisation_method=self.config.polarisation_method,
                                             antenna_threshold=self.config.target_antenna_threshold,
                                             gaussian_params=self.config.target_gaussian_params)
+
+        else: #L1c
+
+            self.target_ap = GaussianAntennaPattern(config=self.config, antenna_threshold=0.001 )  #check if this value makes sense for L1c
+
+
+    def get_antenna_patterns(self, variable_dict, target_dict, target_lon, target_lat, source_inds, target_inds, target_cell_size):
+
+        pattern_lons  = array(variable_dict['longitude'][source_inds])
+        pattern_lats  = array(variable_dict['latitude'][source_inds])
+        pattern_radii = []
+
+        if self.config.source_antenna_method == 'gaussian':
+            sigmax = self.config.source_gaussian_params[0]
+            sigmay = self.config.source_gaussian_params[1]
+            pattern_radii = concatenate((pattern_radii, [self.source_ap.estimate_max_ap_radius(sigmax, sigmay)]))
         else:
-            target_ap = None
+            max_radii = [self.source_ap.max_ap_radius[int(nn)] for nn in variable_dict['feed_horn_number'][source_inds]]
+            pattern_radii = concatenate((pattern_radii, max_radii))
 
+        pattern_lons = concatenate((pattern_lons, [target_lon]))
+        pattern_lats = concatenate((pattern_lats, [target_lat]))
 
-    def get_antenna_patterns(self, variable_dict, target_dict, target_lon, target_lat, source_inds, target_inds, target_cell_size=None):
+        if self.config.grid_type == 'L1C':
+            sigmax = target_cell_size[0]
+            sigmay = target_cell_size[1]
+            pattern_radii = concatenate((pattern_radii, [self.target_ap.estimate_max_ap_radius(sigmax, sigmay)]))
+        elif self.config.target_antenna_method == 'gaussian':
+            sigmax = self.config.target_gaussian_params[0]
+            sigmay = self.config.target_gaussian_params[1]
+            pattern_radii = concatenate((pattern_radii, [self.target_ap.estimate_max_ap_radius(sigmax, sigmay)]))            
+        else:
+            pattern_radii = concatenate((pattern_radii, [self.target_ap.max_ap_radius[variable_dict['feed_horn_number'][target_inds]]]))
 
-        ap_lons_int_grid = concatenate((variable_dict['longitude'][source_inds], [target_lon]))
-        ap_lats_int_grid = concatenate((variable_dict['latitude'][source_inds] , [target_lat]))
-
-        # Make integration grid
-        int_dom_lons, int_dom_lats = self.source_ap.make_integration_grid(
-            longitude=ap_lons_int_grid,
-            latitude=ap_lats_int_grid
+        int_dom_lons, int_dom_lats = make_integration_grid(
+            int_projection_definition=self.config.MRF_projection_definition,
+            int_grid_definition=self.config.MRF_grid_definition,
+            longitude=pattern_lons,
+            latitude=pattern_lats,
+            ap_radii=pattern_radii
         )
 
         # Project source patterns to grid
         source_ant_patterns = []
         for sample in source_inds:
-            if self.config.source_antenna_method in ['real', 'gaussian_projected']:
-                sample_pattern=self.source_ap.antenna_pattern_to_earth(
+            if self.config.source_antenna_method == 'gaussian':
+                sample_pattern = self.source_ap.antenna_pattern_to_earth(
+                    int_dom_lons=int_dom_lons,
+                    int_dom_lats=int_dom_lats,  
+                    lon_nadir=variable_dict['sub_satellite_lon'][sample],
+                    lat_nadir=variable_dict['sub_satellite_lat'][sample],
+                    lon_l1b=variable_dict['longitude'][sample],
+                    lat_l1b=variable_dict['latitude'][sample],
+                    sigmax=self.config.source_gaussian_params[0],
+                    sigmay=self.config.source_gaussian_params[1]
+                )        
+            else:        
+                sample_pattern = self.source_ap.antenna_pattern_to_earth(
                     int_dom_lons=int_dom_lons,
                     int_dom_lats=int_dom_lats,
                     x_pos=variable_dict['x_position'][sample],
@@ -60,46 +111,50 @@ class BGInterp:
                     feed_horn_number=variable_dict['feed_horn_number'][sample],
                     attitude=variable_dict['attitude'][sample],
                     lon_l1b = variable_dict['longitude'][sample],
-                    lat_l1b = variable_dict['latitude'][sample]
+                    lat_l1b = variable_dict['latitude'][sample] 
                 )
-                sample_pattern /= sum(sample_pattern)
-                source_ant_patterns.append(sample_pattern)
-            else:
-                # Project a half power antenna pattern to the approximate using a gaussian
-                pass
-
+                
+            source_ant_patterns.append(sample_pattern)
 
         # Get target patterns
         target_ant_pattern = None
-        if self.config.grid_type == 'L1R':
-            if self.config.target_pattern_method in ['real', 'gaussian_projected']:
-                target_ant_pattern = self.target_ap.antenna_pattern_to_earth(
-                    int_dom_lons=int_dom_lons,
-                    int_dom_lats=int_dom_lats,
-                    x_pos=target_dict['x_position'][target_inds],
-                    y_pos=target_dict['y_position'][target_inds],
-                    z_pos=target_dict['z_position'][target_inds],
-                    x_vel=target_dict['x_velocity'][target_inds],
-                    y_vel=target_dict['y_velocity'][target_inds],
-                    z_vel=target_dict['z_velocity'][target_inds],
-                    processing_scan_angle=target_dict['processing_scan_angle'][target_inds],
-                    feed_horn_number=target_dict['feed_horn_number'][target_inds],
-                    attitude=target_dict['attitude'][target_inds],
-                    lon_l1b=target_lon,
-                    lat_l1b=target_lat
-                )
-                target_ant_pattern /= sum(target_ant_pattern)
-            else:
-                # Project a half power antenna pattern to the approximate using a gaussian
-                pass
-
-        elif self.config.grid_type == 'L1C':
-            #Here area is needed
-            # target cell size can be investigated can be a sharp one the size of the cell or it could be the
-            # approximate size of a half power footprint centered at that location
-            sigma_lon, sigma_lat = target_cell_size
-            target_ant_pattern = AntennaPattern.target_gaussian(int_dom_lons, int_dom_lats, target_lon, target_lat, 
-                                                                sigma_lon, sigma_lat, rot=0.)
+        if self.config.grid_type == 'L1C':
+            target_ant_pattern = self.target_ap.antenna_pattern_to_earth(
+                int_dom_lons=int_dom_lons,
+                int_dom_lats=int_dom_lats,   
+                lon0=target_lon,
+                lat0=target_lat,
+                sigmax=target_cell_size[0],
+                sigmay=target_cell_size[1],
+                theta=0.
+            )     
+        elif self.config.target_antenna_method == 'gaussian':
+            target_ant_pattern = self.target_ap.antenna_pattern_to_earth(
+                int_dom_lons=int_dom_lons,
+                int_dom_lats=int_dom_lats,  
+                lon_nadir=target_dict['sub_satellite_lon'][target_inds],
+                lat_nadir=target_dict['sub_satellite_lat'][target_inds],
+                lon_l1b=target_lon,
+                lat_l1b=target_lat,
+                sigmax=self.config.target_gaussian_params[0],
+                sigmay=self.config.target_gaussian_params[1]
+            )        
+        else:    
+            target_ant_pattern = self.target_ap.antenna_pattern_to_earth(
+                int_dom_lons=int_dom_lons,
+                int_dom_lats=int_dom_lats,
+                x_pos=target_dict['x_position'][target_inds],
+                y_pos=target_dict['y_position'][target_inds],
+                z_pos=target_dict['z_position'][target_inds],
+                x_vel=target_dict['x_velocity'][target_inds],
+                y_vel=target_dict['y_velocity'][target_inds],
+                z_vel=target_dict['z_velocity'][target_inds],
+                processing_scan_angle=target_dict['processing_scan_angle'][target_inds],
+                feed_horn_number=target_dict['feed_horn_number'][target_inds],
+                attitude=target_dict['attitude'][target_inds],
+                lon_l1b=target_lon,
+                lat_l1b=target_lat
+            )
 
         return source_ant_patterns, target_ant_pattern
 
@@ -117,14 +172,9 @@ class BGInterp:
                 target_lon, target_lat = (target_grid[0].flatten('C')[samples_dict['grid_1d_index'][target_cell]],
                                           target_grid[1].flatten('C')[samples_dict['grid_1d_index'][target_cell]])
 
-
-
-                # TODO: this works only with EASE 9km grid.. for other grids, the size of the cell should be estimated in grid_generator
-                Rearth  = (6378137. + 6356752.)/2. #m
                 cell_area = grid_area.flatten('C')[samples_dict['grid_1d_index'][target_cell]]
                 resolution = sqrt(cell_area)
-                angle   = rad2deg(resolution/Rearth)
-                target_cell_size = [angle, angle]
+                target_cell_size = [resolution, resolution]
 
             elif self.config.grid_type == 'L1R':
                 target_cell_size = None
