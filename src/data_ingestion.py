@@ -86,6 +86,13 @@ class DataIngestion:
         y_bound_max = grid['y_max'] + 0.5 * grid['res']
         y_bound_min = grid['y_max'] - grid['n_rows']*grid['res'] - 0.5 * grid['res']
 
+        if 'N' in self.config.projection_definition:
+            out_of_bounds_lat = where(data_dict['latitude']< grid['lat_min'])
+        elif 'G' in self.config.projection_definition:
+            out_of_bounds_lat = where((data_dict['latitude'] > grid['lat_max']) | (data_dict['latitude'] < grid['lat_min']))
+        elif 'S' in self.config.projection_definition:
+            out_of_bounds_lat = where(data_dict['latitude'] > grid['lat_min'])
+
         source_x, source_y = GridGenerator(self.config,
                                            projection_definition=self.config.projection_definition,
                                            grid_definition=self.config.grid_definition).lonlat_to_xy(
@@ -93,9 +100,15 @@ class DataIngestion:
             lat=data_dict['latitude']
         )
 
-        out_of_bound_inds = where((source_y < y_bound_min) | (source_y > y_bound_max))
+        out_of_bound_xy = where((source_y < y_bound_min) | (source_y > y_bound_max))
+
+        out_of_bounds_combined = (
+            concatenate([out_of_bound_xy[0], out_of_bounds_lat[0]]),
+            concatenate([out_of_bound_xy[1], out_of_bounds_lat[1]])
+        )
+
         for variable in data_dict:
-            data_dict[variable][out_of_bound_inds] = nan
+            data_dict[variable][out_of_bounds_combined] = nan
 
         return data_dict
 
