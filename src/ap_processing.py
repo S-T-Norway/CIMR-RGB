@@ -476,17 +476,15 @@ class GaussianAntennaPattern:
 
         return
 
-    def antenna_pattern_to_earth(self, int_dom_lons, int_dom_lats, lon_nadir, lat_nadir, lon_l1b, lat_l1b, sigmax, sigmay):
+    def antenna_pattern_to_earth(self, int_dom_lons, int_dom_lats, lon_l1b, lat_l1b, sigmax, sigmay, theta=None, lon_nadir=None, lat_nadir=None):
 
-        delta_lon = np.deg2rad(lon_l1b - lon_nadir)
+        if theta is None:
 
-        theta = np.arctan2(np.cos(np.deg2rad(lon_l1b)) * np.sin(delta_lon),
-                         np.cos(np.deg2rad(lon_nadir)) * np.sin(np.deg2rad(lon_l1b)) - np.sin(np.deg2rad(lon_nadir)) * np.cos(np.deg2rad(lon_l1b)) * np.cos(delta_lon)
-                )
+            delta_lon = np.deg2rad(lon_l1b - lon_nadir)
 
-        print('nadir:', lon_nadir, lat_nadir)
-        print('boresight:', lon_l1b, lat_l1b)
-        print('theta:', np.rad2deg(theta))
+            theta = np.arctan2(np.cos(np.deg2rad(lon_l1b)) * np.sin(delta_lon),
+                             np.cos(np.deg2rad(lon_nadir)) * np.sin(np.deg2rad(lon_l1b)) - np.sin(np.deg2rad(lon_nadir)) * np.cos(np.deg2rad(lon_l1b)) * np.cos(delta_lon)
+                    )
 
         x = haversine_distance(int_dom_lons, lat_l1b, lon_l1b, lat_l1b)
         y = haversine_distance(lon_l1b, int_dom_lats, lon_l1b, lat_l1b)

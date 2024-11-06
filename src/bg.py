@@ -73,7 +73,7 @@ class BGInterp:
             sigmay = self.config.target_gaussian_params[1]
             pattern_radii = concatenate((pattern_radii, [self.target_ap.estimate_max_ap_radius(sigmax, sigmay)]))            
         else:
-            pattern_radii = concatenate((pattern_radii, [self.target_ap.max_ap_radius[variable_dict['feed_horn_number'][target_inds]]]))
+            pattern_radii = concatenate((pattern_radii, [self.target_ap.max_ap_radius[int(variable_dict['feed_horn_number'][target_inds])]]))
 
         int_dom_lons, int_dom_lats = make_integration_grid(
             int_projection_definition=self.config.MRF_projection_definition,
@@ -113,7 +113,7 @@ class BGInterp:
                     lon_l1b = variable_dict['longitude'][sample],
                     lat_l1b = variable_dict['latitude'][sample] 
                 )
-                
+
             source_ant_patterns.append(sample_pattern)
 
         # Get target patterns
@@ -122,8 +122,8 @@ class BGInterp:
             target_ant_pattern = self.target_ap.antenna_pattern_to_earth(
                 int_dom_lons=int_dom_lons,
                 int_dom_lats=int_dom_lats,   
-                lon0=target_lon,
-                lat0=target_lat,
+                lon_l1b=target_lon,
+                lat_l1b=target_lat,
                 sigmax=target_cell_size[0],
                 sigmay=target_cell_size[1],
                 theta=0.
