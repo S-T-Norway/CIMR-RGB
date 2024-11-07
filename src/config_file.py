@@ -538,8 +538,6 @@ class ConfigFile:
         str
             Validated grid definition
         """
-        if grid_type == 'L1R':
-            return None
 
         valid_input = ['EASE2_G9km', 'EASE2_N9km', 'EASE2_S9km',
                        'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km',

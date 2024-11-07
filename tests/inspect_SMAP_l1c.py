@@ -63,6 +63,10 @@ class compare_smap_l1c:
         if 'bt' in variable:
             # SMAP naming convention is tb
             variable_smap = variable.replace('bt', 'cell_tb')
+        if 'scan_angle' in variable:
+            print(variable)
+            variable_smap = variable.replace('processing', 'cell_antenna')
+            print(variable_smap)
 
         var_smap, row_smap, col_smap = self.get_l1c_data(self.l1c_path, variable_smap)
         var_rgb = data_dict_rgb[variable]
