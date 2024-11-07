@@ -153,9 +153,6 @@ class DataIngestion:
         data_dict = {}
         with h5.File(self.config.input_data_path, 'r') as data:
 
-            # Not using qc_dict at the moment need to add functionality for "qc remap".
-            qc_dict = {}
-
             if self.config.input_data_type == "AMSR2":
 
                 # Extract Metadata
@@ -220,16 +217,24 @@ class DataIngestion:
 
             if self.config.input_data_type == "SMAP":
                 variable_dict = {}
+                qc_vars = None
                 bt_data = data['Brightness_Temperature']
                 spacecraft_data = data['Spacecraft_Data']
 
-                # Extract variables
+                # Extract variables (dont need a load of those variables for basic algorithm)
                 required_variables = ['longitude', 'latitude', 'processing_scan_angle',
                                       'x_position', 'y_position', 'z_position',
                                       'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
                                       'y_velocity', 'z_velocity', 'altitude']
 
                 variables_to_open = set(required_variables + self.config.variables_to_regrid)
+
+                # Add quality control variables
+                if self.config.quality_control == True:
+                    variables_to_open.add('scan_quality_flag')
+                    for pol in ['h', 'v', '3', '4']:
+                        if f"bt_{pol}" in variables_to_open:
+                            variables_to_open.add(f"data_quality_{pol}")
 
                 for variable in variables_to_open:
                     variable_key = self.config.variable_key_map[variable]
@@ -266,6 +271,9 @@ class DataIngestion:
                 for variable in variable_dict:
                     if len(variable_dict[variable].shape) == 1:
                         variable_dict[variable] = tile(variable_dict[variable], (num_samples, 1)).T
+
+                if self.config.quality_control == True:
+                    variable_dict = self.apply_smap_qc(variable_dict)
 
                 # Remove out of bounds
                 variable_dict = self.remove_out_of_bounds(variable_dict)
@@ -462,53 +470,23 @@ class DataIngestion:
         return data_dict
 
     @staticmethod
-    def extract_smap_qc(qc_dict):
-        """
-        Applied NaNs to qc_dict extracted in read_hdf5() function.
-
-        Parameters
-        ----------
-        qc_dict: dict
-            Dictionary containing the quality control values extracted
-            from the SMAP data for different polarisations.
-
-        Returns
-        -------
-        qc_dict: dict
-            Dictionary containing the quality control values extracted
-            from the SMAP data for different polarisations
-            with NaNs applied.
-
-        """
-        for qc in qc_dict:
-            qc_dict[qc] = where(qc_dict[qc] == 0, 1, nan)
-        return qc_dict
-
-    @staticmethod
-    def apply_smap_qc(qc_dict, data_dict):
+    def apply_smap_qc(variable_dict):
         """
         Applies the quality control values to the SMAP data for each polarisation.
-
-        Parameters
-        ----------
-        qc_dict: dict
-            Dictionary containing the quality control values extracted
-            from the SMAP data for different polarisations.
-        data_dict: dict
-            Dictionary containing the data extracted from the SMAP data.
-
-        Returns
-        -------
-        data_dict: dict
-            Dictionary containing the data extracted from the SMAP
-            data with quality control values applied.
-
         """
-        data_dict['bt_h_target'] = data_dict['bt_h_target'] * qc_dict['bt_h_qc']
-        data_dict['bt_v_target'] = data_dict['bt_v_target'] * qc_dict['bt_v_qc']
-        data_dict['bt_3_target'] = data_dict['bt_3_target'] * qc_dict['bt_3_qc']
-        data_dict['bt_4_target'] = data_dict['bt_4_target'] * qc_dict['bt_4_qc']
-        return data_dict
+        quality_filter = zeros(variable_dict['scan_quality_flag'].shape)
+        for quality_flag in ['scan_quality_flag', 'data_quality_h', 'data_quality_v', 'data_quality_3', 'data_quality_4']:
+            if quality_flag in variable_dict.keys():
+                print(quality_flag)
+                quality_filter[variable_dict[quality_flag] != 0] = 1
+                variable_dict.pop(quality_flag)
+
+        # Remove bad quality samples from all variables in dict
+        for variable in variable_dict:
+            print(variable)
+            variable_dict[variable][quality_filter == 1] = nan
+
+        return variable_dict
 
     def clean_data(self, data_dict):
         """

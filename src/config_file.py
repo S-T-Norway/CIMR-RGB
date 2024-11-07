@@ -50,6 +50,12 @@ class ConfigFile:
 
         self.dpr_path = path.join(path.dirname(getcwd()), 'dpr')
 
+        self.quality_control = self.validate_quality_control(
+            config_object=config_object,
+            quality_control='inputData/quality_control',
+            input_data_type = self.input_data_type
+        )
+
         self.grid_type = self.validate_grid_type(
             config_object=config_object,
             grid_type='GridParams/gridType',
@@ -164,7 +170,13 @@ class ConfigFile:
                 'nedt_4': 'nedt_4',
                 'regridding_n_samples': 'regridding_n_samples',
                 'regridding_l1b_orphans': 'regridding_l1b_orphans',
-                'acq_time_utc': 'antenna_scan_time_utc'
+                'acq_time_utc': 'antenna_scan_time_utc',
+                'azimuth': 'antenna_earth_azimuth',
+                'scan_quality_flag': 'antenna_scan_qual_flag',
+                'data_quality_h': 'tb_qual_flag_h',
+                'data_quality_v': 'tb_qual_flag_v',
+                'data_quality_3': 'tb_qual_flag_3',
+                'data_quality_4': 'tb_qual_flag_4',
             }
 
         # AMSR2 specific parameters
@@ -218,7 +230,9 @@ class ConfigFile:
                 'nedt_4': 'nedt_4',
                 'regridding_n_samples': 'regridding_n_samples',
                 'regridding_l1b_orphans': 'regridding_l1b_orphans',
-                'acq_time_utc': 'utc_time'
+                'acq_time_utc': 'utc_time',
+                'azimuth': 'earth_azimuth',
+                'oza': 'OZA'
             }
             self.aft_angle_min = 180
             self.aft_angle_max = 360
@@ -711,7 +725,7 @@ class ConfigFile:
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                          'processing_scan_angle', 'longitude', 'latitude', 'faraday_rot_angle', 'nedt_h',
                            'nedt_v', 'nedt_3', 'nedt_4', 'regridding_n_samples', 'regridding_l1b_orphans',
-                           'acq_time_utc']
+                           'acq_time_utc', 'azimuth']
 
             default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                             'processing_scan_angle', 'longitude', 'latitude']
@@ -722,7 +736,7 @@ class ConfigFile:
         elif input_data_type == 'CIMR':
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                            'processing_scan_angle', 'longitude', 'latitude', 'nedt_h', 'nedt_v', 'nedt_3', 'nedt_4',
-                           'regridding_n_samples', 'regridding_l1b_orphans', 'acq_time_utc']
+                           'regridding_n_samples', 'regridding_l1b_orphans', 'acq_time_utc' , 'azimuth', 'oza']
 
             default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                             'processing_scan_angle', 'longitude', 'latitude']
@@ -933,6 +947,24 @@ class ConfigFile:
         else:
             value = 0
         return value
+
+    @staticmethod
+    def validate_quality_control(config_object, quality_control, input_data_type):
+        if input_data_type == 'AMSR2':
+            return False
+        elif input_data_type == 'CIMR':
+            return False
+        else:
+            valid_input = ['True', 'False']
+            if config_object.find(quality_control).text in valid_input:
+                if config_object.find(quality_control).text == 'True':
+                    return True
+                else:
+                    return False
+            raise ValueError(
+                f"Invalid split fore aft. Check Configuration File."
+                f" Valid split fore aft are: {valid_input}"
+            )
 
 
 
