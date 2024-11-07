@@ -126,7 +126,7 @@ class BGInterp:
                 lat_l1b=target_lat,
                 sigmax=target_cell_size[0],
                 sigmay=target_cell_size[1],
-                theta=0.
+                alpha=0.
             )     
         elif self.config.target_antenna_method == 'gaussian':
             target_ant_pattern = self.target_ap.antenna_pattern_to_earth(

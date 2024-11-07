@@ -476,15 +476,17 @@ class GaussianAntennaPattern:
 
         return
 
-    def antenna_pattern_to_earth(self, int_dom_lons, int_dom_lats, lon_l1b, lat_l1b, sigmax, sigmay, theta=None, lon_nadir=None, lat_nadir=None):
+    def antenna_pattern_to_earth(self, int_dom_lons, int_dom_lats, lon_l1b, lat_l1b, sigmax, sigmay, alpha=None, lon_nadir=None, lat_nadir=None):
 
-        if theta is None:
+        if alpha is None:
 
             delta_lon = np.deg2rad(lon_l1b - lon_nadir)
 
-            theta = np.arctan2(np.cos(np.deg2rad(lon_l1b)) * np.sin(delta_lon),
-                             np.cos(np.deg2rad(lon_nadir)) * np.sin(np.deg2rad(lon_l1b)) - np.sin(np.deg2rad(lon_nadir)) * np.cos(np.deg2rad(lon_l1b)) * np.cos(delta_lon)
+            alpha = np.arctan2(np.cos(np.deg2rad(lat_l1b)) * np.sin(delta_lon),
+                             np.cos(np.deg2rad(lat_nadir)) * np.sin(np.deg2rad(lat_l1b)) - np.sin(np.deg2rad(lat_nadir)) * np.cos(np.deg2rad(lat_l1b)) * np.cos(delta_lon)
                     )
+            
+            alpha = np.pi/2. - alpha
 
         x = haversine_distance(int_dom_lons, lat_l1b, lon_l1b, lat_l1b)
         y = haversine_distance(lon_l1b, int_dom_lats, lon_l1b, lat_l1b)
@@ -492,8 +494,8 @@ class GaussianAntennaPattern:
         x[int_dom_lons < lon_l1b] *= -1
         y[int_dom_lats < lat_l1b] *= -1
 
-        x_rot = x * np.cos(theta) + y * np.sin(theta)  #m
-        y_rot = -x * np.sin(theta) + y * np.cos(theta) #m
+        x_rot = x * np.cos(alpha) + y * np.sin(alpha)  #m
+        y_rot = -x * np.sin(alpha) + y * np.cos(alpha) #m
 
         G = np.exp(-((x_rot ** 2) / (2 * sigmax ** 2) + (y_rot ** 2) / (2 * sigmay ** 2)))
 
