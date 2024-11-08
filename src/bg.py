@@ -43,9 +43,7 @@ class BGInterp:
                                             gaussian_params=self.config.target_gaussian_params)
 
         else: #L1c
-
             self.target_ap = GaussianAntennaPattern(config=self.config, antenna_threshold=0.001 )  #check if this value makes sense for L1c
-
 
     def get_antenna_patterns(self, variable_dict, target_dict, target_lon, target_lat, source_inds, target_inds, target_cell_size):
 
@@ -117,7 +115,6 @@ class BGInterp:
             source_ant_patterns.append(sample_pattern)
 
         # Get target patterns
-        target_ant_pattern = None
         if self.config.grid_type == 'L1C':
             target_ant_pattern = self.target_ap.antenna_pattern_to_earth(
                 int_dom_lons=int_dom_lons,
@@ -156,7 +153,6 @@ class BGInterp:
                 lat_l1b=target_lat
             )
         target_ant_pattern /= sum(target_ant_pattern)
-
 
         return source_ant_patterns, target_ant_pattern
 
