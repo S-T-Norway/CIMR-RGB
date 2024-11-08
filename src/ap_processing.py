@@ -531,6 +531,7 @@ def haversine_distance(lon1, lat1, lon2, lat2):
 def make_integration_grid(int_projection_definition, int_grid_definition, longitude, latitude, ap_radii):
 
     #TODO: still an unlucky case that would not work here. What if the source patterns centers are across the IDL ?
+    # This wont be an unlucky case, if you imagine 15 years of operation, this will happen often :)
 
     Rearth  = (6378137. + 6356752.)/2. #m
     Rcircle = Rearth * np.abs(np.cos(np.deg2rad(latitude)))
@@ -553,6 +554,8 @@ def make_integration_grid(int_projection_definition, int_grid_definition, longit
     elif lonmax > 180.:
         lonmax = lonmax - 360.
     if int_projection_definition == 'G':
+        # I actually added latmin to the grid dictionary, would it be more helpful to take it from
+        # there?
         _, easelatmin = integration_grid.xy_to_lonlat(integration_grid.x_min, integration_grid.y_min)
         _, easelatmax = integration_grid.xy_to_lonlat(integration_grid.x_max, integration_grid.y_max)
         latmin = np.maximum(latmin, easelatmin)
