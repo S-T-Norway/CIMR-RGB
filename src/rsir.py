@@ -1,7 +1,6 @@
 from numpy import column_stack
-
-from ap_processing import AntennaPattern
-from  numpy import zeros_like, array, exp, sin, meshgrid,nanmean, cos, ravel_multi_index, ogrid,  unravel_index, where, nan, take, full, all, sum, zeros, identity, dot, nansum, nan_to_num, sqrt
+from ap_processing import AntennaPattern, GaussianAntennaPattern, make_integration_grid
+from  numpy import zeros_like, concatenate, array, exp, sin, meshgrid,nanmean, cos, ravel_multi_index, ogrid,  unravel_index, where, nan, take, full, all, sum, zeros, identity, dot, nansum, nan_to_num, sqrt
 from tqdm import tqdm
 from grid_generator import GridGenerator, GRIDS
 from pyresample import kd_tree, geometry
@@ -18,65 +17,134 @@ class rSIRInterp:
     def __init__(self, config, band):
         self.config = config
         self.band = band
-        self.source_ap = AntennaPattern(config=self.config,
-                                                        band=self.band,
-                                                        antenna_method=self.config.source_antenna_method,
-                                                        polarisation_method=self.config.polarisation_method,
-                                                        antenna_threshold=self.config.source_antenna_threshold,
-                                                        gaussian_params=self.config.source_gaussian_params)
-        if self.config.grid_type == 'L1R':
-            self.target_ap = AntennaPattern(config=self.config,
-                                              band=self.config.target_band[0],
-                                              antenna_method=self.config.target_antenna_method,
-                                              polarisation_method=self.config.polarisation_method,
-                                              antenna_threshold=self.config.target_antenna_threshold,
-                                              gaussian_params=self.config.target_gaussian_params)
+
+        if self.config.source_antenna_method == 'gaussian':
+            self.source_ap = GaussianAntennaPattern(config=self.config,
+                                                    antenna_threshold=self.config.source_antenna_threshold)
+
         else:
-            target_ap = None
+            self.source_ap = AntennaPattern(config=self.config,
+                                            band=self.band,
+                                            antenna_method=self.config.source_antenna_method,
+                                            polarisation_method=self.config.polarisation_method,
+                                            antenna_threshold=self.config.source_antenna_threshold,
+                                            gaussian_params=self.config.source_gaussian_params)
+
+        if self.config.grid_type == 'L1R':
+
+            if self.config.target_antenna_method == 'gaussian':
+                self.target_ap = GaussianAntennaPattern(config=self.config,
+                                                        antenna_threshold=self.config.target_antenna_threshold)
+
+            else:
+                self.target_ap = AntennaPattern(config=self.config,
+                                                band=self.config.target_band[0],
+                                                antenna_method=self.config.target_antenna_method,
+                                                polarisation_method=self.config.polarisation_method,
+                                                antenna_threshold=self.config.target_antenna_threshold,
+                                                gaussian_params=self.config.target_gaussian_params)
+
+        else:  # L1c
+            self.target_ap = GaussianAntennaPattern(config=self.config,
+                                                    antenna_threshold=0.001)  # check if this value makes sense for L1c
+
         self.ids_weights = None
 
-    def get_antenna_patterns(self, band, variable_dict, target_dict, target_lon, target_lat, source_inds, target_inds):
-        target_ant_pattern = None
-        target_idx = None
+    def get_antenna_patterns(self, band, variable_dict, target_dict, target_lon, target_lat, source_inds, target_inds, target_cell_size):
+
+        pattern_lons = array(variable_dict['longitude'][source_inds])
+        pattern_lats = array(variable_dict['latitude'][source_inds])
+        pattern_radii = []
+
+        if self.config.source_antenna_method == 'gaussian':
+            sigmax = self.config.source_gaussian_params[0]
+            sigmay = self.config.source_gaussian_params[1]
+            pattern_radii = concatenate((pattern_radii, [self.source_ap.estimate_max_ap_radius(sigmax, sigmay)]))
+        else:
+            max_radii = [self.source_ap.max_ap_radius[int(nn)] for nn in variable_dict['feed_horn_number'][source_inds]]
+            pattern_radii = concatenate((pattern_radii, max_radii))
+
+        pattern_lons = concatenate((pattern_lons, [target_lon]))
+        pattern_lats = concatenate((pattern_lats, [target_lat]))
+
+        if self.config.grid_type == 'L1C':
+            sigmax = target_cell_size[0]
+            sigmay = target_cell_size[1]
+            pattern_radii = concatenate((pattern_radii, [self.target_ap.estimate_max_ap_radius(sigmax, sigmay)]))
+        elif self.config.target_antenna_method == 'gaussian':
+            sigmax = self.config.target_gaussian_params[0]
+            sigmay = self.config.target_gaussian_params[1]
+            pattern_radii = concatenate((pattern_radii, [self.target_ap.estimate_max_ap_radius(sigmax, sigmay)]))
+        else:
+            pattern_radii = concatenate((pattern_radii, [self.target_ap.max_ap_radius[int(target_dict['feed_horn_number'][target_inds])]]))
+
 
         # Make integration grid
-        int_dom_lons, int_dom_lats = self.source_ap.make_integration_grid(
-            longitude=variable_dict['longitude'][source_inds],
-            latitude=variable_dict['latitude'][source_inds]
+        int_dom_lons, int_dom_lats = make_integration_grid(
+            int_projection_definition=self.config.MRF_projection_definition,
+            int_grid_definition=self.config.MRF_grid_definition,
+            longitude=pattern_lons,
+            latitude=pattern_lats,
+            ap_radii=pattern_radii
         )
-
-        # Testing
-        # plt.figure()
-        # plt.scatter(int_dom_lons.flatten(), int_dom_lats.flatten())
-        # plt.scatter(variable_dict['longitude'][source_inds], variable_dict['latitude'][source_inds])
-        # plt.scatter(target_lon, target_lat)
-        # plt.show()
-        # plt.savefig('/home/beywood/Desktop/test/integration_grid.png')
 
         # Project source patterns to grid
         source_ant_patterns = []
-        for sample in source_inds:  # CHECK SAMPLE
-            sample_pattern = self.source_ap.antenna_pattern_to_earth(
-                int_dom_lons=int_dom_lons,
-                int_dom_lats=int_dom_lats,
-                x_pos=variable_dict['x_position'][sample],
-                y_pos=variable_dict['y_position'][sample],
-                z_pos=variable_dict['z_position'][sample],
-                x_vel=variable_dict['x_velocity'][sample],
-                y_vel=variable_dict['y_velocity'][sample],
-                z_vel=variable_dict['z_velocity'][sample],
-                processing_scan_angle=variable_dict['processing_scan_angle'][sample],
-                feed_horn_number=variable_dict['feed_horn_number'][sample],
-                attitude=variable_dict['attitude'][sample],
-                lon_l1b=variable_dict['longitude'][sample],
-                lat_l1b=variable_dict['latitude'][sample]
-            )
+        for sample in source_inds:
+            if self.config.source_antenna_method == 'gaussian':
+                sample_pattern = self.source_ap.antenna_pattern_to_earth(
+                    int_dom_lons=int_dom_lons,
+                    int_dom_lats=int_dom_lats,
+                    lon_nadir=variable_dict['sub_satellite_lon'][sample],
+                    lat_nadir=variable_dict['sub_satellite_lat'][sample],
+                    lon_l1b=variable_dict['longitude'][sample],
+                    lat_l1b=variable_dict['latitude'][sample],
+                    sigmax=self.config.source_gaussian_params[0],
+                    sigmay=self.config.source_gaussian_params[1]
+                )
+
+            else:
+                sample_pattern = self.source_ap.antenna_pattern_to_earth(
+                    int_dom_lons=int_dom_lons,
+                    int_dom_lats=int_dom_lats,
+                    x_pos=variable_dict['x_position'][sample],
+                    y_pos=variable_dict['y_position'][sample],
+                    z_pos=variable_dict['z_position'][sample],
+                    x_vel=variable_dict['x_velocity'][sample],
+                    y_vel=variable_dict['y_velocity'][sample],
+                    z_vel=variable_dict['z_velocity'][sample],
+                    processing_scan_angle=variable_dict['processing_scan_angle'][sample],
+                    feed_horn_number=variable_dict['feed_horn_number'][sample],
+                    attitude=variable_dict['attitude'][sample],
+                    lon_l1b=variable_dict['longitude'][sample],
+                    lat_l1b=variable_dict['latitude'][sample]
+                )
             sample_pattern /= sum(sample_pattern)
             source_ant_patterns.append(sample_pattern)
 
         # Get target patterns
-        if self.config.grid_type == 'L1R':
-
+        if self.config.grid_type == 'L1C':
+            target_ant_pattern = self.target_ap.antenna_pattern_to_earth(
+                int_dom_lons=int_dom_lons,
+                int_dom_lats=int_dom_lats,
+                lon_l1b=target_lon,
+                lat_l1b=target_lat,
+                sigmax=target_cell_size[0],
+                sigmay=target_cell_size[1],
+                alpha=0.
+            )
+        elif self.config.target_antenna_method == 'gaussian':
+            target_ant_pattern = self.target_ap.antenna_pattern_to_earth(
+                int_dom_lons=int_dom_lons,
+                int_dom_lats=int_dom_lats,
+                lon_nadir=target_dict['sub_satellite_lon'][target_inds],
+                lat_nadir=target_dict['sub_satellite_lat'][target_inds],
+                lon_l1b=target_lon,
+                lat_l1b=target_lat,
+                sigmax=self.config.target_gaussian_params[0],
+                sigmay=self.config.target_gaussian_params[1]
+            )
+        else:
             target_ant_pattern = self.target_ap.antenna_pattern_to_earth(
                 int_dom_lons=int_dom_lons,
                 int_dom_lats=int_dom_lats,
@@ -92,15 +160,9 @@ class rSIRInterp:
                 lon_l1b=target_lon,
                 lat_l1b=target_lat
             )
-            target_ant_pattern /= sum(target_ant_pattern)
+        target_ant_pattern /= sum(target_ant_pattern)
 
-        elif self.config.grid_type == 'L1C':
-            target_ant_pattern = None
-            grid_coords = column_stack((int_dom_lons.flatten(), int_dom_lats.flatten()))
-            tree = KDTree(grid_coords)
-            _, target_idx = tree.query([target_lon, target_lat])
-
-        return source_ant_patterns, target_ant_pattern, target_idx
+        return source_ant_patterns, target_ant_pattern
 
     def rsir_algorithm(self, source_ant_patterns, target_ant_pattern, earth_samples, K=5):
         a0 = zeros_like(source_ant_patterns[0]).flatten()
@@ -140,12 +202,16 @@ class rSIRInterp:
             a_update = a_update.flatten()/ant_sum
             a0 = a_update
 
-        return a_update
+        t_out = nansum(target_ant_pattern.flatten() * a_update)
+
+        return t_out
 
     def rsir(self, band, variable, samples_dict, variable_dict, target_dict, target_grid):
 
         indexes = samples_dict['indexes']
         fill_value = len(variable_dict[f"longitude"])
+        grid_area = GridGenerator(self.config, self.config.projection_definition, self.config.grid_definition).get_grid_area()
+
         T_out = []
         for target_cell in tqdm(range(indexes.shape[0])):
 
@@ -153,61 +219,38 @@ class rSIRInterp:
             if self.config.grid_type == 'L1C':
                 target_lon, target_lat = (target_grid[0].flatten('C')[samples_dict['grid_1d_index'][target_cell]],
                                                     target_grid[1].flatten('C')[samples_dict['grid_1d_index'][target_cell]])
+
+                cell_area = grid_area.flatten('C')[samples_dict['grid_1d_index'][target_cell]]
+                resolution = sqrt(cell_area)
+                target_cell_size = [resolution, resolution]
+
             elif self.config.grid_type == 'L1R':
                 target_lon, target_lat = (target_grid[0][samples_dict['grid_1d_index'][target_cell]],
                                           target_grid[1][samples_dict['grid_1d_index'][target_cell]])
+                target_cell_size = None
 
             # Get Antenna Patterns
             samples = indexes[target_cell, :]
             input_samples = samples[samples != fill_value]
-            source_ant_patterns, target_ant_pattern, target_idx = self.get_antenna_patterns(
+            source_ant_patterns, target_ant_pattern = self.get_antenna_patterns(
                 band=band,
                 variable_dict=variable_dict,
                 target_dict=target_dict,
                 target_lon=target_lon,
                 target_lat=target_lat,
                 source_inds=input_samples,
-                target_inds=samples_dict['grid_1d_index'][target_cell]
+                target_inds=samples_dict['grid_1d_index'][target_cell],
+                target_cell_size=target_cell_size
             )
 
-            a = self.rsir_algorithm(
+            t_out = self.rsir_algorithm(
                 source_ant_patterns=source_ant_patterns,
                 target_ant_pattern=target_ant_pattern,
                 earth_samples= variable_dict[variable][input_samples],
                 K = self.config.rsir_iteration
             )
-
-            if self.config.grid_type == 'L1R':
-                t_out = nansum(target_ant_pattern.flatten() * a)
-            else:
-                if self.config.MRF_grid_definition == self.config.grid_definition:
-                    t_out = a[target_idx]
-                else:
-                    # We need to perform some sort of binning. Add uncertainty at some point
-                    out_res = GRIDS[self.config.grid_definition]['res']
-                    mrf_res = GRIDS[self.config.MRF_grid_definition]['res']
-                    scale = round(out_res/mrf_res)
-                    a_flat = a
-                    a = a.reshape(source_ant_patterns[0].shape)
-                    target_y, target_x = unravel_index(target_idx, a.shape)
-                    if scale % 2 == 0:
-                        half_scale = int(scale/2)
-                        # Dealing with the cases as the edge of the grid.
-                        y_start = max(target_y - half_scale, 0)
-                        y_end = min(target_y + half_scale, a.shape[0])
-                        x_start = max(target_x - half_scale, 0)
-                        x_end = min(target_x + half_scale, a.shape[1])
-                        t_bin = a[y_start:y_end, x_start:x_end]
-                    else:
-                        half_scale = int((scale - 1) / 2)
-                        y_start = max(target_y - half_scale, 0)
-                        y_end = min(target_y + half_scale + 1, a.shape[0])
-                        x_start = max(target_x - half_scale, 0)
-                        x_end = min(target_x + half_scale + 1, a.shape[1])
-                        t_bin = t_bin = a[y_start:y_end, x_start:x_end]
-
-                t_out = nanmean(t_bin)
             T_out.append(t_out)
+
         return array(T_out)
 
     def IDS(self, samples_dict, variable):
