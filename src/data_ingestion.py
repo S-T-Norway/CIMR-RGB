@@ -86,13 +86,20 @@ class DataIngestion:
         x_bound_max = grid['x_min'] + grid['n_cols']*grid['res'] + 0.5 * grid['res']
         y_bound_max = grid['y_max'] + 0.5 * grid['res']
         y_bound_min = grid['y_max'] - grid['n_rows']*grid['res'] - 0.5 * grid['res']
+        if 'EASE2' in self.config.grid_definition:
+            if 'N' in self.config.projection_definition:
+                out_of_bounds_lat = where(data_dict['latitude']< grid['lat_min'])
+            elif 'G' in self.config.projection_definition:
+                out_of_bounds_lat = where((data_dict['latitude'] > grid['lat_max']) | (data_dict['latitude'] < grid['lat_min']))
+            elif 'S' in self.config.projection_definition:
+                out_of_bounds_lat = where(data_dict['latitude'] > grid['lat_min'])
+        elif 'STEREO' in self.config.grid_definition:
+            if self.config.projection_definition == 'PS_N':
+                out_of_bounds_lat = where(data_dict['latitude'] < grid['lat_min'])
+            elif self.config.projection_definition == 'PS_S':
+                out_of_bounds_lat = where(data_dict['latitude'] > grid['lat_min'])
 
-        if 'N' in self.config.projection_definition:
-            out_of_bounds_lat = where(data_dict['latitude']< grid['lat_min'])
-        elif 'G' in self.config.projection_definition:
-            out_of_bounds_lat = where((data_dict['latitude'] > grid['lat_max']) | (data_dict['latitude'] < grid['lat_min']))
-        elif 'S' in self.config.projection_definition:
-            out_of_bounds_lat = where(data_dict['latitude'] > grid['lat_min'])
+
 
         source_x, source_y = GridGenerator(self.config,
                                            projection_definition=self.config.projection_definition,

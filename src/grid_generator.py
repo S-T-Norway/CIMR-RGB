@@ -41,17 +41,17 @@ GRIDS = {'EASE2_G1km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83
                          'res': 36000.0, 'n_cols': 500, 'n_rows': 500, 'lat_min': 0},
          # Polar Stereographic Projection Grids
          'STEREO_N6.25km': {'epsg': 3413, 'x_min': -3850000, 'y_max': 5850000,
-                            'res': 6250, 'n_cols': 1216, 'n_rows': 1792},
+                            'res': 6250, 'n_cols': 1216, 'n_rows': 1792, 'lat_min': 60},
          'STEREO_N12.5km': {'epsg': 3413, 'x_min': -3850000, 'y_max': 5850000,
-                            'res': 12500, 'n_cols': 608, 'n_rows': 896},
+                            'res': 12500, 'n_cols': 608, 'n_rows': 896, 'lat_min': 60},
          'STEREO_N25km': {'epsg': 3413, 'x_min': -3850000, 'y_max': 5850000,
-                          'res': 25000, 'n_cols': 304, 'n_rows': 448},
+                          'res': 25000, 'n_cols': 304, 'n_rows': 448, 'lat_min': 60},
          'STEREO_S6.25km': {'epsg': 3976, 'x_min': -3950000, 'y_max': 4350000,
-                            'res': 6250, 'n_cols': 1264, 'n_rows': 1328},
+                            'res': 6250, 'n_cols': 1264, 'n_rows': 1328, 'lat_min': -60},
          'STEREO_S12.5km': {'epsg': 3976, 'x_min': -3950000, 'y_max': 4350000,
-                            'res': 12500, 'n_cols': 632, 'n_rows': 664},
+                            'res': 12500, 'n_cols': 632, 'n_rows': 664, 'lat_min': -60},
          'STEREO_S25km': {'epsg': 3976, 'x_min': -3950000, 'y_max': 4350000,
-                          'res': 25000, 'n_cols': 316, 'n_rows': 332}
+                          'res': 25000, 'n_cols': 316, 'n_rows': 332, 'lat_min': -60}
          }
 
 # TODO: Abandon the usage of proj4 strings in favor of newer format?
