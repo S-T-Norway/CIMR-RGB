@@ -26,7 +26,7 @@ class AntennaPattern:
 
         if self.antenna_method == 'real':
 
-            ap_dict = self.load_antenna_patterns()
+            ap_dict, self.fraction_below_threshold = self.load_antenna_patterns()
 
             if self.polarisation_method == 'scalar':
                 self.scalar_gain = self.get_scalar_pattern(ap_dict)
@@ -90,9 +90,12 @@ class AntennaPattern:
 
         mask = full(ap_dict['Gnorm'].shape, False)
 
+        fraction_below_threshold = 1.
+
         if antenna_threshold is not None:
             threshold_power = antenna_threshold * np.max(ap_dict['Gnorm'])
             mask = np.logical_or(mask, ap_dict['Gnorm'] < threshold_power)
+            fraction_below_threshold = np.sum(ap_dict['Gnorm'][mask]) / np.sum(ap_dict['Gnorm'])
 
         if theta_max is not None:
             mask = logical_or(mask, ap_dict['theta'] > theta_max)
@@ -103,7 +106,7 @@ class AntennaPattern:
         ap_dict['Gvcx'][mask] = 0.
         ap_dict['Gnorm'][mask] = 0.
     
-        return ap_dict
+        return ap_dict, fraction_below_threshold
 
     def load_antenna_patterns(self):
 
@@ -111,7 +114,8 @@ class AntennaPattern:
         # is forced to specify the targetBand config parameter also for SMAP
         if self.config.input_data_type == "SMAP":
             ap_dict = {}
-            ap_dict[0] = self.extract_gain_dict(
+            fraction_below_threshold = {}
+            ap_dict[0], fraction_below_threshold[0] = self.extract_gain_dict(
                 file_path = self.config.antenna_pattern_path,
                 antenna_threshold=self.antenna_threshold
             )
@@ -120,6 +124,7 @@ class AntennaPattern:
             num_horns = self.config.num_horns[self.band]
             horn_dict = {}
             ap_dict = {}
+            fraction_below_threshold = {}
             for feedhorn in range(num_horns):
                 path = os.path.join(
                     self.config.antenna_pattern_path, self.band)
@@ -129,12 +134,12 @@ class AntennaPattern:
 
                 assert(len(set(horn_files))==1), "There are zero or more than one antenna pattern files for feedhorn " + horn
 
-                ap_dict[int(feedhorn)] = self.extract_gain_dict(
+                ap_dict[int(feedhorn)], fraction_below_threshold[int(feedhorn)] = self.extract_gain_dict(
                             file_path=os.path.join(path, horn_files[0]),
                             antenna_threshold=self.antenna_threshold
                         )
 
-        return ap_dict
+        return ap_dict, fraction_below_threshold
 
     def gaussian_antenna_patterns(self, ap_dict):
 
@@ -473,6 +478,7 @@ class GaussianAntennaPattern:
 
         self.config = config
         self.antenna_threshold = antenna_threshold #dB
+        self.fraction_below_threshold = 1.
 
         return
 

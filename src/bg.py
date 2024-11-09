@@ -95,6 +95,7 @@ class BGInterp:
                     sigmax=self.config.source_gaussian_params[0],
                     sigmay=self.config.source_gaussian_params[1]
                 )        
+                fraction_above_threshold = 1. 
             else:        
                 sample_pattern = self.source_ap.antenna_pattern_to_earth(
                     int_dom_lons=int_dom_lons,
@@ -111,7 +112,8 @@ class BGInterp:
                     lon_l1b = variable_dict['longitude'][sample],
                     lat_l1b = variable_dict['latitude'][sample] 
                 )
-            sample_pattern /= sum(sample_pattern)
+                fraction_above_threshold = 1.- self.source_ap.fraction_below_threshold[int(variable_dict['feed_horn_number'][sample])]
+            sample_pattern /= (fraction_above_threshold*sum(sample_pattern))
             source_ant_patterns.append(sample_pattern)
 
         # Get target patterns
@@ -125,6 +127,7 @@ class BGInterp:
                 sigmay=target_cell_size[1],
                 alpha=0.
             )     
+            fraction_above_threshold = 1.
         elif self.config.target_antenna_method == 'gaussian':
             target_ant_pattern = self.target_ap.antenna_pattern_to_earth(
                 int_dom_lons=int_dom_lons,
@@ -135,7 +138,8 @@ class BGInterp:
                 lat_l1b=target_lat,
                 sigmax=self.config.target_gaussian_params[0],
                 sigmay=self.config.target_gaussian_params[1]
-            )        
+            )     
+            fraction_above_threshold = 1.   
         else:    
             target_ant_pattern = self.target_ap.antenna_pattern_to_earth(
                 int_dom_lons=int_dom_lons,
@@ -152,7 +156,8 @@ class BGInterp:
                 lon_l1b=target_lon,
                 lat_l1b=target_lat
             )
-        target_ant_pattern /= sum(target_ant_pattern)
+            fraction_above_threshold = (1-self.target_ap.fraction_below_threshold[int(target_dict['feed_horn_number'][target_inds])])
+        target_ant_pattern /= (fraction_above_threshold*sum(sample_pattern))
 
         return source_ant_patterns, target_ant_pattern
 
