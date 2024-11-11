@@ -9,7 +9,12 @@ version = "0.0.1"
 description = "CIMR RGB"
 readme = "README.md"
 requires-python = ">=3.10"
-keywords = ["one", "two"] 
+authors = [
+  {name = "Joseph Heywood",    email = "heywood@stcorp.no"},
+  {name = "Maksym Brilenkov",  email = "brilenkov@stcorp.no"},
+  {name = "Davide Decataldo ", email = "decataldo@stcorp.no"}
+]
+keywords = ["satellites", "microwave radiometry"] 
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
     # Add any dependencies here if necessary
