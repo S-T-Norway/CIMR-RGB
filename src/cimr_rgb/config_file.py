@@ -95,6 +95,12 @@ class ConfigFile:
             input_data_path  = 'inputData/path'
         )
 
+        self.antenna_pattern_path = self.validate_input_antenna_pattern_path(
+            config_object        =  config_object,
+            antenna_pattern_path = 'inputData/antenna_pattern_path',
+            data_type = self.input_data_type
+        )
+
         self.dpr_path        = path.join(path.dirname(getcwd()), 'dpr')
 
         self.quality_control = self.validate_quality_control(
@@ -374,20 +380,9 @@ class ConfigFile:
 
 
             if self.input_data_type == 'SMAP':
-                # Antenna Pattern Path
-                # Try and load a file, raise an error if its not there
-                try:
-                    relative_path = '../dpr/antenna_patterns/SMAP/RadiometerAntPattern_170830_v011.h5'
-                    self.antenna_pattern_path = path.normpath(path.join(getcwd(), relative_path))
-                except AttributeError as e:
-                    raise ValueError(f"Error: SMAP Antenna Pattern not found in dpr") from e
-
                 self.antenna_tilt_angle = 144.54
 
             elif self.input_data_type == 'CIMR':
-                relative_path = '../dpr/antenna_patterns/CIMR'
-                self.antenna_pattern_path = path.normpath(path.join(getcwd(), relative_path))
-
                 self.antenna_tilt_angle = 46.886 # update to read from file
 
         if self.regridding_algorithm == 'RSIR':
@@ -472,7 +467,44 @@ class ConfigFile:
         if input_data_path.exists(): 
             return input_data_path  
         else: 
-            raise FileNotFoundError(f"File\n {input_data_path}\n not found. Check file location.") 
+            raise FileNotFoundError(f"File\n {input_data_path}\n not found. Check file location.")
+
+    @staticmethod
+    def validate_input_antenna_pattern_path(config_object, antenna_pattern_path, data_type):
+        """
+        Validates the input data path and returns the value if valid
+        Parameters
+        ----------
+        config_object: xml.etree.ElementTree.Element
+            Root element of the configuration file
+        input_data_path: str
+            Path to the input data type in the configuration file
+
+        Returns
+        -------
+        str
+            Validated input data path
+        """
+
+        antenna_pattern_path = pb.Path(config_object.find(antenna_pattern_path).text).resolve()
+
+        if antenna_pattern_path.exists():
+            if data_type == 'SMAP':
+                try:
+                    relative_path = 'SMAP/RadiometerAntPattern_170830_v011.h5'
+                    antenna_pattern_path = path.join(antenna_pattern_path, relative_path)
+                except AttributeError as e:
+                    raise ValueError(f"Error: SMAP Antenna Pattern not found in dpr") from e
+            elif data_type == 'CIMR':
+                try:
+                    relative_path = 'CIMR'
+                    antenna_pattern_path = path.join(antenna_pattern_path, relative_path)
+                except AttributeError as e:
+                    raise ValueError(f"Error: CIMR Antenna Pattern folder not found in {antenna_pattern_path}") from e
+
+            return antenna_pattern_path
+        else:
+            raise FileNotFoundError(f"File\n {antenna_pattern_path}\n not found. Check file location.")
 
 
     @staticmethod
