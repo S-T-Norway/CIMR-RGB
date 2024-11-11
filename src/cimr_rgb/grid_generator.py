@@ -126,7 +126,7 @@ class GridGenerator:
         """
 
         self.config = config_object
-        self.logger = config_object.logger 
+        # self.logger = config_object.logger
 
 
         self.projection_definition = projection_definition
