@@ -536,48 +536,54 @@ def haversine_distance(lon1, lat1, lon2, lat2):
 
 def make_integration_grid(int_projection_definition, int_grid_definition, longitude, latitude, ap_radii):
 
-    #TODO: still an unlucky case that would not work here. What if the source patterns centers are across the IDL ?
-    # This wont be an unlucky case, if you imagine 15 years of operation, this will happen often :)
-
     Rearth  = (6378137. + 6356752.)/2. #m
     Rcircle = Rearth * np.abs(np.cos(np.deg2rad(latitude)))
     Rcircle = np.max(Rcircle)
     Rpattern = max(ap_radii)
-    latmin = np.min(latitude)  - np.rad2deg(Rpattern/Rearth)
-    latmax = np.max(latitude)  + np.rad2deg(Rpattern/Rearth)
-    lonmin = np.min(longitude) - np.rad2deg(Rpattern/Rcircle)
-    lonmax = np.max(longitude) + np.rad2deg(Rpattern/Rcircle)
+    latdn = np.array(latitude)  - np.rad2deg(Rpattern/Rearth)
+    latup = np.array(latitude)  + np.rad2deg(Rpattern/Rearth)
+    lonsx = np.array(longitude) - np.rad2deg(Rpattern/Rcircle)
+    londx = np.array(longitude) + np.rad2deg(Rpattern/Rcircle)
 
     integration_grid = GridGenerator(None,
                                projection_definition=int_projection_definition,
                                grid_definition=int_grid_definition)
-    
-    if lonmin < -180. and lonmax > 180.:
-        lonmin = -180.
-        lonmax = 180.
-    elif lonmin < -180.:
-        lonmin = 360. + lonmin
-    elif lonmax > 180.:
-        lonmax = lonmax - 360.
+
+    mask = latup>90
+    latup[mask] = 180. - latup[mask]
+
+    mask = latdn<-90
+    latdn[mask] = -180. - latdn[mask]
+
+    mask = londx>180.
+    londx[mask] = londx[mask] - 360.
+
+    mask = lonsx<-180.
+    lonsx[mask] = lonsx[mask] + 360.
+
+    latmin = np.minimum(latdn.min(), latup.min())
+    latmax = np.maximum(latdn.max(), latup.max())
+    lonmin = np.minimum(lonsx.min(), londx.min())
+    lonmax = np.maximum(lonsx.max(), londx.max())
+
     if int_projection_definition == 'G':
-        # I actually added latmin to the grid dictionary, would it be more helpful to take it from
-        # there?
-        _, easelatmin = integration_grid.xy_to_lonlat(integration_grid.x_min, integration_grid.y_min)
-        _, easelatmax = integration_grid.xy_to_lonlat(integration_grid.x_max, integration_grid.y_max)
-        latmin = np.maximum(latmin, easelatmin)
-        latmax = np.minimum(latmax, easelatmax)
+
+        easelatmin = GRIDS[int_grid_definition]['lat_min']
+        easelatmax = GRIDS[int_grid_definition]['lat_max']
         xmin, ymin = integration_grid.lonlat_to_xy(lonmin, latmin)
         xmax, ymax = integration_grid.lonlat_to_xy(lonmax, latmax)
         xs, ys = integration_grid.generate_grid_xy()
-        if xmax > xmin:
+        dist = np.abs(lonmax-lonmin)
+        dist_wrapped = np.abs(180-lonmax) + np.abs(lonmin+180)
+        if dist<=dist_wrapped:
             xs = xs[logical_and(xs > xmin, xs < xmax)]
         else:
-            xs = concatenate((xs[xs > xmin], xs[xs < xmax]))
+            xs = concatenate((xs[xs > xmax], xs[xs < xmin]))
         ys = ys[logical_and(ys > ymin, ys < ymax)]
         Xs, Ys = meshgrid(xs, ys)
-    elif int_projection_definition == 'N':
-        if latmax > 90.:
-            latmax = 180. - latmax
+
+    elif int_projection_definition in ['N', 'S']:
+
         x0, y0 = integration_grid.lonlat_to_xy(lonmin, latmin)
         x1, y1 = integration_grid.lonlat_to_xy(lonmin, latmax)
         x2, y2 = integration_grid.lonlat_to_xy(lonmax, latmin)
@@ -586,30 +592,11 @@ def make_integration_grid(int_projection_definition, int_grid_definition, longit
         xmax = np.max([x0, x1, x2, x3])
         ymin = np.min([y0, y1, y2, y3])
         ymax = np.max([y0, y1, y2, y3])
-        
         xs, ys = integration_grid.generate_grid_xy()
         xs = xs[logical_and(xs > xmin, xs < xmax)]
         ys = ys[logical_and(ys > ymin, ys < ymax)]
         Xs, Ys = meshgrid(xs, ys)
-    elif int_projection_definition == 'S':
-        if latmax < -90.:
-            latmax = -180. - latmax
-        
-        x0, y0 = integration_grid.lonlat_to_xy(lonmin, latmin)
-        x1, y1 = integration_grid.lonlat_to_xy(lonmin, latmax)
-        x2, y2 = integration_grid.lonlat_to_xy(lonmax, latmin)
-        x3, y3 = integration_grid.lonlat_to_xy(lonmax, latmax)
-        xmin = np.min([x0, x1, x2, x3])
-        xmax = np.max([x0, x1, x2, x3])
-        ymin = np.min([y0, y1, y2, y3])
-        ymax = np.max([y0, y1, y2, y3])
-        
-        xs, ys = integration_grid.generate_grid_xy()
-        xs = xs[logical_and(xs > xmin, xs < xmax)]
-        ys = ys[logical_and(ys > ymin, ys < ymax)]
-        Xs, Ys = meshgrid(xs, ys)
+   
     lons, lats = integration_grid.xy_to_lonlat(Xs, Ys)
 
     return lons, lats
-
-
