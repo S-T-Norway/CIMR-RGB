@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='utf-8'?>
+<config>
+    <inputData>
+        <type>SMAP</type>
+        <path>dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>
+        <splitForeAft>True</splitForeAft>
+        <sourceBand>89a</sourceBand>
+        <targetBand>10</targetBand> 
+        <LMT>2200</LMT>
+        <quality_control>True</quality_control>
+    </inputData>
+    <GridParams>
+        <gridType>L1C</gridType>
+	<gridDefinition>EASE2_G36km</gridDefinition>
+	<projectionDefinition>G</projectionDefinition>
+    	<reduced_grid_inds></reduced_grid_inds> # 800 900 3200 3260 south 1450 1460 1780 1800 north 650 660 1250 1260
+    </GridParams>
+    <ReGridderParams>
+        <regriddingAlgorithm>IDS</regriddingAlgorithm>
+        <searchRadius>18</searchRadius>
+        <max_neighbours>10</max_neighbours>
+        <variables_to_regrid>bt_h bt_v bt_3 bt_4</variables_to_regrid>
+        <source_antenna_method>gaussian</source_antenna_method>
+        <target_antenna_method>real</target_antenna_method>
+        <polarisation_method>scalar</polarisation_method>
+        <source_antenna_threshold>0.5</source_antenna_threshold>
+        <target_antenna_threshold>0.5</target_antenna_threshold>
+        <MRF_grid_definition>EASE2_G3km</MRF_grid_definition>
+        <MRF_projection_definition>G</MRF_projection_definition>
+        <source_gaussian_params>100000 100000 0</source_gaussian_params>
+        <target_gaussian_params>100000 100000 0</target_gaussian_params>
+        <boresight_shift>True</boresight_shift>
+        <rsir_iteration>15</rsir_iteration>
+    </ReGridderParams>
+    <outputData>
+        <saveTodisk>True</saveTodisk>
+	<outputPath>output/cimr_rgb</outputPath>
+    </outputData>
+    <LoggingParams>
+        <configPath>src/cimr_rgb/logger_config.json</configPath>
+	<decorate>True</decorate>
+    </LoggingParams> 
+</config>
