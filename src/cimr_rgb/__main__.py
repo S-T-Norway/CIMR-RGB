@@ -13,8 +13,7 @@ import pathlib as pb
 import pickle
 import argparse 
 
-from numpy import full, nan, array 
-#import simplekml
+from numpy import full, nan, array
 
 # ---- Testing ----
 import matplotlib
@@ -22,12 +21,12 @@ tkagg = matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 # -----------------
 
-from .config_file       import ConfigFile
-from .data_ingestion    import DataIngestion
-from .grid_generator    import GridGenerator, GRIDS
-from .regridder         import ReGridder
-from .rgb_logging       import RGBLogging 
-from .product_generator import ProductGenerator 
+from cimr_rgb.config_file import ConfigFile
+from cimr_rgb.data_ingestion import DataIngestion
+from cimr_rgb.grid_generator    import GridGenerator, GRIDS
+from cimr_rgb.regridder         import ReGridder
+from cimr_rgb.rgb_logging       import RGBLogging
+from cimr_rgb.product_generator import ProductGenerator
 
 # Maksym: I assume this comes frome tests directory 
 #from inspect_SMAP_l1c import compare_smap_l1c
@@ -131,7 +130,7 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
 
 
     # Returning the configuration file path (from the command line). If it is
-    # not given, then the dafult one will be used.  
+    # not given, then the default one will be used.
     rgb_config_path = pb.Path(args.config_file).resolve()  
 
     modified_pars = {} 
@@ -218,7 +217,9 @@ def main():
     #       file, otherwise it won't work 
     # 
     # Setting the default value of the configuration parameter 
-    rgb_config_path   = pb.Path("configs", 'rgb_config.xml').resolve() 
+    rgb_config_path   = pb.Path("configs", 'rgb_config.xml').resolve()
+    # If running from IDE, comment out above and use the line below
+    # rgb_config_path = pb.Path('/home/beywood/ST/CIMR_RGB/CIMR-RGB/configs', 'rgb_config.xml').resolve()
 
     parser = argparse.ArgumentParser(description = "Update XML configuration parameters.")
     # Will use the default value of config_file if none is provided via command line: 
@@ -275,7 +276,7 @@ def main():
 if __name__ == '__main__':
 
 
-    main() 
+    main()
 
     # Intermediate results check
     # Put in the variables you want from the data_dict_out in data_dict.
