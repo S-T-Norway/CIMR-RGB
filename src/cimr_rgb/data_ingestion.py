@@ -9,6 +9,7 @@ process.
 """
 
 import re
+from datetime import datetime, timezone, timedelta
 
 from numpy import (array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile, repeat, arange,
                    isnan, delete, where, concatenate, full, newaxis, float32, asarray, any, atleast_1d)
@@ -93,17 +94,34 @@ class DataIngestion:
         x_bound_max = grid['x_min'] + grid['n_cols']*grid['res'] + 0.5 * grid['res']
         y_bound_max = grid['y_max'] + 0.5 * grid['res']
         y_bound_min = grid['y_max'] - grid['n_rows']*grid['res'] - 0.5 * grid['res']
+        if 'EASE2' in self.config.grid_definition:
+            if 'N' in self.config.projection_definition:
+                out_of_bounds_lat = where(data_dict['latitude']< grid['lat_min'])
+            elif 'G' in self.config.projection_definition:
+                out_of_bounds_lat = where((data_dict['latitude'] > grid['lat_max']) | (data_dict['latitude'] < grid['lat_min']))
+            elif 'S' in self.config.projection_definition:
+                out_of_bounds_lat = where(data_dict['latitude'] > grid['lat_min'])
+        elif 'STEREO' in self.config.grid_definition:
+            if self.config.projection_definition == 'PS_N':
+                out_of_bounds_lat = where(data_dict['latitude'] < grid['lat_min'])
+            elif self.config.projection_definition == 'PS_S':
+                out_of_bounds_lat = where(data_dict['latitude'] > grid['lat_min'])
 
 
-        source_x, source_y = GridGenerator(self.config).lonlat_to_xy(
-            lon = data_dict['longitude'],
-            lat = data_dict['latitude']
+        source_x, source_y = GridGenerator(self.config,
+                                           projection_definition=self.config.projection_definition,
+                                           grid_definition=self.config.grid_definition).lonlat_to_xy(
+            lon=data_dict['longitude'],
+            lat=data_dict['latitude']
         )
 
-        out_of_bound_inds = where((source_y < y_bound_min) | (source_y > y_bound_max))
+        out_of_bounds_xy = where((source_y < y_bound_min) | (source_y > y_bound_max))
 
         for variable in data_dict:
-            data_dict[variable][out_of_bound_inds] = nan
+            if len(out_of_bounds_lat[0]) != 0:
+                data_dict[variable][out_of_bounds_xy] = nan
+            if len(out_of_bounds_xy[0]) != 0:
+                data_dict[variable][out_of_bounds_lat] = nan
 
         return data_dict
 
@@ -151,9 +169,6 @@ class DataIngestion:
         data_dict = {}
 
         with h5.File(self.config.input_data_path, 'r') as data:
-
-            # Not using qc_dict at the moment need to add functionality for "qc remap".
-            qc_dict = {}
 
             if self.config.input_data_type == "AMSR2":
 
@@ -219,16 +234,24 @@ class DataIngestion:
 
             if self.config.input_data_type == "SMAP":
                 variable_dict = {}
+                qc_vars = None
                 bt_data = data['Brightness_Temperature']
                 spacecraft_data = data['Spacecraft_Data']
 
-                # Extract variables
+                # Extract variables (dont need a load of those variables for basic algorithm)
                 required_variables = ['longitude', 'latitude', 'processing_scan_angle',
                                       'x_position', 'y_position', 'z_position',
                                       'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
                                       'y_velocity', 'z_velocity', 'altitude']
 
                 variables_to_open = set(required_variables + self.config.variables_to_regrid)
+
+                # Add quality control variables
+                if self.config.quality_control == True:
+                    variables_to_open.add('scan_quality_flag')
+                    for pol in ['h', 'v', '3', '4']:
+                        if f"bt_{pol}" in variables_to_open:
+                            variables_to_open.add(f"data_quality_{pol}")
 
                 for variable in variables_to_open:
                     variable_key = self.config.variable_key_map[variable]
@@ -238,8 +261,22 @@ class DataIngestion:
                         if variable == 'altitude':
                             # Only need the maximum altitude for ap_max_radius calculation
                             self.config.max_altitude = spacecraft_data[variable_key][:].max()
-                            continue
-                        variable_dict[variable] = spacecraft_data[variable_key][:]
+                            variable_dict[variable] = spacecraft_data[variable_key][:]
+
+                        if variable == 'acq_time_utc':
+                            datetime_obj = []
+                            for timestamp in spacecraft_data[variable_key][:]:
+                                timestamp_str = timestamp.decode('utf-8')
+                                timestamp_str = timestamp_str.replace('Z', '+00:00')
+                                dt_obj = datetime.fromisoformat(timestamp_str)
+                                datetime_obj.append(dt_obj.timestamp())
+                            variable_dict[variable] = array(datetime_obj)
+
+                        else:
+                            variable_dict[variable] = spacecraft_data[variable_key][:]
+                    else:
+                        # regridding_n_samples, regridding_l1b_orphans
+                        continue
 
                 # Create a map between scan number, earth sample number and feed_horn number
                 num_scans, num_samples = variable_dict['longitude'].shape
@@ -247,12 +284,13 @@ class DataIngestion:
                 variable_dict['sample_number'] = float32(tile(arange(num_samples), (num_scans, 1)))
                 variable_dict['feed_horn_number'] = float32(zeros((num_scans, num_samples)))
 
-                # Add attitude variable
-
                 # Turn the 1D (once per scan) variables into 2D variables
                 for variable in variable_dict:
                     if len(variable_dict[variable].shape) == 1:
                         variable_dict[variable] = tile(variable_dict[variable], (num_samples, 1)).T
+
+                if self.config.quality_control == True:
+                    variable_dict = self.apply_smap_qc(variable_dict)
 
                 # Remove out of bounds
                 # 
@@ -260,7 +298,7 @@ class DataIngestion:
                 variable_dict = self.remove_out_of_bounds(variable_dict)
 
                 # Split Fore/Aft and Flatten
-                if self.config.split_fore_aft == True:
+                if self.config.split_fore_aft:
                     variable_dict_out = {}
                     mask_dict = {'aft': (variable_dict['processing_scan_angle'] >= self.config.aft_angle_min) & (
                             variable_dict['processing_scan_angle'] <= self.config.aft_angle_max)}
@@ -313,49 +351,90 @@ class DataIngestion:
                 # Extract variables (This can be tweaked to remove variables for Non-AP algorithms)
                 if self.config.grid_type == 'L1R':
                     if band in self.config.target_band:
-                        variables_to_open = ['longitude', 'latitude']
+                        if self.config.regridding_algorithm in ['NN', 'IDS', 'DIB']:
+                            variables_to_open = ['longitude', 'latitude']
+                        else:
+                            variables_to_open = ['longitude', 'latitude', 'processing_scan_angle',
+                                          'x_position', 'y_position', 'z_position',
+                                          'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
+                                          'y_velocity', 'z_velocity', 'attitude']
                     else:
-                        required_variables = ['longitude', 'latitude', 'processing_scan_angle',
+                        if self.config.regridding_algorithm in ['NN', 'IDS', 'DIB']:
+                            required_variables = ['longitude', 'latitude', 'processing_scan_angle']
+                        else:
+                            required_variables = ['longitude', 'latitude', 'processing_scan_angle',
                                           'x_position', 'y_position', 'z_position',
                                           'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
                                           'y_velocity', 'z_velocity', 'attitude']
                         variables_to_open = set(required_variables + self.config.variables_to_regrid)
 
                 elif self.config.grid_type == 'L1C':
-                    required_variables = ['longitude', 'latitude', 'processing_scan_angle',
-                                          'x_position', 'y_position', 'z_position',
-                                          'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
-                                          'y_velocity', 'z_velocity', 'attitude']
+                    # We don't need alot of these variables for simple algorithms, can reduce set.
+                    if self.config.regridding_algorithm in ['NN', 'IDS', 'DIB']:
+                        required_variables = ['longitude', 'latitude', 'processing_scan_angle']
+                    else:
+                        required_variables = ['longitude', 'latitude', 'processing_scan_angle',
+                                              'x_position', 'y_position', 'z_position',
+                                              'sub_satellite_lat', 'sub_satellite_lon', 'x_velocity',
+                                              'y_velocity', 'z_velocity', 'attitude']
                     variables_to_open = set(required_variables + self.config.variables_to_regrid)
 
-
                 for variable in variables_to_open:
-                    variable_key = self.config.variable_key_map[variable]
-                    data = band_data[variable_key][:]
-                    if variable == 'x_position':
-                        variable_dict[variable] = data[:,:,0]
-                    elif variable == 'y_position':
-                        variable_dict[variable] = data[:,:,1]
-                    elif variable == 'z_position':
-                        variable_dict[variable] = data[:,:,2]
-                    elif variable == 'x_velocity':
-                        variable_dict[variable] = data[:,:,0]
-                    elif variable == 'y_velocity':
-                        variable_dict[variable] = data[:,:,1]
-                    elif variable == 'z_velocity':
-                        variable_dict[variable] = data[:,:,2]
+                    if 'nedt' in variable:
+                        # Synthetically create NEDT in the absence of L1b field and/or MACRAD LUTs
+                        shape = band_data[self.config.variable_key_map['longitude']][:].shape
+                        nedt = self.config.nedt[band]
+                        variable_dict[variable] = tile(nedt, shape)
+                    elif 'regridding_n_samples' in variable:
+                        continue
+                    elif 'regridding_l1b_orphans' in variable:
+                        continue
                     else:
-                        variable_dict[variable] = data
+                        variable_key = self.config.variable_key_map[variable]
+                        if variable == 'acq_time_utc':
+                            utc_time = band_data[variable_key]
+                            days = array(utc_time['days'][:])
+                            seconds = array(utc_time['seconds'][:])
+                            micro_seconds = array(utc_time['microseconds'][:])
+                            days_flat = days.flatten()
+                            seconds_flat = seconds.flatten()
+                            microseconds_flat = micro_seconds.flatten()
+                            base_date = datetime(2000, 1, 1, tzinfo=timezone.utc)
+
+                            timestamps = [
+                                (base_date + timedelta(days=int(d), seconds=int(s), microseconds=int(us))).timestamp()
+                                for d, s, us in zip(days_flat, seconds_flat, microseconds_flat)
+                            ]
+
+                            variable_dict[variable] = array(timestamps).reshape(days.shape)
+
+                        else:
+                            data = band_data[variable_key][:]
+                            if variable == 'x_position':
+                                variable_dict[variable] = data[:,:,0]
+                            elif variable == 'y_position':
+                                variable_dict[variable] = data[:,:,1]
+                            elif variable == 'z_position':
+                                variable_dict[variable] = data[:,:,2]
+                            elif variable == 'x_velocity':
+                                variable_dict[variable] = data[:,:,0]
+                            elif variable == 'y_velocity':
+                                variable_dict[variable] = data[:,:,1]
+                            elif variable == 'z_velocity':
+                                variable_dict[variable] = data[:,:,2]
+                            else:
+                                variable_dict[variable] = data
 
                 # Calculate max altitude for ap_radius calculation (same for all bands)
-                if self.config.grid_type == 'L1R':
-                    if band in self.config.target_band:
+                if self.config.regridding_algorithm in ['BG', 'RSIR']:
+                    if self.config.grid_type == 'L1R' and band in self.config.target_band:
                         pass
-                else:
-                    if not hasattr(self.config, 'max_altitude'):
-                        altitude = sqrt(variable_dict['x_position']**2 + variable_dict['y_position']**2 + variable_dict['z_position']**2)
-                        altitude -= 6371000
-                        self.config.max_altitude = altitude.max()
+                    else:
+                        if not hasattr(self.config, 'max_altitude'):
+                            print(band)
+                            altitude = sqrt(variable_dict['x_position'] ** 2 + variable_dict['y_position'] ** 2 + variable_dict[
+                                'z_position'] ** 2) - 6371000
+                            self.config.max_altitude = altitude.max()
 
                 # Create map between scan number and earth sample number
                 num_feed_horns = self.config.num_horns[band]
@@ -366,6 +445,8 @@ class DataIngestion:
                 variable_dict['scan_number'] = float32(repeat(arange(num_scans)[:, newaxis], num_samples * num_feed_horns,axis=1).flatten('C'))
                 single_row = tile(arange(num_samples), num_feed_horns)
                 variable_dict['sample_number'] = float32(tile(single_row, (num_scans, 1)).flatten('C'))
+
+
 
                 # Remove out of bounds here
                 if self.config.grid_type != 'L1R':
@@ -390,7 +471,7 @@ class DataIngestion:
                             variable_dict = variable_dict_out
                             del variable_dict_out
                 elif self.config.grid_type == 'L1C':
-                    if self.config.split_fore_aft == True:
+                    if self.config.split_fore_aft:
                         mask_dict = {'aft': (variable_dict['processing_scan_angle'] >= self.config.aft_angle_min) & (
                                 variable_dict['processing_scan_angle'] <= self.config.aft_angle_max)}
                         mask_dict['fore'] = ~mask_dict['aft']
@@ -409,56 +490,24 @@ class DataIngestion:
 
 
     @staticmethod
-    def extract_smap_qc(qc_dict):
-        """
-        Applied NaNs to qc_dict extracted in read_hdf5() function.
-
-        Parameters
-        ----------
-        qc_dict: dict
-            Dictionary containing the quality control values extracted
-            from the SMAP data for different polarisations.
-
-        Returns
-        -------
-        qc_dict: dict
-            Dictionary containing the quality control values extracted
-            from the SMAP data for different polarisations
-            with NaNs applied.
-
-        """
-        for qc in qc_dict:
-            qc_dict[qc] = where(qc_dict[qc] == 0, 1, nan)
-        return qc_dict
-
-
-    @staticmethod
-    def apply_smap_qc(qc_dict, data_dict):
+    def apply_smap_qc(variable_dict):
         """
         Applies the quality control values to the SMAP data for each polarisation.
-
-        Parameters
-        ----------
-        qc_dict: dict
-            Dictionary containing the quality control values extracted
-            from the SMAP data for different polarisations.
-        data_dict: dict
-            Dictionary containing the data extracted from the SMAP data.
-
-        Returns
-        -------
-        data_dict: dict
-            Dictionary containing the data extracted from the SMAP
-            data with quality control values applied.
-
         """
 
-        data_dict['bt_h_target'] = data_dict['bt_h_target'] * qc_dict['bt_h_qc']
-        data_dict['bt_v_target'] = data_dict['bt_v_target'] * qc_dict['bt_v_qc']
-        data_dict['bt_3_target'] = data_dict['bt_3_target'] * qc_dict['bt_3_qc']
-        data_dict['bt_4_target'] = data_dict['bt_4_target'] * qc_dict['bt_4_qc']
+        quality_filter = zeros(variable_dict['scan_quality_flag'].shape)
+        for quality_flag in ['scan_quality_flag', 'data_quality_h', 'data_quality_v', 'data_quality_3', 'data_quality_4']:
+            if quality_flag in variable_dict.keys():
+                print(quality_flag)
+                quality_filter[variable_dict[quality_flag] != 0] = 1
+                variable_dict.pop(quality_flag)
 
-        return data_dict
+        # Remove bad quality samples from all variables in dict
+        for variable in variable_dict:
+            print(variable)
+            variable_dict[variable][quality_filter == 1] = nan
+
+        return variable_dict
 
 
     def clean_data(self, data_dict):
@@ -482,6 +531,8 @@ class DataIngestion:
                 # Get fore and aft array shapes
                 fore_shape, aft_shape = None, None
                 for variable in variable_dict:
+                    if variable_dict[variable].ndim != 1:
+                        continue
                     if fore_shape is None and 'fore' in variable:
                         fore_shape = variable_dict[variable].shape
                     if aft_shape is None and 'aft' in variable:
@@ -521,7 +572,11 @@ class DataIngestion:
                             variable_dict[variable] = delete(variable_dict[variable], where(nan_map)[0], axis=0)
                     data_dict[band] = variable_dict
             else:
-                nan_map = zeros(next(iter(variable_dict.values())).shape, dtype=bool).flatten('C')
+                # This wont work if attitude is the first array in the dictionary
+                for key, value in variable_dict.items():
+                    if key != "attitude":
+                        nan_map = zeros(value.shape, dtype=bool).flatten('C')
+                        break
                 for variable in variable_dict:
                     if self.config.input_data_type == 'SMAP':
                         if variable_dict[variable].dtype == 'float32':
@@ -533,7 +588,6 @@ class DataIngestion:
                     elif self.config.input_data_type == 'AMSR2':
                         # Include AMSR2 specific fill values
                         pass
-                    print(variable)
                     if variable_dict[variable].ndim == 1:
                         nan_map |= isnan(variable_dict[variable])
                     # Deadling with the attitude array

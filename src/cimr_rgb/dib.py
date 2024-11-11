@@ -20,7 +20,7 @@ class DIBInterp:
 
         return average_values
 
-    def interp_variable_dict(self, samples_dict, variable_dict, scan_direction=None, band=None):
+    def interp_variable_dict(self, samples_dict, variable_dict, target_grid, scan_direction=None, band=None, **args):
 
         variable_dict_out = {}
         for variable in variable_dict:
@@ -30,7 +30,6 @@ class DIBInterp:
                 elif variable.removesuffix(f'_{scan_direction}') not in self.config.variables_to_regrid:
                     continue
                 else:
-                    print(variable)
                     variable_dict_out[variable] = self.DIB(
                         samples_dict=samples_dict,
                         variable=variable_dict[variable]

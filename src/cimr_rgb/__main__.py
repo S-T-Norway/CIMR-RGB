@@ -7,6 +7,8 @@ It is also responsible for printing the output to the console
 It is also responsible for returning the output to the caller
 """
 import os
+import sys
+#sys.path.append(os.path.join(os.path.dirname(os.getcwd()), "tests"))
 import pathlib as pb 
 import pickle
 import argparse 
@@ -26,6 +28,9 @@ from .grid_generator    import GridGenerator, GRIDS
 from .regridder         import ReGridder
 from .rgb_logging       import RGBLogging 
 from .product_generator import ProductGenerator 
+
+# Maksym: I assume this comes frome tests directory 
+#from inspect_SMAP_l1c import compare_smap_l1c
 
 
 def get_rgb_configuration(parser: argparse.ArgumentParser, 
@@ -208,6 +213,9 @@ def main():
     # It is the entry point of the script
 
     # TODO: Default value should be taken from the installed package probably? 
+    #       Do we even need a default value? 
+    #       Need to add the confug as part of installable files in the MANIFEST
+    #       file, otherwise it won't work 
     # 
     # Setting the default value of the configuration parameter 
     rgb_config_path   = pb.Path("configs", 'rgb_config.xml').resolve() 
@@ -258,6 +266,7 @@ def main():
 
         data_dict_out = regridder.regrid_l1c(data_dict)
 
+    # Generate L1C product according to CDL 
     ProductGenerator(rgb_config).generate_l1c_product(data_dict = data_dict_out) 
 
     
@@ -312,6 +321,23 @@ if __name__ == '__main__':
     #     for count, sample in enumerate(data_dict_out['C'][variable]):
     #         grid[int(scan_number[count]), int(sample_number[count])] = sample
     #     test = 0
+    
+
+    # Maksym: This part was in main.py in devel, leave it here for now 
+    
+    ## If the prodct is L1r we build the array as follows
+    #if config.grid_type == 'L1R':
+    #    # Build an array of nans
+    #    variable = 'bt_h'
+    #    grid_shape = config.num_target_scans, config.num_target_samples
+    #    grid = full(grid_shape, nan)
+    #    scan_number = data_dict_out['L']['cell_row']
+    #    sample_number = data_dict_out['L']['cell_col']
+    #    for count, sample in enumerate(data_dict_out['L'][variable]):
+    #        grid[int(scan_number[count]), int(sample_number[count])] = sample
+    #    plt.imshow(grid)
+
+    ##     test = 0
 
 
 

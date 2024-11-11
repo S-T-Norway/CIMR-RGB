@@ -10,7 +10,8 @@ class NNInterp:
         values = take(variable, samples_dict['indexes'])
         return values
 
-    def interp_variable_dict(self, samples_dict, variable_dict, scan_direction = None, band = None):
+
+    def interp_variable_dict(self, samples_dict, variable_dict, target_grid, scan_direction=None, band=None, **args):
 
         variable_dict_out = {}
  

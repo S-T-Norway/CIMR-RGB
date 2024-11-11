@@ -1,6 +1,7 @@
 import numpy as np
-from numpy import meshgrid, isinf, where, full, nan, unravel_index, all, sqrt
-from pyresample     import kd_tree, geometry
+from numpy import meshgrid, isinf, where, full, nan, zeros, unravel_index, all, sqrt, sum, ones, unique
+from pyresample import kd_tree, geometry
+
 import matplotlib
 tkagg = matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -17,18 +18,24 @@ class ReGridder:
     def __init__(self, config):
         self.config = config
         self.algos = {
-            'NN': NNInterp(self.config),
-            'DIB': DIBInterp(self.config),
-            'IDS': IDSInterp(self.config),
-            'BG': BGInterp(self.config),
-            'RSIR': rSIRInterp(self.config)
+            'NN': lambda band=None: NNInterp(self.config),
+            'DIB': lambda band=None: DIBInterp(self.config),
+            'IDS': lambda band=None: IDSInterp(self.config),
+            'BG': lambda band: BGInterp(self.config, band),
+            'RSIR': lambda band: rSIRInterp(self.config, band)
         }
+
+    def get_algorithm(self, algorithm_name, band=None):
+        algo = self.algos.get(algorithm_name)
+        return algo(band)
 
     # Check if you need the full data dict once the function is complete
     def get_grid(self, data_dict=None):
         # Get target grid
         if self.config.grid_type == 'L1C':
-            target_x, target_y, res = GridGenerator(self.config).generate_grid_xy(
+            target_x, target_y, res = GridGenerator(self.config,
+                                                    projection_definition=self.config.projection_definition,
+                                                    grid_definition=self.config.grid_definition).generate_grid_xy(
                 return_resolution=True
             )
             x_shape = len(target_x)
@@ -37,7 +44,10 @@ class ReGridder:
             target_x = target_x.flatten()
             target_y = target_y.flatten()
 
-            target_lon, target_lat = GridGenerator(self.config).xy_to_lonlat(
+            target_lon, target_lat = GridGenerator(self.config,
+                                                   projection_definition=self.config.projection_definition,
+                                                   grid_definition=self.config.grid_definition
+                                                   ).xy_to_lonlat(
                 x=target_x,
                 y=target_y
             )
@@ -99,7 +109,7 @@ class ReGridder:
         return reduced_distance, reduced_index, original_indices, valid_input_index
 
     # We need data dict or just pass specific variables?
-    def get_l1c_samples(self, variable_dict, target_grid):
+    def get_l1c_samples(self, variable_dict, target_grid): # also need to change the name of this for l1r
 
         samples_dict = {}
 
@@ -184,7 +194,12 @@ class ReGridder:
         return samples_dict, variable_dict
 
     def reduce_grid_inds(self, samples_dict):
-        grid_shape = GRIDS[self.config.grid_definition]['n_rows'], GRIDS[self.config.grid_definition]['n_cols']
+
+        if self.config.grid_type == 'L1C':
+            grid_shape = GRIDS[self.config.grid_definition]['n_rows'], GRIDS[self.config.grid_definition]['n_cols']
+        elif self.config.grid_type == 'L1R':
+            grid_shape = self.config.scan_geometry[self.config.target_band[0]]
+
         rows_out, cols_out = unravel_index(samples_dict['grid_1d_index'], grid_shape)
         row_min = self.config.reduced_grid_inds[0]
         row_max = self.config.reduced_grid_inds[1]
@@ -192,8 +207,9 @@ class ReGridder:
         col_max = self.config.reduced_grid_inds[3]
         indices = where((rows_out >= row_min) & (rows_out <= row_max) &
                         (cols_out >= col_min) & (cols_out <= col_max))[0]
-        filtered_data_dict = {key: value[indices] for key, value in samples_dict.items()}
-        return filtered_data_dict
+        filtered_samples_dict = {key: value[indices] for key, value in samples_dict.items()}
+
+        return filtered_samples_dict
 
     def create_output_grid_inds(self, grid_1d_index):
         # Can be unified
@@ -214,19 +230,22 @@ class ReGridder:
 
         return row, col
 
-    def regrid_l1c(self, data_dict):
+    def regrid_l1c(self, data_dict): # Need to change the name of this.
 
         # Get target grid
         if self.config.grid_type == 'L1C':
             target_grid = self.get_grid()
+            target_dict = None
         elif self.config.grid_type == 'L1R':
             target_grid = self.get_grid(data_dict)
+            target_dict = data_dict[self.config.target_band[0]]
 
         data_dict_out = {}
         for band in data_dict:
-            print(f"Regridding band: {band}")
             if band not in self.config.source_band and self.config.grid_type == 'L1R':
                 continue
+            print(f"Regridding band: {band}")
+
             variable_dict = data_dict[band]
             samples_dict, variable_dict = self.sample_selection(variable_dict, target_grid)
 
@@ -235,33 +254,128 @@ class ReGridder:
                 for scan_direction in ['fore', 'aft']:
                     print(scan_direction)
 
+                    # Create an argument dictionary for interp_variable_dict, not all the algorithms need
+                    # all the arguments.
+                    args = {
+                        'samples_dict': samples_dict[scan_direction],
+                        'variable_dict': variable_dict,
+                        'target_dict': target_dict,
+                        'target_grid': target_grid,
+                        'scan_direction': scan_direction,
+                        'band': band
+                    }
+
                     # Regrid Variables
-                    variable_dict_out[scan_direction] = self.algos.get(self.config.regridding_algorithm).interp_variable_dict(
-                        samples_dict=samples_dict[scan_direction],
-                        variable_dict=variable_dict,
-                        scan_direction=scan_direction,
-                        band = band)
+                    algorithm = self.get_algorithm(algorithm_name=self.config.regridding_algorithm,
+                                                   band=band)
+                    variable_dict_out[scan_direction] = algorithm.interp_variable_dict(**args)
 
                     # Add cell_row and cell_col indexes
                     cell_row, cell_col = self.create_output_grid_inds(grid_1d_index=samples_dict[scan_direction]['grid_1d_index'])
                     variable_dict_out[scan_direction][f'cell_row_{scan_direction}'] = cell_row
                     variable_dict_out[scan_direction][f'cell_col_{scan_direction}'] = cell_col
 
+                    # Add regridding_n_samples
+                    if 'regridding_n_samples' in self.config.variables_to_regrid:
+                        if samples_dict[scan_direction]['distances'].ndim == 1:
+                            variable_dict_out[scan_direction]["regridding_n_samples"] = ones(len(samples_dict[scan_direction]['distances']), dtype=int)
+                        else:
+                            variable_dict_out[scan_direction][f"regridding_n_samples_{scan_direction}"] = (
+                                sum(~isinf(samples_dict[scan_direction]['distances']), axis=1))
+
+                    # Add regridding_l1b_orphans
+                    if 'regridding_l1b_orphans' in self.config.variables_to_regrid:
+                        fill_value = len(variable_dict[f"longitude_{scan_direction}"])
+                        unique_indexes = unique(samples_dict[scan_direction]['indexes'][
+                                                    samples_dict[scan_direction]['indexes'] != fill_value])
+                        used_scans = variable_dict[f'scan_number_{scan_direction}'][unique_indexes].astype(int)
+                        used_samples = variable_dict[f'sample_number_{scan_direction}'][unique_indexes].astype(int)
+
+                        if self.config.input_data_type == 'SMAP':
+                            # Create output array the same size as the input data
+                            l1b_orphans = zeros(self.config.scan_geometry[band])
+                            l1b_orphans[used_scans, used_samples] = 1
+
+                        elif self.config.input_data_type == 'CIMR':
+                            scan_geometry = self.config.scan_geometry[band]
+                            num_feed_horns = self.config.num_horns[band]
+                            l1b_orphans = zeros((scan_geometry[0], int(scan_geometry[1]/num_feed_horns), num_feed_horns))
+                            feed_horn_number = variable_dict[f'feed_horn_number_{scan_direction}']
+                            used_feed_horn_number = feed_horn_number[unique_indexes].astype(int)
+                            for feed_horn in range(num_feed_horns):
+                                feed_horn_inds = where(used_feed_horn_number == feed_horn)[0]
+                                feed_horn_scans = used_scans[feed_horn_inds]
+                                feed_horn_samples = used_samples[feed_horn_inds]
+                                l1b_orphans[feed_horn_scans, feed_horn_samples, feed_horn] = 1
+
+                        variable_dict_out[scan_direction][f'regridding_l1b_orphans_{scan_direction}'] = l1b_orphans
+
+
+
+
+
+
                 # Combine fore and aft variables into single dictionary
                 combined_dict = {**variable_dict_out['fore'], **variable_dict_out['aft']}
                 variable_dict_out = combined_dict
             else:
                 # Don't split fore/aft
-                variable_dict_out = self.algos.get(self.config.regridding_algorithm).interp_variable_dict(
-                    samples_dict=samples_dict,
-                    variable_dict=variable_dict,
-                    band=band
-                )
+
+                # Create an argument dictionary for interp_variable_dict, not all the algorithms need
+                # all the arguments.
+                args = {
+                    'samples_dict': samples_dict,
+                    'variable_dict': variable_dict,
+                    'target_dict': target_dict,
+                    'target_grid': target_grid,
+                    'scan_direction': None,
+                    'band': band
+                }
+
+                # Regrid Variables
+                algorithm = self.get_algorithm(algorithm_name=self.config.regridding_algorithm,
+                                               band=band)
+                variable_dict_out = algorithm.interp_variable_dict(**args)
 
                 # Add cell_row and cell_col indexes
                 cell_row, cell_col = self.create_output_grid_inds(samples_dict['grid_1d_index'])
                 variable_dict_out['cell_row'] = cell_row
                 variable_dict_out['cell_col'] = cell_col
+
+                # Add regridding_n_samples
+                if 'regridding_n_samples' in self.config.variables_to_regrid:
+                    if samples_dict['distances'].ndim == 1:
+                        variable_dict_out["regridding_n_samples"] = ones(len(samples_dict['distances']), dtype=int)
+                    else:
+                        variable_dict_out["regridding_n_samples"] = sum(~isinf(samples_dict['distances']), axis=1)
+
+                # Add regridding_l1b_orphans
+                if 'regridding_l1b_orphans' in self.config.variables_to_regrid:
+                    fill_value = len(variable_dict["longitude"])
+                    unique_indexes = unique(samples_dict['indexes'][
+                                                samples_dict['indexes'] != fill_value])
+                    used_scans = variable_dict[f'scan_number'][unique_indexes].astype(int)
+                    used_samples = variable_dict[f'sample_number'][unique_indexes].astype(int)
+
+                    if self.config.input_data_type == 'SMAP':
+                        # Create output array the same size as the input data
+                        l1b_orphans = zeros(self.config.scan_geometry[band])
+                        l1b_orphans[used_scans, used_samples] = 1
+
+                    elif self.config.input_data_type == 'CIMR':
+                        scan_geometry = self.config.scan_geometry[band]
+                        num_feed_horns = self.config.num_horns[band]
+                        l1b_orphans = zeros(
+                            (scan_geometry[0], int(scan_geometry[1] / num_feed_horns), num_feed_horns))
+                        feed_horn_number = variable_dict['feed_horn_number']
+                        used_feed_horn_number = feed_horn_number[unique_indexes].astype(int)
+                        for feed_horn in range(num_feed_horns):
+                            feed_horn_inds = where(used_feed_horn_number == feed_horn)[0]
+                            feed_horn_scans = used_scans[feed_horn_inds]
+                            feed_horn_samples = used_samples[feed_horn_inds]
+                            l1b_orphans[feed_horn_scans, feed_horn_samples, feed_horn] = 1
+
+                    variable_dict_out['regridding_l1b_orphans'] = l1b_orphans
 
             data_dict_out[band] = variable_dict_out
             print(f"Finished regridding band: {band}")

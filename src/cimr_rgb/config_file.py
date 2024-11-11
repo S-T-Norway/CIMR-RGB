@@ -97,10 +97,16 @@ class ConfigFile:
 
         self.dpr_path        = path.join(path.dirname(getcwd()), 'dpr')
 
-        self.grid_type       = self.validate_grid_type(
-            config_object    = config_object,
-            grid_type        = 'GridParams/gridType',
-            input_data_type  = self.input_data_type
+        self.quality_control = self.validate_quality_control(
+            config_object=config_object,
+            quality_control='inputData/quality_control',
+            input_data_type = self.input_data_type
+        )
+
+        self.grid_type = self.validate_grid_type(
+            config_object=config_object,
+            grid_type='GridParams/gridType',
+            input_data_type=self.input_data_type
         )
 
         self.target_band     = self.validate_target_band(
@@ -164,7 +170,8 @@ class ConfigFile:
 
         self.boresight_shift = self.validate_boresight_shift(
             config_object = config_object,
-            boresight_shift = 'ReGridderParams/boresight_shift'
+            boresight_shift = 'ReGridderParams/boresight_shift',
+            input_data_type = self.input_data_type
         )
 
         if self.grid_type == "L1R":
@@ -175,16 +182,18 @@ class ConfigFile:
                 print(f"{e}")
                 sys.exit(1)
 
-        if self.grid_type == "L1C":
-            self.reduced_grid_inds = self.validate_reduced_grid_inds(
-                config_object=config_object,
-                reduced_grid_inds='GridParams/reduced_grid_inds'
-            )
+        self.reduced_grid_inds = self.validate_reduced_grid_inds(
+            config_object=config_object,
+            reduced_grid_inds='GridParams/reduced_grid_inds'
+        )
 
         # SMAP specific Parameters
         if self.input_data_type == "SMAP":
             self.aft_angle_min = 90
             self.aft_angle_max = 270
+            self.scan_geometry = {
+                'L': (779, 241)
+            }
             self.variable_key_map = {
                 'bt_h': 'tb_h',
                 'bt_v': 'tb_v',
@@ -201,7 +210,21 @@ class ConfigFile:
                 'z_velocity': 'z_vel',
                 'sub_satellite_lon': 'sc_nadir_lon',
                 'sub_satellite_lat': 'sc_nadir_lat',
-                'altitude': 'sc_geodetic_alt_ellipsoid'
+                'altitude': 'sc_geodetic_alt_ellipsoid',
+                'faraday_rot_angle': 'faraday_rotation_angle',
+                'nedt_h': 'nedt_h',
+                'nedt_v': 'nedt_v',
+                'nedt_3': 'nedt_3',
+                'nedt_4': 'nedt_4',
+                'regridding_n_samples': 'regridding_n_samples',
+                'regridding_l1b_orphans': 'regridding_l1b_orphans',
+                'acq_time_utc': 'antenna_scan_time_utc',
+                'azimuth': 'antenna_earth_azimuth',
+                'scan_quality_flag': 'antenna_scan_qual_flag',
+                'data_quality_h': 'tb_qual_flag_h',
+                'data_quality_v': 'tb_qual_flag_v',
+                'data_quality_3': 'tb_qual_flag_3',
+                'data_quality_4': 'tb_qual_flag_4',
             }
 
 
@@ -220,6 +243,16 @@ class ConfigFile:
                 '89b': (None, 'Brightness Temperature (89.0GHz-B,')
             }
             self.kernel_size = config_object.find('ReGridderParams/kernelSize').text
+            self.scan_geometry = {
+                '6': (1, 1),
+                '7': (1, 1),
+                '10': (1, 1),
+                '18': (1, 1),
+                '23': (1, 1),
+                '36': (1, 1),
+                '89a': (1, 1),
+                '89b': (1, 1)
+            }
 
 
         # CIMR Specific Parameters
@@ -241,6 +274,15 @@ class ConfigFile:
                 'sub_satellite_lon': 'sub_satellite_lon',
                 'sub_satellite_lat': 'sub_satellite_lat',
                 'attitude': 'SatelliteBody2EarthCenteredInertialFrame',
+                'nedt_h': 'nedt_h',
+                'nedt_v': 'nedt_v',
+                'nedt_3': 'nedt_3',
+                'nedt_4': 'nedt_4',
+                'regridding_n_samples': 'regridding_n_samples',
+                'regridding_l1b_orphans': 'regridding_l1b_orphans',
+                'acq_time_utc': 'utc_time',
+                'azimuth': 'earth_azimuth',
+                'oza': 'OZA'
             }
             self.aft_angle_min = 180
             self.aft_angle_max = 360
@@ -254,7 +296,21 @@ class ConfigFile:
             self.scan_angle_feed_offsets = {}
             self.u0 = {}
             self.v0 = {}
-
+            # Scan Geometry Hard Coding for now
+            self.scan_geometry = {
+                'L': (74, 691),
+                'C': (74, 2747*4),
+                'X': (74, 2807*4),
+                'KA': (74, 10395*8),
+                'KU': (74, 7692*8)
+            }
+            self.nedt = {
+                'L': 0.3,
+                'C': 0.2,
+                'X': 0.3,
+                'KA': 0.4,
+                'KU': 0.7
+            }
 
         self.variables_to_regrid = self.validate_variables_to_regrid(
             config_object = config_object,
@@ -264,19 +320,56 @@ class ConfigFile:
 
         if self.regridding_algorithm == 'BG' or self.regridding_algorithm=='RSIR':
 
-            self.antenna_method = self.validate_antenna_method(
+            self.source_antenna_method = self.validate_source_antenna_method(
                 config_object = config_object,
-                antenna_method = 'ReGridderParams/antenna_method'
+                source_antenna_method = 'ReGridderParams/source_antenna_method'
             )
 
-            self.antenna_threshold = self.validate_antenna_threshold(
+            if self.source_antenna_method in ['gaussian', 'gaussian_projected']:
+                self.source_gaussian_params = self.validate_source_gaussian_params(
+                    config_object = config_object,
+                    source_gaussian_params = 'ReGridderParams/source_gaussian_params'
+                )
+            else:
+                self.source_gaussian_params = None
+
+            self.target_antenna_method = self.validate_target_antenna_method(
+                config_object = config_object,
+                target_antenna_method = 'ReGridderParams/target_antenna_method'
+            )
+
+            if self.target_antenna_method in ['gaussian', 'gaussian_projected']:
+                self.target_gaussian_params = self.validate_target_gaussian_params(
+                    config_object=config_object,
+                    target_gaussian_params='ReGridderParams/target_gaussian_params'
+                )
+            else:
+                self.target_gaussian_params = None
+
+
+            self.source_antenna_threshold = self.validate_source_antenna_threshold(
                 config_object=config_object,
-                antenna_threshold = 'ReGridderParams/antenna_threshold'
+                source_antenna_threshold = 'ReGridderParams/source_antenna_threshold'
+            )
+
+            self.target_antenna_threshold = self.validate_target_antenna_threshold(
+                config_object=config_object,
+                target_antenna_threshold = 'ReGridderParams/target_antenna_threshold'
             )
 
             self.polarisation_method = self.validate_polarisation_method(
                 config_object=config_object,
                 polarisation_method='ReGridderParams/polarisation_method'
+            )
+
+            self.MRF_grid_definition = self.validate_MRF_grid_definition(
+                config_object=config_object,
+                MRF_grid_definition='ReGridderParams/MRF_grid_definition'
+            )
+
+            self.MRF_projection_definition = self.validate_MRF_projection_definition(
+                config_object=config_object,
+                MRF_projection_definition='ReGridderParams/MRF_projection_definition'
             )
 
 
@@ -297,6 +390,17 @@ class ConfigFile:
 
                 self.antenna_tilt_angle = 46.886 # update to read from file
 
+        if self.regridding_algorithm == 'RSIR':
+            self.rsir_iteration = self.validate_rsir_iteration(
+                config_object=config_object,
+                rsir_iteration='ReGridderParams/rsir_iteration'
+            )
+
+        if self.regridding_algorithm == 'BG':
+            self.bg_smoothing = self.validate_bg_smoothing(
+                config_object=config_object,
+                bg_smoothing='ReGridderParams/bg_smoothing'
+            )
 
     @staticmethod
     def read_config(config_file_path):
@@ -517,12 +621,11 @@ class ConfigFile:
             Validated grid definition
         """
 
-        if grid_type == 'L1R':
-            return None
-
         valid_input = ['EASE2_G9km', 'EASE2_N9km', 'EASE2_S9km',
                        'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km',
-                       'STEREO_N25km', 'STEREO_S25km']
+                       'STEREO_N25km', 'STEREO_S25km', 'STEREO_N6.25km',
+                       'STEREO_N12.5km', 'STEREO_S6.25km', 'STEREO_S12.5km',
+                       'STEREO_S25km']
 
         if config_object.find(grid_definition).text in valid_input:
             return config_object.find(grid_definition).text
@@ -557,9 +660,7 @@ class ConfigFile:
                 valid_input = ['G', 'N', 'S']
 
             elif 'STEREO' in grid_definition:
-                #valid_input = ['SN', 'SS']
-                valid_input = ['STEREO_N', 'STEREO_S'] 
-                #print(valid_input)
+                valid_input = ['PS_N', 'PS_S']
 
             if config_object.find(projection_definition).text in valid_input:
                 return config_object.find(projection_definition).text
@@ -699,16 +800,21 @@ class ConfigFile:
         value = config_object.find(variables_to_regrid).text
         if input_data_type == 'SMAP':
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
-                         'processing_scan_angle', 'longitude', 'latitude']
+                         'processing_scan_angle', 'longitude', 'latitude', 'faraday_rot_angle', 'nedt_h',
+                           'nedt_v', 'nedt_3', 'nedt_4', 'regridding_n_samples', 'regridding_l1b_orphans',
+                           'acq_time_utc', 'azimuth']
+
             default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                             'processing_scan_angle', 'longitude', 'latitude']
 
         elif input_data_type == 'AMSR2':
-            valid_input = ['bt_h', 'bt_v', 'longitude', 'latitude']
+            valid_input = ['bt_h', 'bt_v', 'longitude', 'latitude', 'regridding_n_samples']
 
         elif input_data_type == 'CIMR':
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
-                           'processing_scan_angle', 'longitude', 'latitude']
+                           'processing_scan_angle', 'longitude', 'latitude', 'nedt_h', 'nedt_v', 'nedt_3', 'nedt_4',
+                           'regridding_n_samples', 'regridding_l1b_orphans', 'acq_time_utc' , 'azimuth', 'oza']
+
             default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                             'processing_scan_angle', 'longitude', 'latitude']
 
@@ -739,9 +845,9 @@ class ConfigFile:
             return value
 
     @staticmethod
-    def validate_antenna_method(config_object, antenna_method):
-        valid_input = ['gaussian', 'real']
-        value = config_object.find(antenna_method)
+    def validate_source_antenna_method(config_object, source_antenna_method):
+        valid_input = ['gaussian', 'real', 'gaussian_projected']
+        value = config_object.find(source_antenna_method)
         if value is None:
             return 'real'
         elif value.text in valid_input:
@@ -753,14 +859,44 @@ class ConfigFile:
             )
 
     @staticmethod
-    def validate_antenna_threshold(config_object, antenna_threshold):
-        if config_object.find(antenna_threshold).text is None:
+    def validate_target_antenna_method(config_object, target_antenna_method):
+        valid_input = ['gaussian', 'real', 'gaussian_projected']
+        value = config_object.find(target_antenna_method)
+        if value is None:
+            return 'real'
+        elif value.text in valid_input:
+            return value.text
+        else:
+            raise ValueError(
+                f"Invalid antenna method. Check Configuration File."
+                f" Valid antenna methods are: {valid_input}"
+            )
+
+
+    @staticmethod
+    def validate_source_antenna_threshold(config_object, source_antenna_threshold):
+        if config_object.find(source_antenna_threshold).text is None:
+            # We should have a default set of values for each Antenna Pattern
+            # For now, I will just choose 9dB
+            return None
+
+        try:
+            return float(config_object.find(source_antenna_threshold).text)
+        except:
+            raise ValueError(
+                f"Invalid antenna threshold. Check Configuration File."
+                f" Antenna threshold must be a float or integer"
+            )
+
+    @staticmethod
+    def validate_target_antenna_threshold(config_object, target_antenna_threshold):
+        if config_object.find(target_antenna_threshold).text is None:
             # We should have a default set of values for each Antenna Pattern
             # For now, I will just choose 9dB
             return 9.
 
         try:
-            return float(config_object.find(antenna_threshold).text)
+            return float(config_object.find(target_antenna_threshold).text)
         except:
             raise ValueError(
                 f"Invalid antenna threshold. Check Configuration File."
@@ -781,7 +917,10 @@ class ConfigFile:
             return config_object.find(polarisation_method).text
 
     @staticmethod
-    def validate_boresight_shift(config_object, boresight_shift):
+    def validate_boresight_shift(config_object, boresight_shift, input_data_type):
+        if input_data_type != 'SMAP':
+            return False
+
         value = config_object.find(boresight_shift).text
         valid_input = ['True', 'False']
         if value is None:
@@ -812,6 +951,102 @@ class ConfigFile:
         grid_col_min = int(value[2])
         grid_col_max = int(value[3])
         return [grid_row_min, grid_row_max, grid_col_min, grid_col_max]
+
+    @staticmethod
+    def validate_source_gaussian_params(config_object, source_gaussian_params):
+        # We should add default values.
+        value = config_object.find(source_gaussian_params).text
+        params = value.split()
+        # Check we only have 3 params
+        if len(params) != 3:
+            raise ValueError(
+                f"Invalid source gaussian parameters. Check Configuration File."
+                f" There should be 3 parameters for the source gaussian"
+            )
+        try:
+            float_params = [float(param) for param in params]
+        except ValueError as e:
+            raise ValueError("Invalid parameter: All parameters must be valid numbers (int or float).") from e
+
+        return float_params
+
+    @staticmethod
+    def validate_target_gaussian_params(config_object, target_gaussian_params):
+        # We should add default values.
+        value = config_object.find(target_gaussian_params).text
+        params = value.split()
+        # Check we only have 3 params
+        if len(params) != 3:
+            raise ValueError(
+                f"Invalid source gaussian parameters. Check Configuration File."
+                f" There should be 3 parameters for the source gaussian"
+            )
+        try:
+            float_params = [float(param) for param in params]
+        except ValueError as e:
+            raise ValueError("Invalid parameter: All parameters must be valid numbers (int or float).") from e
+
+        return float_params
+
+    @staticmethod
+    def validate_rsir_iteration(config_object, rsir_iteration):
+            value = config_object.find(rsir_iteration).text
+            return int(value)
+
+    @staticmethod
+    def validate_MRF_grid_definition(config_object, MRF_grid_definition):
+        value = config_object.find(MRF_grid_definition).text
+        valid_input = ['EASE2_G3km', 'EASE2_G1km' ,'EASE2_G9km', 'EASE2_N9km', 'EASE2_S9km',
+                       'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km',
+                       'STEREO_N25km', 'STEREO_S25km', 'EASE2_N3km', 'EASE2_S3km']
+        if value in valid_input:
+            return value
+        raise ValueError(
+            f"Invalid Grid Definition, check configuration file. "
+            f"Valid grid definitions are: {valid_input}"
+        )
+
+    @staticmethod
+    def validate_MRF_projection_definition(config_object, MRF_projection_definition):
+        value = config_object.find(MRF_projection_definition).text
+        valid_input = ['G', 'N', 'S']
+        if value in valid_input:
+            return value
+        raise ValueError(
+            f"Invalid Projection Definition, check configuration file."
+            f" Valid projection definitions are: {valid_input}"
+        )
+
+    @staticmethod
+    def validate_bg_smoothing(config_object, bg_smoothing):
+        value = config_object.find(bg_smoothing).text
+        if value is not None:
+            value = float(value)
+        else:
+            value = 0
+        return value
+
+    @staticmethod
+    def validate_quality_control(config_object, quality_control, input_data_type):
+        if input_data_type == 'AMSR2':
+            return False
+        elif input_data_type == 'CIMR':
+            return False
+        else:
+            valid_input = ['True', 'False']
+            if config_object.find(quality_control).text in valid_input:
+                if config_object.find(quality_control).text == 'True':
+                    return True
+                else:
+                    return False
+            raise ValueError(
+                f"Invalid split fore aft. Check Configuration File."
+                f" Valid split fore aft are: {valid_input}"
+            )
+
+
+
+
 
 
 
