@@ -5,9 +5,9 @@ from pyresample import kd_tree, geometry
 from scipy.spatial import KDTree
 
 # ---- Testing ----
-import matplotlib
-tkagg = matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
+#import matplotlib
+#tkagg = matplotlib.use('TkAgg')
+#import matplotlib.pyplot as plt
 
 from .ap_processing  import AntennaPattern, GaussianAntennaPattern, make_integration_grid
 from .grid_generator import GridGenerator, GRIDS

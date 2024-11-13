@@ -27,7 +27,8 @@ dependencies = [
     "tqdm", 
     "colorama", 
     "psutil",
-    "pyresample"
+    "pyresample",
+    "tk"
 ]
 
 

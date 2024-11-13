@@ -2,9 +2,9 @@ import numpy as np
 from numpy import meshgrid, isinf, where, full, nan, zeros, unravel_index, all, sqrt, sum, ones, unique
 from pyresample import kd_tree, geometry
 
-import matplotlib
-tkagg = matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
+#import matplotlib
+#tkagg = matplotlib.use('TkAgg')
+#import matplotlib.pyplot as plt
 
 from .nn             import NNInterp
 from .ids            import IDSInterp

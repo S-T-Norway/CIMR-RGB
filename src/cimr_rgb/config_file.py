@@ -51,7 +51,7 @@ class ConfigFile:
 
         # TODO: Add validation for this parameter 
         #       Add possibility to create output dirs recursively (nested)
-        self.output_path  = pb.Path(config_object.find("outputData/outputPath").text).resolve() 
+        self.output_path  = pb.Path(config_object.find("OutputData/output_path").text).resolve() 
         if not pb.Path(self.output_path).exists(): 
             pb.Path(self.output_path).mkdir() 
 
@@ -60,7 +60,7 @@ class ConfigFile:
         # -----------
         # Path to logger_config.json 
         # -----------
-        self.logpar_config   = config_object.find("LoggingParams/configPath").text
+        self.logpar_config   = config_object.find("LoggingParams/config_path").text
 
         # Creating output directory for logs (to save log files there)  
         logdir  = pb.Path(self.output_path).joinpath("logs")
@@ -87,17 +87,17 @@ class ConfigFile:
 
         self.input_data_type = self.validate_input_data_type(
             config_object    = config_object,
-            input_data_type  = 'inputData/type'
+            input_data_type  = 'InputData/type'
         )
 
         self.input_data_path = self.validate_input_data_path(
             config_object    = config_object,
-            input_data_path  = 'inputData/path'
+            input_data_path  = 'InputData/path'
         )
 
-        self.antenna_pattern_path = self.validate_input_antenna_pattern_path(
+        self.antenna_patterns_path = self.validate_input_antenna_patterns_path(
             config_object        =  config_object,
-            antenna_pattern_path = 'inputData/antenna_pattern_path',
+            antenna_patterns_path = 'InputData/antenna_patterns_path',
             data_type = self.input_data_type
         )
 
@@ -105,19 +105,19 @@ class ConfigFile:
 
         self.quality_control = self.validate_quality_control(
             config_object=config_object,
-            quality_control='inputData/quality_control',
+            quality_control='InputData/quality_control',
             input_data_type = self.input_data_type
         )
 
         self.grid_type = self.validate_grid_type(
             config_object=config_object,
-            grid_type='GridParams/gridType',
+            grid_type='GridParams/grid_type',
             input_data_type=self.input_data_type
         )
 
         self.target_band     = self.validate_target_band(
             config_object    = config_object,
-            target_band      = 'inputData/targetBand',
+            target_band      = 'InputData/target_band',
             input_data_type  = self.input_data_type,
             grid_type        = self.grid_type
         )
@@ -128,42 +128,42 @@ class ConfigFile:
         else:
             self.source_band = self.validate_source_band(
                 config_object= config_object,
-                source_band  = 'inputData/sourceBand',
+                source_band  = 'InputData/source_band',
                 input_data_type=self.input_data_type
             )
 
         self.grid_definition = self.validate_grid_definition(
             config_object    = config_object,
             grid_type        = self.grid_type,
-            grid_definition  = 'GridParams/gridDefinition'
+            grid_definition  = 'GridParams/grid_definition'
         )
 
         self.projection_definition = self.validate_projection_definition(
             config_object    = config_object,
             grid_definition  = self.grid_definition,
-            projection_definition  = 'GridParams/projectionDefinition'
+            projection_definition  = 'GridParams/projection_definition'
         )
 
         self.regridding_algorithm  = self.validate_regridding_algorithm(
             config_object          = config_object,
-            regridding_algorithm   = 'ReGridderParams/regriddingAlgorithm'
+            regridding_algorithm   = 'ReGridderParams/regridding_algorithm'
         )
 
         self.split_fore_aft = self.validate_split_fore_aft(
             config_object=config_object,
-            split_fore_aft='inputData/splitForeAft',
+            split_fore_aft='InputData/split_fore_aft',
             input_data_type=self.input_data_type
         )
 
         self.save_to_disk = self.validate_save_to_disk(
             config_object=config_object,
-            save_to_disk='outputData/saveTodisk'
+            save_to_disk='OutputData/save_to_disk'
         )
 
 
         self.search_radius = self.validate_search_radius(
             config_object=config_object,
-            search_radius='ReGridderParams/searchRadius',
+            search_radius='ReGridderParams/search_radius',
             grid_definition=self.grid_definition,
             grid_type=self.grid_type,
             input_data_type=self.input_data_type
@@ -248,7 +248,7 @@ class ConfigFile:
                 '89a': (None, 'Brightness Temperature (89.0GHz-A,'),
                 '89b': (None, 'Brightness Temperature (89.0GHz-B,')
             }
-            self.kernel_size = config_object.find('ReGridderParams/kernelSize').text
+            self.kernel_size = config_object.find('ReGridderParams/kernel_size').text
             self.scan_geometry = {
                 '6': (1, 1),
                 '7': (1, 1),
@@ -469,8 +469,9 @@ class ConfigFile:
         else: 
             raise FileNotFoundError(f"File\n {input_data_path}\n not found. Check file location.")
 
+
     @staticmethod
-    def validate_input_antenna_pattern_path(config_object, antenna_pattern_path, data_type):
+    def validate_input_antenna_patterns_path(config_object, antenna_patterns_path, data_type):
         """
         Validates the input data path and returns the value if valid
         Parameters
@@ -486,25 +487,25 @@ class ConfigFile:
             Validated input data path
         """
 
-        antenna_pattern_path = pb.Path(config_object.find(antenna_pattern_path).text).resolve()
+        antenna_patterns_path = pb.Path(config_object.find(antenna_patterns_path).text).resolve()
 
-        if antenna_pattern_path.exists():
+        if antenna_patterns_path.exists():
             if data_type == 'SMAP':
                 try:
                     relative_path = 'SMAP/RadiometerAntPattern_170830_v011.h5'
-                    antenna_pattern_path = path.join(antenna_pattern_path, relative_path)
+                    antenna_patterns_path = path.join(antenna_patterns_path, relative_path)
                 except AttributeError as e:
                     raise ValueError(f"Error: SMAP Antenna Pattern not found in dpr") from e
             elif data_type == 'CIMR':
                 try:
                     relative_path = 'CIMR'
-                    antenna_pattern_path = path.join(antenna_pattern_path, relative_path)
+                    antenna_patterns_path = path.join(antenna_patterns_path, relative_path)
                 except AttributeError as e:
-                    raise ValueError(f"Error: CIMR Antenna Pattern folder not found in {antenna_pattern_path}") from e
+                    raise ValueError(f"Error: CIMR Antenna Pattern folder not found in {antenna_patterns_path}") from e
 
-            return antenna_pattern_path
+            return antenna_patterns_path
         else:
-            raise FileNotFoundError(f"File\n {antenna_pattern_path}\n not found. Check file location.")
+            raise FileNotFoundError(f"File\n {antenna_patterns_path}\n not found. Check file location.")
 
 
     @staticmethod

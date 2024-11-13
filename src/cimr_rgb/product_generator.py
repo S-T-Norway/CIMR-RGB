@@ -1,22 +1,211 @@
 import re 
-import pickle 
+#import pickle 
 import pathlib as pb 
 
 
-import numpy   as np 
+#import numpy   as np 
 import netCDF4 as nc 
 
 
-
+# TODO: Make sure it work with this CDL 
+CDL = {
+    "Measurement": {
+        "bt_h": { 
+            "units": "K",
+            "long_name": "H-polarised TOA Brightness Temperatures",
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            "_FillValue": nc.default_fillvals['f8'], 
+            "comment": f"Earth-Gridded TOA h-polarised" + \
+             f" [L|C|X|KU|KA]_BAND_[fore|aft] BTS" + \
+             f" interpolated on a TBD-km grid"
+        }, 
+        "bt_v": {
+            "units": "K",
+            "long_name": "V-polarised TOA Brightness Temperatures",
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            "_FillValue": nc.default_fillvals['f8'], 
+            "comment": f"Earth-Gridded TOA v-polarised" + \
+             f" [L|C|X|KU|KA]_BAND_[fore|aft] BTS" + \
+             f" interpolated on a TBD-km grid"
+        }, 
+        "bt_3": {
+            "units": "K",
+            "long_name": "Stokes 3-polarised TOA Brightness Temperatures", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            "_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Earth-Gridded TOA [L|C|X|KU|KA]_BAND_[fore|aft] BTS " + \
+             "interpolated on a TBD-km grid, third stokes parameter " + \
+             "of the surface polarisation basis"
+        }, 
+        "bt_4": {
+            "units": "K",
+            "long_name": "Stokes 4-polarised TOA Brightness Temperatures", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            "_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Earth-Gridded TOA [L|C|X|KU|KA]_BAND_[fore|aft] BTS " + \
+              "interpolated on a TBD-km grid, fourth stokes parameter " + \
+              "of the surface polarisation basis"
+        }, 
+        "faraday_rot_angle":   {
+            "units": "deg",
+            "long_name": "Interpolated Faraday Rotation Angle of acquisitions", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            "_FillValue": nc.default_fillvals['f8'], 
+             "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] faraday " + \
+               "rotation angle corresponding to the measured BT value. " + \
+               "The value of the faraday rotation angle will be scaled " + \
+               "with the interpolation weights of all faraday rotation " + \
+               "angles Earth samples used in the interpolation of that " + \
+               "grid cell."
+        }, 
+        "geometric_rot_angle": {
+            "units": "deg",
+            "long_name": "Interpolated Geometric Rotation angle of acquisitions.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            "_FillValue": nc.default_fillvals['f8'], 
+             "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] geometric " + \
+             "rotation angle corresponding to the measured BT value. " + \
+             "The value of the geometric rotation angle will be " + \
+             "scaled with the interpolation weights of all geometric " + \
+             "rotation angles Earth samples used in the " + \
+             "interpolation of that grid cell." 
+        }, 
+        "ndet": {
+            "units": "K",
+            "long_name": "Radiometric resolution of each measured BT.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            "_FillValue": nc.default_fillvals['f8'], 
+            "comment": f"Radiometric resolution of each measured BT." 
+        }, 
+        "tsu":  {
+            "units": "K",
+            "long_name": "Total standard uncertainty for each measured BT.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            "_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Total standard uncertainty for each measured BT." 
+        }, 
+        "instrument_status": {
+            "units": "N/A",
+            "long_name": "Instrument Calibration or Observation mode.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            "_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Instrument Calibration or Observation mode, " + \
+            "for all samples. L1c values will consider the majority " + \
+            "status values from input L1b samples."
+        }, 
+        "land_sea_content":  {
+            "units": "N/A",
+            "long_name": "Land/Sea content of the measured pixel.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            "_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Land/Sea content of the measured pixel, " + \
+            "200 for full sea content, 0 for full land content."
+        }, 
+        "regridding_n_samples": {
+            "units": "N/A",
+            "long_name": "Number of earth samples used for interpolation", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            "_FillValue": nc.default_fillvals['f8'], 
+             "comment": "Number of L1b [h|v|t3|t4] polarised " + \
+             "[L|C|X|KU|KA]_BAND_[fore|aft] brightness temperature " + \
+             "Earth samples used in the [Backus-Gilbert|rSIR|LW] " + \
+             "remapping interpolation."
+            }, 
+        "regridding_quality_measure": {
+            "units": "N/A",
+            "long_name": "Algorithm Specific Optimal Value of Regularization Parameter.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            "_FillValue": nc.default_fillvals['f8'], 
+            "comment": "The optimal value of a parameter for the " + \
+             "[Backus-Gilbert|rSIR|LW]_[fore|aft] that controls the " + \
+             "trade-off between noise amplification and " + \
+             "regularisation. For BG it is the optimal value for the " + \
+             "smoothing parameter, while for [rSIR|LW] it is the " + \
+             "number of iterations to achieve a chosen level of " + \
+             "residual error. In case of [NN|IDS|DIB] regularisation " + \
+             "is not performed and the parameter will take on the " + \
+             "_FillValue."  
+        }, 
+        "regridding_l1b_orphans": {
+            "units": "N/A",
+            "long_name": "Indication of L1b orphaned Earth samples.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            "_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Whether each [L|C|X|KU|KA]_BAND L1b measurement sample was " + \
+            "unused (1) or used (0) in [Backus-Gilbert|rSIR|LW] regridding " + \
+            "interpolation of [fore|aft] scan samples. In the fore-scan " + \
+            "regridding nearly all aft scan samples would be orphan " + \
+            "(unused), for instance, and vice versa. It would also occur if " + \
+            "the swath stretches outside the projection window. Orphaned " + \
+            "samples may also occur if nearest neighbour or linear " + \
+            "interpolation (among the TBD methods) is used."
+        } 
+    }
+} 
 
 class ProductGenerator: 
 
     def __init__(self, config):
         self.config = config 
         self.logger = config.logger  
+        
+        print(self.config.split_fore_aft)
 
 
-    def generate_l1c_product(self, data_dict: dict()): 
+
+    def generate_l1c_product(self, data_dict: dict): 
 
         # TODO: Change the lists into dictionaries and add metadata (as well as
         # proper dimensions to variables, since right now it is only x, y but
@@ -717,6 +906,9 @@ class ProductGenerator:
         #with open(file_path, 'rb') as file:
         #    loaded_object = pickle.load(file)
 
+        #params_to_save = CDL 
+
+        # TODO: Adopt proper naming as indicated in the D2 document 
         # <Projection> -> Data -> Measurement -> <Band>
         outfile = pb.Path(f"{self.config.output_path}/test_l1c.nc").resolve()
         with nc.Dataset(outfile, "w", format = "NETCDF4") as dataset: 
@@ -736,10 +928,13 @@ class ProductGenerator:
             # CDL values for CIMR have dimensions (time, x, y) while SMAP has
             # only 1, so we also programmatically figure out the dimensonf of
             # the numpy array provided and save the data accordingly. 
-            for group_field, group_vals in params_to_save.items(): 
+            for group_field, group_vals in CDL.items(): 
+
+                print(f"Creating group: {group_field}")#. Group val: {group_vals}")
 
                 group = data_group.createGroup(group_field)
 
+                # Looping through data dictionayr and retrieving its variables (per band) 
                 for band_name, band_var in data_dict.items(): 
 
                     band_group = group.createGroup(f"{band_name}_BAND")
@@ -748,25 +943,43 @@ class ProductGenerator:
 
                         var_shape = var_val.shape
 
-                        if var_name in group_vals: 
+                        # Creating a list of complete cariables to regrid based on CDL 
+                        # and whether user chose to split scans into fore and aft 
+                        if self.config.split_fore_aft: 
+                            #print("True")
+                            fore = [ key + "_fore" for key in group_vals.keys() ]
+                            aft  = [ key + "_aft"  for key in group_vals.keys() ]
+                            regrid_vars = fore + aft 
+                        else: 
+                            regrid_vars = [ key for key in group_vals.keys() ]
+
+                        # Removing the _fore and _aft from the variable name 
+                        # to get the metadata from CDL (it is almost the same for 
+                        # both of them anyway). The idea is to compare actual 
+                        # variable to the variable from the CDL above  
+                        regrid_var = var_name.replace("_fore", "") if "_fore" in var_name \
+                                else var_name.replace("_aft", "")  if "_aft" in var_name \
+                                else var_name
+                        #print(var_name, regrid_var)
+
+                        if var_name in regrid_vars: 
 
                             self.logger.info(f"{group_field}, {band_name}, {var_name}")
 
-                            #print(group_vals[var_name]["_FillValue"])
-
+                            # TODO: Fis data types 
                             if len(var_shape) == 1: 
                                 var_data = band_group.createVariable(
                                         var_name, 
                                         "double", 
                                         ('x'), 
-                                        fill_value = group_vals[var_name]["_FillValue"]
+                                        fill_value = group_vals[regrid_var]["_FillValue"]
                                         ) 
                                 var_data[:] = var_val 
                             elif len(var_shape) == 2:  
                                 var_data = band_group.createVariable(
                                         var_name, 
                                         "double", ('x', 'y'), 
-                                        fill_value = group_vals[var_name]["_FillValue"]
+                                        fill_value = group_vals[regrid_var]["_FillValue"]
                                         ) 
                                 var_data[:, :] = var_val 
                             elif len(var_shape) == 3: 
@@ -774,7 +987,7 @@ class ProductGenerator:
                                         var_name, 
                                         "double", 
                                         ('time', 'x', 'y'), 
-                                        fill_value = group_vals[var_name]["_FillValue"]
+                                        fill_value = group_vals[regrid_var]["_FillValue"]
                                         ) 
                                 var_data[:, :, :] = var_val 
                             else:
@@ -785,16 +998,93 @@ class ProductGenerator:
                             # when this loop will be appropriate
 
                             # Loop through the dictionary and set attributes for the variable
-                            for attr_name, attr_value in group_vals[var_name].items():
+                            for attr_name, attr_value in group_vals[regrid_var].items():
+
                                 if attr_name != "_FillValue" and attr_name != "comment": 
+
                                     #print(attr_name)
                                     # Use setncattr to assign the attribute
                                     var_data.setncattr(attr_name, attr_value)
+
                                 elif attr_name == "comment": 
-                                    pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_" #\[fore\|aft\]" 
-                                    substitution = f"{band_name}_BAND_" 
+
+                                    pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_\[fore\|aft\]" 
+
+                                    if self.config.split_fore_aft: 
+                                        substitution = f"{band_name}_BAND_fore" if "_fore" in var_name \
+                                                else f"{band_name}_BAND_aft" 
+                                    else: 
+                                        substitution = f"{band_name}_BAND" 
+                                    #print(substitution) 
+
+                                    #pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_" #\[fore\|aft\]" 
+                                    #substitution = f"{band_name}_BAND_" 
                                     attr_value = re.sub(pattern, substitution, attr_value)
+                                    #var_data.setncattr(attr_name, attr_value)
+
+                                    # Checking whther there is any patter left of the following format 
+                                    pattern = r"\[L\|C\|X\|KU\|KA\]_BAND" 
+                                    substitution = f"{band_name}_BAND" 
+                                    attr_value = re.sub(pattern, substitution, attr_value)
+
+
+                                    pattern = r"\[fore\|aft\]" 
+                                    if self.config.split_fore_aft: 
+                                        substitution = f"fore" if "_fore" in var_name \
+                                                else f"aft" 
+                                    else: 
+                                        # Just leave it the way it is 
+                                        substitution = f"[fore|aft]" 
+                                    attr_value = re.sub(pattern, substitution, attr_value)
+
+                                    # Setting comment attribute 
                                     var_data.setncattr(attr_name, attr_value)
+
+
+    #def create_cdf_var(self, var_shape, var_name, var_val, band_group, group_vals):
+
+    #    if len(var_shape) == 1: 
+    #        var_data = band_group.createVariable(
+    #                var_name, 
+    #                "double", 
+    #                ('x'), 
+    #                fill_value = group_vals[var_name]["_FillValue"]
+    #                ) 
+    #        var_data[:] = var_val 
+    #    elif len(var_shape) == 2:  
+    #        var_data = band_group.createVariable(
+    #                var_name, 
+    #                "double", ('x', 'y'), 
+    #                fill_value = group_vals[var_name]["_FillValue"]
+    #                ) 
+    #        var_data[:, :] = var_val 
+    #    elif len(var_shape) == 3: 
+    #        var_data = band_group.createVariable(
+    #                var_name, 
+    #                "double", 
+    #                ('time', 'x', 'y'), 
+    #                fill_value = group_vals[var_name]["_FillValue"]
+    #                ) 
+    #        var_data[:, :, :] = var_val 
+    #    else:
+    #        # Return a generic message or handle error for unknown shapes
+    #        raise ValueError(f"Unsupported shape with {len(var_shape)} dimensions: {var_shape}")
+
+    #    # TODO: fix the re pattern to also include fore|aft
+    #    # when this loop will be appropriate
+
+    #    # Loop through the dictionary and set attributes for the variable
+    #    #for attr_name, attr_value in group_vals[var_name].items():
+    #    #    if attr_name != "_FillValue" and attr_name != "comment": 
+    #    #        #print(attr_name)
+    #    #        # Use setncattr to assign the attribute
+    #    #        var_data.setncattr(attr_name, attr_value)
+    #    #    elif attr_name == "comment": 
+    #    #        pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_" #\[fore\|aft\]" 
+    #    #        substitution = f"{band_name}_BAND_" 
+    #    #        attr_value = re.sub(pattern, substitution, attr_value)
+    #    #        var_data.setncattr(attr_name, attr_value)
+
 
 
 

@@ -4,9 +4,9 @@ from numpy.linalg import inv
 from tqdm import tqdm
 
 # ---- Testing ----
-import matplotlib
-tkagg = matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
+#import matplotlib
+#tkagg = matplotlib.use('TkAgg')
+#import matplotlib.pyplot as plt
 
 from .grid_generator import GridGenerator, GRIDS
 from .ap_processing  import AntennaPattern, GaussianAntennaPattern, make_integration_grid
