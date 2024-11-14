@@ -2,12 +2,18 @@ import re
 #import pickle 
 import pathlib as pb 
 
-
-#import numpy   as np 
+import numpy  as np 
 import netCDF4 as nc 
 
+# TODO: Ad rows and cols variables <= all variables are 
+# in 1D flattened array and these rows and cols will allow 
+# the user to build the grid.
 
-# TODO: Make sure it work with this CDL 
+# For CIMR:  
+# rows are # of samples
+# cols are 
+# z dim are the scans 
+
 CDL = {
     "Measurement": {
         "bt_h": { 
@@ -18,10 +24,10 @@ CDL = {
             "valid_range": "TBD",
             "_Storage": "chunked",
             "_ChunkSizes": "256, 256",  
-            "_FillValue": nc.default_fillvals['f8'], 
-            "comment": f"Earth-Gridded TOA h-polarised" + \
-             f" [L|C|X|KU|KA]_BAND_[fore|aft] BTS" + \
-             f" interpolated on a TBD-km grid"
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Earth-Gridded TOA h-polarised" + \
+             " [L|C|X|KU|KA]_BAND_[fore|aft] BTS" + \
+             " interpolated on a TBD-km grid" 
         }, 
         "bt_v": {
             "units": "K",
@@ -31,10 +37,10 @@ CDL = {
             "valid_range": "TBD",
             "_Storage": "chunked",
             "_ChunkSizes": "256, 256",  
-            "_FillValue": nc.default_fillvals['f8'], 
-            "comment": f"Earth-Gridded TOA v-polarised" + \
-             f" [L|C|X|KU|KA]_BAND_[fore|aft] BTS" + \
-             f" interpolated on a TBD-km grid"
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Earth-Gridded TOA v-polarised" + \
+             " [L|C|X|KU|KA]_BAND_[fore|aft] BTS" + \
+             " interpolated on a TBD-km grid"
         }, 
         "bt_3": {
             "units": "K",
@@ -44,10 +50,10 @@ CDL = {
             "valid_range": "TBD",
             "_Storage": "chunked",
             "_ChunkSizes": "256, 256",  
-            "_FillValue": nc.default_fillvals['f8'], 
+            #"_FillValue": nc.default_fillvals['f8'], 
             "comment": "Earth-Gridded TOA [L|C|X|KU|KA]_BAND_[fore|aft] BTS " + \
-             "interpolated on a TBD-km grid, third stokes parameter " + \
-             "of the surface polarisation basis"
+            "interpolated on a TBD-km grid, third stokes parameter " + \
+            "of the surface polarisation basis"
         }, 
         "bt_4": {
             "units": "K",
@@ -57,10 +63,10 @@ CDL = {
             "valid_range": "TBD",
             "_Storage": "chunked",
             "_ChunkSizes": "256, 256",  
-            "_FillValue": nc.default_fillvals['f8'], 
+            #"_FillValue": nc.default_fillvals['f8'], 
             "comment": "Earth-Gridded TOA [L|C|X|KU|KA]_BAND_[fore|aft] BTS " + \
-              "interpolated on a TBD-km grid, fourth stokes parameter " + \
-              "of the surface polarisation basis"
+            "interpolated on a TBD-km grid, fourth stokes parameter " + \
+            "of the surface polarisation basis"
         }, 
         "faraday_rot_angle":   {
             "units": "deg",
@@ -70,13 +76,13 @@ CDL = {
             "valid_range": "TBD",
             "_Storage": "chunked",
             "_ChunkSizes": "256, 256",  
-            "_FillValue": nc.default_fillvals['f8'], 
-             "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] faraday " + \
-               "rotation angle corresponding to the measured BT value. " + \
-               "The value of the faraday rotation angle will be scaled " + \
-               "with the interpolation weights of all faraday rotation " + \
-               "angles Earth samples used in the interpolation of that " + \
-               "grid cell."
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] faraday " + \
+            "rotation angle corresponding to the measured BT value. " + \
+            "The value of the faraday rotation angle will be scaled " + \
+            "with the interpolation weights of all faraday rotation " + \
+            "angles Earth samples used in the interpolation of that " + \
+            "grid cell."
         }, 
         "geometric_rot_angle": {
             "units": "deg",
@@ -86,15 +92,15 @@ CDL = {
             "valid_range": "TBD",
             "_Storage": "chunked",
             "_ChunkSizes": "256, 256",  
-            "_FillValue": nc.default_fillvals['f8'], 
-             "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] geometric " + \
-             "rotation angle corresponding to the measured BT value. " + \
-             "The value of the geometric rotation angle will be " + \
-             "scaled with the interpolation weights of all geometric " + \
-             "rotation angles Earth samples used in the " + \
-             "interpolation of that grid cell." 
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] geometric " + \
+            "rotation angle corresponding to the measured BT value. " + \
+            "The value of the geometric rotation angle will be " + \
+            "scaled with the interpolation weights of all geometric " + \
+            "rotation angles Earth samples used in the " + \
+            "interpolation of that grid cell." 
         }, 
-        "ndet": {
+        "ndet_h": {
             "units": "K",
             "long_name": "Radiometric resolution of each measured BT.", 
             "grid_mapping": "crs",
@@ -102,8 +108,41 @@ CDL = {
             "valid_range": "TBD",
             "_Storage": "chunked",
             "_ChunkSizes": "256, 256",  
-            "_FillValue": nc.default_fillvals['f8'], 
-            "comment": f"Radiometric resolution of each measured BT." 
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Radiometric resolution of each measured BT." 
+        }, 
+        "ndet_v": {
+            "units": "K",
+            "long_name": "Radiometric resolution of each measured BT.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Radiometric resolution of each measured BT." 
+        }, 
+        "ndet_3": {
+            "units": "K",
+            "long_name": "Radiometric resolution of each measured BT.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Radiometric resolution of each measured BT." 
+        }, 
+        "ndet_4": {
+            "units": "K",
+            "long_name": "Radiometric resolution of each measured BT.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "TBD",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Radiometric resolution of each measured BT." 
         }, 
         "tsu":  {
             "units": "K",
@@ -113,7 +152,7 @@ CDL = {
             "valid_range": "TBD",
             "_Storage": "chunked",
             "_ChunkSizes": "256, 256",  
-            "_FillValue": nc.default_fillvals['f8'], 
+            #"_FillValue": nc.default_fillvals['f8'], 
             "comment": "Total standard uncertainty for each measured BT." 
         }, 
         "instrument_status": {
@@ -124,7 +163,7 @@ CDL = {
             "valid_range": "TBD",
             "_Storage": "chunked",
             "_ChunkSizes": "256, 256",  
-            "_FillValue": nc.default_fillvals['f8'], 
+            #"_FillValue": nc.default_fillvals['f8'], 
             "comment": "Instrument Calibration or Observation mode, " + \
             "for all samples. L1c values will consider the majority " + \
             "status values from input L1b samples."
@@ -137,7 +176,7 @@ CDL = {
             "valid_range": "TBD",
             "_Storage": "chunked",
             "_ChunkSizes": "256, 256",  
-            "_FillValue": nc.default_fillvals['f8'], 
+            #"_FillValue": nc.default_fillvals['f8'], 
             "comment": "Land/Sea content of the measured pixel, " + \
             "200 for full sea content, 0 for full land content."
         }, 
@@ -149,7 +188,7 @@ CDL = {
             "valid_range": "TBD",
             "_Storage": "chunked",
             "_ChunkSizes": "256, 256",  
-            "_FillValue": nc.default_fillvals['f8'], 
+            #"_FillValue": nc.default_fillvals['f8'], 
              "comment": "Number of L1b [h|v|t3|t4] polarised " + \
              "[L|C|X|KU|KA]_BAND_[fore|aft] brightness temperature " + \
              "Earth samples used in the [Backus-Gilbert|rSIR|LW] " + \
@@ -163,7 +202,7 @@ CDL = {
             "valid_range": "TBD",
             "_Storage": "chunked",
             "_ChunkSizes": "256, 256",  
-            "_FillValue": nc.default_fillvals['f8'], 
+            #"_FillValue": nc.default_fillvals['f8'], 
             "comment": "The optimal value of a parameter for the " + \
              "[Backus-Gilbert|rSIR|LW]_[fore|aft] that controls the " + \
              "trade-off between noise amplification and " + \
@@ -182,7 +221,7 @@ CDL = {
             "valid_range": "TBD",
             "_Storage": "chunked",
             "_ChunkSizes": "256, 256",  
-            "_FillValue": nc.default_fillvals['f8'], 
+            #"_FillValue": nc.default_fillvals['f8'], 
             "comment": "Whether each [L|C|X|KU|KA]_BAND L1b measurement sample was " + \
             "unused (1) or used (0) in [Backus-Gilbert|rSIR|LW] regridding " + \
             "interpolation of [fore|aft] scan samples. In the fore-scan " + \
@@ -192,7 +231,183 @@ CDL = {
             "samples may also occur if nearest neighbour or linear " + \
             "interpolation (among the TBD methods) is used."
         } 
-    }
+    }, 
+    "Navigation": {
+        "acq_time_utc": {
+            "units": "N/A",
+            "long_name": "Interpolated UTC Acquisition time of Earth Sample acquisitions.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "0,N/A",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "UTC acquisition times expressed in seconds " +\
+            "(seconds since 2000-01-01 00:00:00 UTC). The value of " + \
+            "time_earth will be scaled with the interpolation " + \
+            "weights of all time_earth Earth samples used in the " + \
+            "interpolation of that grid cell. "
+        }, 
+        "azimuth": {
+            "units": "deg",
+            "long_name": "Interpolated Earth Azimuth angle of the acquisitions.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "0,359.99",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] " + \
+            "Earth observation azimuth angles of the acquisitions, " + \
+            "positive counterclockwise from due east. The value of " + \
+            "observation azimuth angle will be scaled with the " + \
+            "interpolation weights of all observation azimuth angle " + \
+            "Earth samples used in the interpolation of that grid " \
+            "cell." 
+        }, 
+        "latitude": {
+            "units": "deg",
+            "long_name": "Latitude of the centre of a TBD-km PROJ grid cell.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "-90, 90",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256", 
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Latitude of the centre of a TBD-km PROJ grid cell."
+        }, 
+        "longitude": {
+            "units": "deg",
+            "long_name": "Longitude of the centre of a TBD-km PROJ grid cell.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "-180, 179.99",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256", 
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Longitude of the centre of a TBD-km PROJ grid cell."
+        }, 
+        "oza": {
+            "units": "deg",
+            "long_name": "Interpolated Observation Zenith Angle of acquisitions.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "0,359.99",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] " + \
+            "Earth Observation zenith angles of the acquisitions. " + \
+            "The value of OZA will be scaled with the interpolation " + \
+            "weights of all observation OZA Earth samples used in " + \
+            "the interpolation of that grid cell. The OZA is defined " + \
+            "as the included angle between the antenna Boresight " + \
+            "vector and the normal to the Earth's surface."
+        }, 
+        "processing_scan_angle": {
+            "units": "deg",
+            "long_name": "Interpolated scan angle of acquisitions", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "0,359.99",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",   
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "The processing scan angle of the L1b " + \
+            "[L|C|X|KU|KA]_BAND_[fore|aft] Earth view samples. The " + \
+            "value of scan angle will be scaled with the " + \
+            "interpolation weights of all scan angle Earth samples " + \
+            "used in the interpolation of that grid cell. " + \
+            "Measurements from different feed horns are combined. " + \
+            "The scan angle is defined as the azimuth angle of the " + \
+            "antenna boresight measured from the ground track " + \
+            "vector. The scan angle is 90° when the boresight points " + \
+            "in the same direction as the ground track vector and " + \
+            "increases clockwise when viewed from above." 
+        }, 
+        "solar_azimuth": {
+            "units": "deg",
+            "long_name": "Interpolated solar azimuth angle of acquisitions", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "0,359.99",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",   
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] " + \
+            "solar azimuth angle of acquisitions.The value of " + \
+            "solar_azimuth will be scaled with the interpolation " + \
+            "weights of all solar_azimuth Earth samples used in the " + \
+            "interpolation of that grid cell." 
+        }, 
+        "solar_zenith": {
+            "units": "deg",
+            "long_name": "Interpolated solar zenith angle of acquisitions", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "0,359.99",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            #"_FillValue": nc.default_fillvals['f8'], 
+            "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] " + \
+            "solar zenith angle of acquisitions.The value of " + \
+            "solar_zenith will be scaled with the interpolation " + \
+            "weights of all solar_zenith Earth samples used in the " + \
+            "interpolation of that grid cell."
+        }, 
+
+    }, 
+    "Processing_flags": {
+        "processing_flags": {
+            "units": "N/A",
+            "long_name": "L1c processing performance related information.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "0,65535",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256, 256",  
+            #"_FillValue": "0",#nc.default_fillvals['f8'], 
+            "comment": "A TBD-bit binary string of 1’s and 0’s " + \
+            "indicating a variety of TBD information related to the " + \
+            "processing of L1c/r data."
+        }
+    },  
+    "Quality_information": {
+        "calibration_flag": {
+            "units": "K",
+            "long_name": "A TBD-bit binary string of 1’s and 0’s indicating the quality " + \
+            "of the L1b [L|C|X|KU|KA]_BAND Earth samples used to derive the " + \
+            "L1c data. A ‘0’ indicates that the L1c samples met a certain " + \
+            "quality criterion and a ‘1’ that it did not. Bit position ‘0’ " + \
+            "refers to the least significant bit. The calibration flag " + \
+            "summarises the calibration quality for each channel and scan. " + \
+            "The data quality flag summarises the BT data quality for each " + \
+            "channel and scan.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "0,65535",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256,256",
+            #"_FillValue": "0" 
+        }, 
+        "data_quality_flag": {
+            "units": "K",
+            "long_name": "A TBD-bit binary string of 1’s and 0’s indicating the quality " + \
+            "of the L1b [L|C|X|KU|KA]_BAND Earth samples used to derive the " + \
+            "L1c data. A ‘0’ indicates that the L1c samples met a certain " + \
+            "quality criterion and a ‘1’ that it did not. Bit position ‘0’ " + \
+            "refers to the least significant bit. The calibration flag " + \
+            "summarises the calibration quality for each channel and scan. " + \
+            "The data quality flag summarises the BT data quality for each " + \
+            "channel and scan.", 
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "0,65535",
+            "_Storage": "chunked",
+            "_ChunkSizes": "256,256",
+            #"_FillValue": "0" 
+        } 
+    } 
 } 
 
 class ProductGenerator: 
@@ -201,8 +416,6 @@ class ProductGenerator:
         self.config = config 
         self.logger = config.logger  
         
-        print(self.config.split_fore_aft)
-
 
 
     def generate_l1c_product(self, data_dict: dict): 
@@ -215,634 +428,6 @@ class ProductGenerator:
         # 
         # Params from CDL 
         params_to_save = {
-                "Measurement": {
-                    "bt_h_fore": { 
-                        "units": "K",
-                        "long_name": "H-polarised TOA Brightness Temperatures",
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": f"Earth-Gridded TOA h-polarised" + \
-                         f" [L|C|X|KU|KA]_BAND_fore BTS" + \
-                         f" interpolated on a TBD-km grid"
-                         }, 
-                    "bt_h_aft": { 
-                        "units": "K",
-                        "long_name": "H-polarised TOA Brightness Temperatures",
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": f"Earth-Gridded TOA h-polarised" + \
-                         f" [L|C|X|KU|KA]_BAND_aft BTS" + \
-                         f" interpolated on a TBD-km grid"
-                         },  
-                    "bt_v_fore": {
-                        "units": "K",
-                        "long_name": "V-polarised TOA Brightness Temperatures",
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": f"Earth-Gridded TOA v-polarised" + \
-                         f" [L|C|X|KU|KA]_BAND_fore BTS" + \
-                         f" interpolated on a TBD-km grid"
-                        }, 
-                    "bt_v_aft":  {
-                        "units": "K",
-                        "long_name": "V-polarised TOA Brightness Temperatures",
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": f"Earth-Gridded TOA v-polarised" + \
-                         f" [L|C|X|KU|KA]_BAND_aft BTS" + \
-                         f" interpolated on a TBD-km grid"
-                        }, 
-                    "bt_3_fore": {
-                        "units": "K",
-                        "long_name": "Stokes 3-polarised TOA Brightness Temperatures", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Earth-Gridded TOA [L|C|X|KU|KA]_BAND_fore BTS " + \
-                         "interpolated on a TBD-km grid, third stokes parameter " + \
-                         "of the surface polarisation basis"
-                        }, 
-                    "bt_3_aft":  {
-                        "units": "K",
-                        "long_name": "H-polarised TOA Brightness Temperatures",
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Earth-Gridded TOA [L|C|X|KU|KA]_BAND_aft BTS " + \
-                         "interpolated on a TBD-km grid, third stokes parameter " + \
-                         "of the surface polarisation basis"
-                        }, 
-                    "bt_4_fore": {
-                        "units": "K",
-                        "long_name": "Stokes 4-polarised TOA Brightness Temperatures", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Earth-Gridded TOA [L|C|X|KU|KA]_BAND_fore BTS " + \
-                          "interpolated on a TBD-km grid, fourth stokes parameter " + \
-                          "of the surface polarisation basis"
-                        }, 
-                    "bt_4_aft":  {
-                        "units": "K",
-                        "long_name": "Stokes 4-polarised TOA Brightness Temperatures", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Earth-Gridded TOA [L|C|X|KU|KA]_BAND_aft BTS " + \
-                          "interpolated on a TBD-km grid, fourth stokes parameter " + \
-                          "of the surface polarisation basis"
-                        }, 
-                    "faraday_rot_angle_fore":   {
-                        "units": "deg",
-                        "long_name": "Interpolated Faraday Rotation Angle of acquisitions", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                         "comment": "Level 1b [L|C|X|KU|KA]_BAND_fore faraday " + \
-                           "rotation angle corresponding to the measured BT value. " + \
-                           "The value of the faraday rotation angle will be scaled " + \
-                           "with the interpolation weights of all faraday rotation " + \
-                           "angles Earth samples used in the interpolation of that " + \
-                           "grid cell."
-                        }, 
-                    "faraday_rot_angle_aft":    {
-                        "units": "deg",
-                        "long_name": "Interpolated Faraday Rotation Angle of acquisitions", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                         "comment": "Level 1b [L|C|X|KU|KA]_BAND_aft faraday " + \
-                           "rotation angle corresponding to the measured BT value. " + \
-                           "The value of the faraday rotation angle will be scaled " + \
-                           "with the interpolation weights of all faraday rotation " + \
-                           "angles Earth samples used in the interpolation of that " + \
-                           "grid cell."
-                        }, 
-                    "geometric_rot_angle_fore": {
-                        "units": "deg",
-                        "long_name": "Interpolated Geometric Rotation angle of acquisitions.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                         "comment": "Level 1b [L|C|X|KU|KA]_BAND_fore geometric " + \
-                         "rotation angle corresponding to the measured BT value. " + \
-                         "The value of the geometric rotation angle will be " + \
-                         "scaled with the interpolation weights of all geometric " + \
-                         "rotation angles Earth samples used in the " + \
-                         "interpolation of that grid cell." 
-                        }, 
-                    "geometric_rot_angle_aft":  {
-                        "units": "deg",
-                        "long_name": "Interpolated Geometric Rotation angle of acquisitions.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_ChunkSizes": [256, 256],  # List instead of a string for chunk sizes
-                        "_FillValue": nc.default_fillvals['f8'], 
-                         "comment": "Level 1b [L|C|X|KU|KA]_BAND_aft geometric " + \
-                         "rotation angle corresponding to the measured BT value. " + \
-                         "The value of the geometric rotation angle will be " + \
-                         "scaled with the interpolation weights of all geometric " + \
-                         "rotation angles Earth samples used in the " + \
-                         "interpolation of that grid cell." 
-                        }, 
-                    "ndet_fore": {
-                        "units": "K",
-                        "long_name": "Radiometric resolution of each measured BT.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": f"Radiometric resolution of each measured BT." 
-                        }, 
-                    "ndet_aft":  {
-                        "units": "K",
-                        "long_name": "Radiometric resolution of each measured BT.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": f"Radiometric resolution of each measured BT." 
-                        }, 
-                    "tsu_fore":  {
-                        "units": "K",
-                        "long_name": "Total standard uncertainty for each measured BT.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Total standard uncertainty for each measured BT." 
-                        }, 
-                    "tsu_aft":   {
-                        "units": "K",
-                        "long_name": "Total standard uncertainty for each measured BT.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Total standard uncertainty for each measured BT." 
-                        }, 
-                    "instrument_status_fore": {
-                        "units": "N/A",
-                        "long_name": "Instrument Calibration or Observation mode.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Instrument Calibration or Observation mode, " + \
-                        "for all samples. L1c values will consider the majority " + \
-                        "status values from input L1b samples."
-                        }, 
-                    "instrument_status_aft":  {
-                        "units": "N/A",
-                        "long_name": "Instrument Calibration or Observation mode.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Instrument Calibration or Observation mode, " + \
-                        "for all samples. L1c values will consider the majority " + \
-                        "status values from input L1b samples."
-                        }, 
-                    "land_sea_content_fore":  {
-                        "units": "N/A",
-                        "long_name": "Land/Sea content of the measured pixel.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Land/Sea content of the measured pixel, " + \
-                        "200 for full sea content, 0 for full land content."
-                        }, 
-                    "land_sea_content_aft":   {
-                        "units": "N/A",
-                        "long_name": "Land/Sea content of the measured pixel.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Land/Sea content of the measured pixel, " + \
-                        "200 for full sea content, 0 for full land content."
-                        }, 
-                    "regridding_n_samples_fore": {
-                        "units": "N/A",
-                        "long_name": "Number of earth samples used for interpolation", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                         "comment": "Number of L1b [h|v|t3|t4] polarised " + \
-                         "[L|C|X|KU|KA]_BAND [fore|aft] brightness temperature " + \
-                         "Earth samples used in the [Backus-Gilbert|rSIR|LW] " + \
-                         "remapping interpolation."
-                        }, 
-                    "regridding_n_samples_aft":  {
-                        "units": "N/A",
-                        "long_name": "Number of earth samples used for interpolation", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                         "comment": "Number of L1b [h|v|t3|t4] polarised " + \
-                         "[L|C|X|KU|KA]_BAND [fore|aft] brightness temperature " + \
-                         "Earth samples used in the [Backus-Gilbert|rSIR|LW] " + \
-                         "remapping interpolation."
-                        }, 
-                    "regridding_quality_measure_fore": {
-                        "units": "N/A",
-                        "long_name": "Algorithm Specific Optimal Value of Regularization Parameter.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "The optimal value of a parameter for the " + \
-                         "[Backus-Gilbert|rSIR|LW] [fore|aft] that controls the " + \
-                         "trade-off between noise amplification and " + \
-                         "regularisation. For BG it is the optimal value for the " + \
-                         "smoothing parameter, while for [rSIR|LW] it is the " + \
-                         "number of iterations to achieve a chosen level of " + \
-                         "residual error. In case of [NN|IDS|DIB] regularisation " + \
-                         "is not performed and the parameter will take on the " + \
-                         "_FillValue."  
-                         }, 
-                    "regridding_quality_measure_aft":  {
-                        "units": "N/A",
-                        "long_name": "Algorithm Specific Optimal Value of Regularization Parameter.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "The optimal value of a parameter for the " + \
-                         "[Backus-Gilbert|rSIR|LW] [fore|aft] that controls the " + \
-                         "trade-off between noise amplification and " + \
-                         "regularisation. For BG it is the optimal value for the " + \
-                         "smoothing parameter, while for [rSIR|LW] it is the " + \
-                         "number of iterations to achieve a chosen level of " + \
-                         "residual error. In case of [NN|IDS|DIB] regularisation " + \
-                         "is not performed and the parameter will take on the " + \
-                         "_FillValue."  
-                        }, 
-                    "regridding_l1b_orphans_fore": {
-                        "units": "N/A",
-                        "long_name": "Indication of L1b orphaned Earth samples.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Whether each [L|C|X|KU|KA]_BAND L1b measurement sample was " + \
-                        "unused (1) or used (0) in [Backus-Gilbert|rSIR|LW] regridding " + \
-                        "interpolation of [fore|aft] scan samples. In the fore-scan " + \
-                        "regridding nearly all aft scan samples would be orphan " + \
-                        "(unused), for instance, and vice versa. It would also occur if " + \
-                        "the swath stretches outside the projection window. Orphaned " + \
-                        "samples may also occur if nearest neighbour or linear " + \
-                        "interpolation (among the TBD methods) is used."
-                        }, 
-                    "regridding_l1b_orphans_aft":  {
-                        "units": "N/A",
-                        "long_name": "Indication of L1b orphaned Earth samples.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "TBD",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Whether each [L|C|X|KU|KA]_BAND L1b measurement sample was " + \
-                        "unused (1) or used (0) in [Backus-Gilbert|rSIR|LW] regridding " + \
-                        "interpolation of [fore|aft] scan samples. In the fore-scan " + \
-                        "regridding nearly all aft scan samples would be orphan " + \
-                        "(unused), for instance, and vice versa. It would also occur if " + \
-                        "the swath stretches outside the projection window. Orphaned " + \
-                        "samples may also occur if nearest neighbour or linear " + \
-                        "interpolation (among the TBD methods) is used."
-                        }
-                    }, 
-                "Navigation":  {
-                    "acq_time_utc_fore": {
-                        "units": "N/A",
-                        "long_name": "Interpolated UTC Acquisition time of Earth Sample acquisitions.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,N/A",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "UTC acquisition times expressed in seconds " +\
-                        "(seconds since 2000-01-01 00:00:00 UTC). The value of " + \
-                        "time_earth will be scaled with the interpolation " + \
-                        "weights of all time_earth Earth samples used in the " + \
-                        "interpolation of that grid cell. "
-                        }, 
-                    "acq_time_utc_aft": {
-                        "units": "N/A",
-                        "long_name": "Interpolated UTC Acquisition time of Earth Sample acquisitions.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,N/A",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "UTC acquisition times expressed in seconds " +\
-                        "(seconds since 2000-01-01 00:00:00 UTC). The value of " + \
-                        "time_earth will be scaled with the interpolation " + \
-                        "weights of all time_earth Earth samples used in the " + \
-                        "interpolation of that grid cell. "
-                        }, 
-                    "azimuth_fore": {
-                        "units": "deg",
-                        "long_name": "Interpolated Earth Azimuth angle of the acquisitions.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,359.99",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                         "comment": "Level 1b [L|C|X|KU|KA]_BAND_fore " + \
-                         "Earth observation azimuth angles of the acquisitions, " + \
-                         "positive counterclockwise from due east. The value of " + \
-                         "observation azimuth angle will be scaled with the " + \
-                         "interpolation weights of all observation azimuth angle " + \
-                         "Earth samples used in the interpolation of that grid " \
-                         "cell." 
-                        }, 
-                    "azimuth_aft": {
-                        "units": "deg",
-                        "long_name": "Interpolated Earth Azimuth angle of the acquisitions.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,359.99",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                         "comment": "Level 1b [L|C|X|KU|KA]_BAND_aft " + \
-                         "Earth observation azimuth angles of the acquisitions, " + \
-                         "positive counterclockwise from due east. The value of " + \
-                         "observation azimuth angle will be scaled with the " + \
-                         "interpolation weights of all observation azimuth angle " + \
-                         "Earth samples used in the interpolation of that grid " \
-                         "cell." 
-                        }, 
-                    "latitude_fore": {
-                        "units": "deg",
-                        "long_name": "Latitude of the centre of a TBD-km PROJ grid cell.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "-90, 90",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256", 
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Latitude of the centre of a TBD-km PROJ grid cell."
-                        }, 
-                    "latitude_aft": {
-                        "units": "deg",
-                        "long_name": "Latitude of the centre of a TBD-km PROJ grid cell.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "-90, 90",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256", 
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Latitude of the centre of a TBD-km PROJ grid cell."
-                        }, 
-                    "longitude_fore": {
-                        "units": "deg",
-                        "long_name": "Longitude of the centre of a TBD-km PROJ grid cell.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "-180, 179.99",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256", 
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Longitude of the centre of a TBD-km PROJ grid cell."
-                        }, 
-                    "longitude_aft": {
-                        "units": "deg",
-                        "long_name": "Longitude of the centre of a TBD-km PROJ grid cell.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "-180, 179.99",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256", 
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Longitude of the centre of a TBD-km PROJ grid cell."
-                        }, 
-                    "oza_fore": {
-                        "units": "deg",
-                        "long_name": "Interpolated Observation Zenith Angle of acquisitions.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,359.99",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Level 1b [L|C|X|KU|KA]_BAND_fore " + \
-                        "Earth Observation zenith angles of the acquisitions. " + \
-                        "The value of OZA will be scaled with the interpolation " + \
-                        "weights of all observation OZA Earth samples used in " + \
-                        "the interpolation of that grid cell. The OZA is defined " + \
-                        "as the included angle between the antenna Boresight " + \
-                        "vector and the normal to the Earth's surface."
-                        }, 
-                    "oza_aft": {
-                        "units": "deg",
-                        "long_name": "Interpolated Observation Zenith Angle of acquisitions.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,359.99",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Level 1b [L|C|X|KU|KA]_BAND_aft " + \
-                        "Earth Observation zenith angles of the acquisitions. " + \
-                        "The value of OZA will be scaled with the interpolation " + \
-                        "weights of all observation OZA Earth samples used in " + \
-                        "the interpolation of that grid cell. The OZA is defined " + \
-                        "as the included angle between the antenna Boresight " + \
-                        "vector and the normal to the Earth's surface."
-                        }, 
-                    "processing_scan_angle_fore": {
-                        "units": "deg",
-                        "long_name": "Interpolated scan angle of acquisitions", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,359.99",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",   
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "The processing scan angle of the L1b " + \
-                        "[L|C|X|KU|KA]_BAND_fore Earth view samples. The " + \
-                        "value of scan angle will be scaled with the " + \
-                        "interpolation weights of all scan angle Earth samples " + \
-                        "used in the interpolation of that grid cell. " + \
-                        "Measurements from different feed horns are combined. " + \
-                        "The scan angle is defined as the azimuth angle of the " + \
-                        "antenna boresight measured from the ground track " + \
-                        "vector. The scan angle is 90° when the boresight points " + \
-                        "in the same direction as the ground track vector and " + \
-                        "increases clockwise when viewed from above." 
-                        }, 
-                    "processing_scan_angle_aft": {
-                        "units": "deg",
-                        "long_name": "Interpolated scan angle of acquisitions", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,359.99",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",   
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "The processing scan angle of the L1b " + \
-                        "[L|C|X|KU|KA]_BAND_aft Earth view samples. The " + \
-                        "value of scan angle will be scaled with the " + \
-                        "interpolation weights of all scan angle Earth samples " + \
-                        "used in the interpolation of that grid cell. " + \
-                        "Measurements from different feed horns are combined. " + \
-                        "The scan angle is defined as the azimuth angle of the " + \
-                        "antenna boresight measured from the ground track " + \
-                        "vector. The scan angle is 90° when the boresight points " + \
-                        "in the same direction as the ground track vector and " + \
-                        "increases clockwise when viewed from above." 
-                        }, 
-                    "solar_azimuth_fore": {
-                        "units": "deg",
-                        "long_name": "Interpolated solar azimuth angle of acquisitions", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,359.99",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",   
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Level 1b [L|C|X|KU|KA]_BAND_fore " + \
-                        "solar azimuth angle of acquisitions.The value of " + \
-                        "solar_azimuth will be scaled with the interpolation " + \
-                        "weights of all solar_azimuth Earth samples used in the " + \
-                        "interpolation of that grid cell." 
-                        }, 
-                    "solar_azimuth_aft": {
-                        "units": "deg",
-                        "long_name": "Interpolated solar azimuth angle of acquisitions", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,359.99",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",   
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Level 1b [L|C|X|KU|KA]_BAND_aft " + \
-                        "solar azimuth angle of acquisitions.The value of " + \
-                        "solar_azimuth will be scaled with the interpolation " + \
-                        "weights of all solar_azimuth Earth samples used in the " + \
-                        "interpolation of that grid cell." 
-                        }, 
-                    "solar_zenith_fore": {
-                        "units": "deg",
-                        "long_name": "Interpolated solar zenith angle of acquisitions", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,359.99",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Level 1b [L|C|X|KU|KA]_BAND_fore " + \
-                        "solar zenith angle of acquisitions.The value of " + \
-                        "solar_zenith will be scaled with the interpolation " + \
-                        "weights of all solar_zenith Earth samples used in the " + \
-                        "interpolation of that grid cell."
-                        }, 
-                    "solar_zenith_aft": {
-                        "units": "deg",
-                        "long_name": "Interpolated solar zenith angle of acquisitions", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,359.99",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": nc.default_fillvals['f8'], 
-                        "comment": "Level 1b [L|C|X|KU|KA]_BAND_aft " + \
-                        "solar zenith angle of acquisitions.The value of " + \
-                        "solar_zenith will be scaled with the interpolation " + \
-                        "weights of all solar_zenith Earth samples used in the " + \
-                        "interpolation of that grid cell."
-                        } 
-                    }, 
-                "Processing_flags": {
-                    "processing_flags": {
-                        "units": "N/A",
-                        "long_name": "L1c processing performance related information.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,65535",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": "0",#nc.default_fillvals['f8'], 
-                        "comment": "A TBD-bit binary string of 1’s and 0’s " + \
-                        "indicating a variety of TBD information related to the " + \
-                        "processing of L1c/r data."
-                        }
-                    },  
                 "Quality_information": {
                     "navigation_status_flag": {
                         "units": "N/A",
@@ -930,14 +515,17 @@ class ProductGenerator:
             # the numpy array provided and save the data accordingly. 
             for group_field, group_vals in CDL.items(): 
 
-                print(f"Creating group: {group_field}")#. Group val: {group_vals}")
+                self.logger.info(f"Creating group: {group_field}")#. Group val: {group_vals}")
 
                 group = data_group.createGroup(group_field)
 
                 # Looping through data dictionayr and retrieving its variables (per band) 
                 for band_name, band_var in data_dict.items(): 
 
-                    band_group = group.createGroup(f"{band_name}_BAND")
+                    if group_field == "Processing_flags": 
+                        band_group = group 
+                    else: 
+                        band_group = group.createGroup(f"{band_name}_BAND")
 
                     for var_name, var_val in band_var.items(): 
 
@@ -962,83 +550,123 @@ class ProductGenerator:
                                 else var_name
                         #print(var_name, regrid_var)
 
+                        
                         if var_name in regrid_vars: 
 
-                            self.logger.info(f"{group_field}, {band_name}, {var_name}")
 
-                            # TODO: Fis data types 
-                            if len(var_shape) == 1: 
-                                var_data = band_group.createVariable(
-                                        var_name, 
-                                        "double", 
-                                        ('x'), 
-                                        fill_value = group_vals[regrid_var]["_FillValue"]
-                                        ) 
-                                var_data[:] = var_val 
-                            elif len(var_shape) == 2:  
-                                var_data = band_group.createVariable(
-                                        var_name, 
-                                        "double", ('x', 'y'), 
-                                        fill_value = group_vals[regrid_var]["_FillValue"]
-                                        ) 
-                                var_data[:, :] = var_val 
-                            elif len(var_shape) == 3: 
-                                var_data = band_group.createVariable(
-                                        var_name, 
-                                        "double", 
-                                        ('time', 'x', 'y'), 
-                                        fill_value = group_vals[regrid_var]["_FillValue"]
-                                        ) 
-                                var_data[:, :, :] = var_val 
-                            else:
-                                # Return a generic message or handle error for unknown shapes
-                                raise ValueError(f"Unsupported shape with {len(var_shape)} dimensions: {var_shape}")
+                            #var_type = type(var_val[0,0,0])
 
-                            # TODO: fix the re pattern to also include fore|aft
-                            # when this loop will be appropriate
+                            # print(var_name, var_val.dtype, dtype_map.get(var_val.dtype, None), dtype_map.get(var_val.dtype))
 
-                            # Loop through the dictionary and set attributes for the variable
-                            for attr_name, attr_value in group_vals[regrid_var].items():
+                            #print(type(var_val[0]))
+                            #print(type(var_val))
+                            #print(var_name, var_val.dtype)
+                            #exit() 
+                            var_type = self.get_netcdf_dtype(var_val.dtype)
+                            var_fill = nc.default_fillvals[var_type]
+                            var_dim  = self.determine_dimension(var_shape)
 
-                                if attr_name != "_FillValue" and attr_name != "comment": 
+                            self.logger.info(f"{group_field}, {band_name}, {var_name}, {var_type}, {var_fill}, {var_dim}")
 
-                                    #print(attr_name)
-                                    # Use setncattr to assign the attribute
-                                    var_data.setncattr(attr_name, attr_value)
+                            # Determine the appropriate slice based on variable shape
+                            slices = tuple(slice(None) for _ in var_shape)
+                            #print(slices, var_shape)
 
-                                elif attr_name == "comment": 
+                            # var_chunked = ncfile.createVariable(
+                            #     varname,          # Variable name as a string
+                            #     datatype,         # Data type (e.g., 'f4' for float32, 'i4' for int32)
+                            #     dimensions,       # Dimensions as a tuple (e.g., ('x', 'y'))
+                            #     chunksizes=None,  # Optional chunk sizes for each dimension (e.g., (100, 100))
+                            #     fill_value=None,  # Optional fill value for missing data
+                            #     zlib=False,       # Optional compression flag (True to enable compression)
+                            #     complevel=4,      # Optional compression level (1-9, higher = more compression)
+                            #     contiguous=False, # Optional flag to set storage as contiguous (True) or chunked (False)
+                            #     endian='native',  # Optional byte order ('native', 'little', 'big')
+                            #     least_significant_digit=None  # Optional precision control for float data
+                            # )
+                            var_data = band_group.createVariable(
+                                    varname    = var_name, 
+                                    datatype   = var_type, #"double", 
+                                    dimensions = var_dim, #('x'), 
+                                    fill_value = var_fill #group_vals[regrid_var]["_FillValue"]
+                                    ) 
+                            # Assign values to the variable
+                            var_data[slices] = var_val
+                            # if len(var_shape) == 1: 
+                            #     var_data = band_group.createVariable(
+                            #             var_name, 
+                            #             var_type, #"double", 
+                            #             var_dim, #('x'), 
+                            #             fill_value = var_fill #group_vals[regrid_var]["_FillValue"]
+                            #             ) 
+                            #     var_data[:] = var_val 
+                            # elif len(var_shape) == 2:  
+                            #     var_data = band_group.createVariable(
+                            #             var_name, 
+                            #             var_type, #"double", 
+                            #             var_dim, #('x', 'y'), 
+                            #             fill_value = var_fill #group_vals[regrid_var]["_FillValue"]
+                            #             ) 
+                            #     var_data[:, :] = var_val 
+                            # elif len(var_shape) == 3: 
+                            #     var_data = band_group.createVariable(
+                            #             var_name, 
+                            #             var_type, #"double", 
+                            #             var_dim, #('time', 'x', 'y'), 
+                            #             fill_value = var_fill #group_vals[regrid_var]["_FillValue"]
+                            #             ) 
+                            #     var_data[:, :, :] = var_val 
+                            # else:
+                            #     # Return a generic message or handle error for unknown shapes
+                            #     raise ValueError(f"Unsupported shape with {len(var_shape)} dimensions: {var_shape}")
+                            #print(var_data)
+                            #exit() 
 
-                                    pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_\[fore\|aft\]" 
+                            # # TODO: fix the re pattern to also include fore|aft
+                            # # when this loop will be appropriate
 
-                                    if self.config.split_fore_aft: 
-                                        substitution = f"{band_name}_BAND_fore" if "_fore" in var_name \
-                                                else f"{band_name}_BAND_aft" 
-                                    else: 
-                                        substitution = f"{band_name}_BAND" 
-                                    #print(substitution) 
+                            # # Loop through the dictionary and set attributes for the variable
+                            # for attr_name, attr_value in group_vals[regrid_var].items():
 
-                                    #pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_" #\[fore\|aft\]" 
-                                    #substitution = f"{band_name}_BAND_" 
-                                    attr_value = re.sub(pattern, substitution, attr_value)
-                                    #var_data.setncattr(attr_name, attr_value)
+                            #     if attr_name != "_FillValue" and attr_name != "comment": 
 
-                                    # Checking whther there is any patter left of the following format 
-                                    pattern = r"\[L\|C\|X\|KU\|KA\]_BAND" 
-                                    substitution = f"{band_name}_BAND" 
-                                    attr_value = re.sub(pattern, substitution, attr_value)
+                            #         #print(attr_name)
+                            #         # Use setncattr to assign the attribute
+                            #         var_data.setncattr(attr_name, attr_value)
+
+                            #     elif attr_name == "comment": 
+
+                            #         pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_\[fore\|aft\]" 
+
+                            #         if self.config.split_fore_aft: 
+                            #             substitution = f"{band_name}_BAND_fore" if "_fore" in var_name \
+                            #                     else f"{band_name}_BAND_aft" 
+                            #         else: 
+                            #             substitution = f"{band_name}_BAND" 
+                            #         #print(substitution) 
+
+                            #         #pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_" #\[fore\|aft\]" 
+                            #         #substitution = f"{band_name}_BAND_" 
+                            #         attr_value = re.sub(pattern, substitution, attr_value)
+                            #         #var_data.setncattr(attr_name, attr_value)
+
+                            #         # Checking whther there is any patter left of the following format 
+                            #         pattern = r"\[L\|C\|X\|KU\|KA\]_BAND" 
+                            #         substitution = f"{band_name}_BAND" 
+                            #         attr_value = re.sub(pattern, substitution, attr_value)
 
 
-                                    pattern = r"\[fore\|aft\]" 
-                                    if self.config.split_fore_aft: 
-                                        substitution = f"fore" if "_fore" in var_name \
-                                                else f"aft" 
-                                    else: 
-                                        # Just leave it the way it is 
-                                        substitution = f"[fore|aft]" 
-                                    attr_value = re.sub(pattern, substitution, attr_value)
+                            #         pattern = r"\[fore\|aft\]" 
+                            #         if self.config.split_fore_aft: 
+                            #             substitution = f"fore" if "_fore" in var_name \
+                            #                     else f"aft" 
+                            #         else: 
+                            #             # Just leave it the way it is 
+                            #             substitution = f"[fore|aft]" 
+                            #         attr_value = re.sub(pattern, substitution, attr_value)
 
-                                    # Setting comment attribute 
-                                    var_data.setncattr(attr_name, attr_value)
+                            #         # Setting comment attribute 
+                            #         var_data.setncattr(attr_name, attr_value)
 
 
     #def create_cdf_var(self, var_shape, var_name, var_val, band_group, group_vals):
@@ -1087,8 +715,64 @@ class ProductGenerator:
 
 
 
+    def get_netcdf_dtype(self, np_dtype: np.dtype):
+        """
+        Retrieve the correct netCDF-4 string literal based on numpy data type.
 
-    # TODO: Perhaps this one is obsolete? 
+        netCDF4 types are: 
+
+        Integer Types:
+        'i1'   : byte     - 1-byte signed integer (int8)
+        'u1'   : ubyte    - 1-byte unsigned integer (uint8)
+        'i2'   : short    - 2-byte signed integer (int16)
+        'u2'   : ushort   - 2-byte unsigned integer (uint16)
+        'i4'   : int      - 4-byte signed integer (int32)
+        'u4'   : uint     - 4-byte unsigned integer (uint32)
+        'i8'   : int64    - 8-byte signed integer (int64)
+        'u8'   : uint64   - 8-byte unsigned integer (uint64)
+
+        Floating-Point Types:
+        'f4'   : float    - 4-byte floating-point (float32)
+        'f8'   : double   - 8-byte floating-point (float64)
+
+        Character and String Types:
+        'S1'   : char     - 1-byte character data
+        str    : string   - Variable-length string data
+
+        Variable-Length Types:
+        Depends on element type (e.g., `str` for variable-length strings)
+
+        User-Defined Types (Supported with Definitions):
+        enum   : Enumerated type (base integer type dependent)
+        opaque : Opaque data type (length defined in bytes)
+        compound : Custom compound structure (user-defined sub-elements)
+
+        Parameters:
+            np_dtype (numpy.dtype): The numpy data type to convert.
+
+        Returns:
+            str: The corresponding netCDF-4 string literal.
+        """
+
+        dtype_map = {
+            np.dtype('int8'):    'i1',     # 1-byte signed integer
+            np.dtype('uint8'):   'u1',    # 1-byte unsigned integer
+            np.dtype('int16'):   'i2',    # 2-byte signed integer
+            np.dtype('uint16'):  'u2',   # 2-byte unsigned integer
+            np.dtype('int32'):   'i4',    # 4-byte signed integer
+            np.dtype('uint32'):  'u4',   # 4-byte unsigned integer
+            np.dtype('int64'):   'i8',    # 8-byte signed integer
+            np.dtype('uint64'):  'u8',   # 8-byte unsigned integer
+            np.dtype('float32'): 'f4',  # 4-byte floating-point
+            np.dtype('float64'): 'f8',  # 8-byte floating-point
+            np.dtype('S1'):      'S1',       # 1-byte character
+            np.dtype('str'):      str,       # Variable-length string
+        }
+
+
+        return dtype_map.get(np_dtype, None) 
+
+
     def determine_dimension(self, var_shape: tuple) -> tuple:
         """
         Determines the dimension names based on the shape of the variable.
