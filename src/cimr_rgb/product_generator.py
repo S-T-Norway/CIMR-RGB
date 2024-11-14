@@ -1,9 +1,13 @@
 import re 
 #import pickle 
 import pathlib as pb 
+import datetime 
 
 import numpy  as np 
 import netCDF4 as nc 
+
+
+from cimr_rgb.grid_generator import GRIDS 
 
 # TODO: Ad rows and cols variables <= all variables are 
 # in 1D flattened array and these rows and cols will allow 
@@ -410,6 +414,10 @@ CDL = {
     } 
 } 
 
+
+
+
+
 class ProductGenerator: 
 
     def __init__(self, config):
@@ -420,70 +428,65 @@ class ProductGenerator:
 
     def generate_l1c_product(self, data_dict: dict): 
 
-        # TODO: Change the lists into dictionaries and add metadata (as well as
-        # proper dimensions to variables, since right now it is only x, y but
-        # can also be n_l1b_scans) 
-        # 
-        # TODO: Double check all metadata below 
-        # 
-        # Params from CDL 
-        params_to_save = {
-                "Quality_information": {
-                    "navigation_status_flag": {
-                        "units": "N/A",
-                        "long_name": "Quality information flag summarising the " + \
-                            "navigation quality of each scan.",  
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,65535",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": "0", 
-                        "comment": "A TBD-bit binary string of 1’s and 0's " +\
-                        "indicating the quality of the L1b acquisition " + \
-                        "conditions. A ‘0’ indicates that the L1c samples met a " + \
-                        "certain quality criterion and a ‘1’ that it did not. " + \
-                        "Bit position ‘0’ refers to the least significant bit. " + \
-                        "navigation_status_flag summarises the navigation " + \
-                        "quality Of each scan."  
-                        }, 
-                    "scan_quality_flag": {
-                        "units": "N/A",
-                        "long_name": "Quality information flag summarising the " + \
-                            "overall scan quality.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,65535",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": "0",#nc.default_fillvals['f8'], 
-                        "comment": "A TBD-bit binary string of 1’s and 0’s " + \
-                        "indicating the quality of the L1b acquisition " + \
-                        "conditions. A ‘0’ indicates that the L1c samples met a " + \
-                        "certain quality criterion and a ‘1’ that it did not. " + \
-                        "Bit position ‘0’ refers to the least significant bit. " + \
-                        "scan_quality_flag summarises the scan quality" 
-                        }, 
-                    "temperatures_flag": {
-                        "units": "N/A",
-                        "long_name": "Quality information indicating degraded " + \
-                            "instrument temperature cases.", 
-                        "grid_mapping": "crs",
-                        "coverage_content_type": "Grid",
-                        "valid_range": "0,65535",
-                        "_Storage": "chunked",
-                        "_ChunkSizes": "256, 256",  
-                        "_FillValue": "0",#nc.default_fillvals['f8'], 
-                        "comment": "A TBD-bit binary string of 1’s and 0’s " + \
-                        "indicating the quality of the L1b acquisition " + \
-                        "conditions. A ‘0’ indicates that the L1c samples met a " + \
-                        "certain quality criterion and a ‘1’ that it did not. " + \
-                        "Bit position ‘0’ refers to the least significant bit. " + \
-                        "temperatures_flag to indicates degraded instrument " + \
-                        "temperature cases." 
-                        }
-                    } 
-                }
+        # (Old dict that contains) Params from CDL. It can be used 
+        # later still, so left here as a comment  
+        #params_to_save = {
+        #    "Quality_information": {
+        #        "navigation_status_flag": {
+        #            "units": "N/A",
+        #            "long_name": "Quality information flag summarising the " + \
+        #                "navigation quality of each scan.",  
+        #            "grid_mapping": "crs",
+        #            "coverage_content_type": "Grid",
+        #            "valid_range": "0,65535",
+        #            "_Storage": "chunked",
+        #            "_ChunkSizes": "256, 256",  
+        #            "_FillValue": "0", 
+        #            "comment": "A TBD-bit binary string of 1’s and 0's " +\
+        #            "indicating the quality of the L1b acquisition " + \
+        #            "conditions. A ‘0’ indicates that the L1c samples met a " + \
+        #            "certain quality criterion and a ‘1’ that it did not. " + \
+        #            "Bit position ‘0’ refers to the least significant bit. " + \
+        #            "navigation_status_flag summarises the navigation " + \
+        #            "quality Of each scan."  
+        #            }, 
+        #        "scan_quality_flag": {
+        #            "units": "N/A",
+        #            "long_name": "Quality information flag summarising the " + \
+        #                "overall scan quality.", 
+        #            "grid_mapping": "crs",
+        #            "coverage_content_type": "Grid",
+        #            "valid_range": "0,65535",
+        #            "_Storage": "chunked",
+        #            "_ChunkSizes": "256, 256",  
+        #            "_FillValue": "0",#nc.default_fillvals['f8'], 
+        #            "comment": "A TBD-bit binary string of 1’s and 0’s " + \
+        #            "indicating the quality of the L1b acquisition " + \
+        #            "conditions. A ‘0’ indicates that the L1c samples met a " + \
+        #            "certain quality criterion and a ‘1’ that it did not. " + \
+        #            "Bit position ‘0’ refers to the least significant bit. " + \
+        #            "scan_quality_flag summarises the scan quality" 
+        #            }, 
+        #            "temperatures_flag": {
+        #                "units": "N/A",
+        #                "long_name": "Quality information indicating degraded " + \
+        #                    "instrument temperature cases.", 
+        #                "grid_mapping": "crs",
+        #                "coverage_content_type": "Grid",
+        #                "valid_range": "0,65535",
+        #                "_Storage": "chunked",
+        #                "_ChunkSizes": "256, 256",  
+        #                "_FillValue": "0",#nc.default_fillvals['f8'], 
+        #                "comment": "A TBD-bit binary string of 1’s and 0’s " + \
+        #                "indicating the quality of the L1b acquisition " + \
+        #                "conditions. A ‘0’ indicates that the L1c samples met a " + \
+        #                "certain quality criterion and a ‘1’ that it did not. " + \
+        #                "Bit position ‘0’ refers to the least significant bit. " + \
+        #                "temperatures_flag to indicates degraded instrument " + \
+        #                "temperature cases." 
+        #                }
+        #            } 
+        #        }
 
         # TODO: Remove pickled object and pass in proper dictionary to be saved 
         #file_path = pb.Path("dpr/data_dict_out.pkl")
@@ -493,10 +496,137 @@ class ProductGenerator:
 
         #params_to_save = CDL 
 
-        # TODO: Adopt proper naming as indicated in the D2 document 
-        # <Projection> -> Data -> Measurement -> <Band>
-        outfile = pb.Path(f"{self.config.output_path}/test_l1c.nc").resolve()
+        #outfile = "test_l1c.nc"
+        #outfile = self.get_processor_filename()
+        grid_res = re.search(r'(\d+(?:\.\d+)?)km', self.config.grid_definition).group() 
+        # Get the current date and time
+        l1c_utc_time = datetime.datetime.now()
+
+        # Format the date and time as "YYYYMMDDHHMMSS"
+        l1c_utc_time = l1c_utc_time.strftime("%Y%m%d%H%M%S")
+
+        outfile = f"{self.config.input_data_type}_{self.config.grid_type}_{self.config.regridding_algorithm}_{grid_res}_{l1c_utc_time}.nc" 
+
+        outfile = pb.Path(f"{self.config.output_path}/{outfile}").resolve()
+        # // global_attributes:
+        # :conventions = “CF-1.6”;
+        # :id = “TBD”;
+        # :naming_authority = “European Space Agency”;
+        # :history = “TBD”;
+        # :source = “TBD”;
+        # :processing_level = “L1c”;
+        # :comment = “TBD”
+        # :acknowledgement = “TBD”;
+        # :licence = None
+        # :standard_name_vocabulary = “TBD”;
+        # :date_created = “TBD”;
+        # :creator_name = “TBD”;
+        # :creator_email = “TBD”;
+        # :creator_url = “TBD”;
+        # :institution “European Space Agency”
+        # :project = “CIMR Re-Gridding Toolbox”
+        # :program = “TBD”;
+        # :contributor_name = “TBD”;
+        # :contributor_role = “TBD”;
+        # :publisher_name = “TBD”;
+        # :publisher_email = “TBD”;
+        # :publisher_url = “TBD”;
+        # :geospatial_bounds = “TBD”;
+        # :geospatial_bounds_crs = “TBD”;
+        # :geospatial_bounds_vertical_crs = “TBD”;
+        # :geospatial_lat_min = “TBD”;
+        # :geospatial_lat_max = “TBD”;
+        # :geospatial_lon_min = “TBD”;
+        # :geospatial_lon_max = “TBD”;
+        # :time_coverage_start = “TBD”;
+        # :time_coverage_end = “TBD”;
+        # :time_coverage_duration = “TBD”;
+        # :time_coverage_resolution = “TBD”;
+        # :geospatial_lat_units = “degrees north”;
+        # :geospatial_lat_resolution = “TBD”;
+        # :geospatial_lon_units = “degrees north”
+        # :geospatial_lon_resolution = “TBD”;
+        # :date_modified = “TBD”;
+        # :date_issued = “TBD”;
+        # :date_metadata_modified = “TBD”;
+        # :product_version = “TBD”;
+        # :platform = “CIMR”
+        # :instrument = “CIMR”
+        # :metadata_link = “TBD”;
+        # :keywords = “TBD”;
+        # :keywords_vocabulary = “TBD”;
+        # :references = “TBD”;
+        # :input_level1b_filenames = “TBD”;
+        # :level_01_atbd = “TBD”;
+        # :mission_requirement_document = “TBD”;
+        # :antenna_pattern_file = “TBD”;
+        # :antenna_pattern_source = “TBD”;
+
+
+        # TODO: - Convert this into a method? 
+        #       - Add product_version parameter file into config.xml 
+        # Define global attributes
+        GLOBAL_ATTRIBUTES = {
+            "conventions": "CF-1.6",
+            "id": "TBD",
+            "naming_authority": "European Space Agency",
+            "history": "TBD",
+            "source": "TBD",
+            "processing_level": f"{self.config.grid_type}",
+            "comment": "TBD",
+            "acknowledgement": "TBD",
+            "license": "None",
+            "standard_name_vocabulary": "TBD",
+            "date_created": f"{l1c_utc_time}",
+            "creator_name": "TBD",
+            "creator_email": "TBD",
+            "creator_url": "TBD",
+            "institution": "European Space Agency",
+            "project": "CIMR Re-Gridding Toolbox",
+            "program": "TBD",
+            "contributor_name": "TBD",
+            "contributor_role": "TBD",
+            "publisher_name": "TBD",
+            "publisher_email": "TBD",
+            "publisher_url": "TBD",
+            "geospatial_bounds": "TBD",
+            "geospatial_bounds_crs": "TBD",
+            "geospatial_bounds_vertical_crs": "TBD",
+            "geospatial_lat_min": "TBD",
+            "geospatial_lat_max": "TBD",
+            "geospatial_lon_min": "TBD",
+            "geospatial_lon_max": "TBD",
+            "time_coverage_start": "TBD",
+            "time_coverage_end": "TBD",
+            "time_coverage_duration": "TBD",
+            "time_coverage_resolution": "TBD",
+            "geospatial_lat_units": "degrees north",
+            "geospatial_lat_resolution": "TBD",
+            "geospatial_lon_units": "degrees north",
+            "geospatial_lon_resolution": "TBD",
+            "date_modified": "TBD",
+            "date_issued": "TBD",
+            "date_metadata_modified": "TBD",
+            "product_version": "TBD",
+            "platform": f"{self.config.input_data_type}",
+            "instrument": f"{self.config.input_data_type}",
+            "metadata_link": "TBD",
+            "keywords": "TBD",
+            "keywords_vocabulary": "TBD",
+            "references": "TBD",
+            "input_level1b_filenames": f"{pb.Path(self.config.input_data_path).resolve().name}", #"TBD",
+            "level_01_atbd": "TBD",
+            "mission_requirement_document": "TBD",
+            "antenna_pattern_files": "TBD",
+            "antenna_pattern_source": "TBD"
+        }
+
         with nc.Dataset(outfile, "w", format = "NETCDF4") as dataset: 
+
+            # Set each global attribute in the netCDF file
+            for attr, value in GLOBAL_ATTRIBUTES.items():
+                dataset.setncattr(attr, value)
+
 
             # Creating Dimentions according to cdl 
             dataset.createDimension('time', None)
@@ -519,9 +649,14 @@ class ProductGenerator:
 
                 group = data_group.createGroup(group_field)
 
-                # Looping through data dictionayr and retrieving its variables (per band) 
+                # Some fields of Quality_information are not sub group of bands 
+                #if group_field == "Quality_information": 
+
+                # Looping through data dictionary and retrieving its variables (per band) 
                 for band_name, band_var in data_dict.items(): 
 
+                    # Processing_flags are defined as a separate field 
+                    # and not as sub field of specific band
                     if group_field == "Processing_flags": 
                         band_group = group 
                     else: 
@@ -592,81 +727,53 @@ class ProductGenerator:
                                     ) 
                             # Assign values to the variable
                             var_data[slices] = var_val
-                            # if len(var_shape) == 1: 
-                            #     var_data = band_group.createVariable(
-                            #             var_name, 
-                            #             var_type, #"double", 
-                            #             var_dim, #('x'), 
-                            #             fill_value = var_fill #group_vals[regrid_var]["_FillValue"]
-                            #             ) 
-                            #     var_data[:] = var_val 
-                            # elif len(var_shape) == 2:  
-                            #     var_data = band_group.createVariable(
-                            #             var_name, 
-                            #             var_type, #"double", 
-                            #             var_dim, #('x', 'y'), 
-                            #             fill_value = var_fill #group_vals[regrid_var]["_FillValue"]
-                            #             ) 
-                            #     var_data[:, :] = var_val 
-                            # elif len(var_shape) == 3: 
-                            #     var_data = band_group.createVariable(
-                            #             var_name, 
-                            #             var_type, #"double", 
-                            #             var_dim, #('time', 'x', 'y'), 
-                            #             fill_value = var_fill #group_vals[regrid_var]["_FillValue"]
-                            #             ) 
-                            #     var_data[:, :, :] = var_val 
-                            # else:
-                            #     # Return a generic message or handle error for unknown shapes
-                            #     raise ValueError(f"Unsupported shape with {len(var_shape)} dimensions: {var_shape}")
                             #print(var_data)
                             #exit() 
 
-                            # # TODO: fix the re pattern to also include fore|aft
-                            # # when this loop will be appropriate
+                            # Loop through the dictionary and set attributes for the variable
+                            for attr_name, attr_value in group_vals[regrid_var].items():
 
-                            # # Loop through the dictionary and set attributes for the variable
-                            # for attr_name, attr_value in group_vals[regrid_var].items():
+                                # TODO: The _FillValue field is kind of obsolete, because we 
+                                # define it above via fill_value parameter (but lets leave it here for now)
+                                if attr_name != "_FillValue" and attr_name != "comment": 
 
-                            #     if attr_name != "_FillValue" and attr_name != "comment": 
+                                    #print(attr_name)
+                                    # Use setncattr to assign the attribute
+                                    var_data.setncattr(attr_name, attr_value)
 
-                            #         #print(attr_name)
-                            #         # Use setncattr to assign the attribute
-                            #         var_data.setncattr(attr_name, attr_value)
+                                elif attr_name == "comment": 
 
-                            #     elif attr_name == "comment": 
+                                    pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_\[fore\|aft\]" 
 
-                            #         pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_\[fore\|aft\]" 
+                                    if self.config.split_fore_aft: 
+                                        substitution = f"{band_name}_BAND_fore" if "_fore" in var_name \
+                                                else f"{band_name}_BAND_aft" 
+                                    else: 
+                                        substitution = f"{band_name}_BAND" 
+                                    #print(substitution) 
 
-                            #         if self.config.split_fore_aft: 
-                            #             substitution = f"{band_name}_BAND_fore" if "_fore" in var_name \
-                            #                     else f"{band_name}_BAND_aft" 
-                            #         else: 
-                            #             substitution = f"{band_name}_BAND" 
-                            #         #print(substitution) 
+                                    #pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_" #\[fore\|aft\]" 
+                                    #substitution = f"{band_name}_BAND_" 
+                                    attr_value = re.sub(pattern, substitution, attr_value)
+                                    #var_data.setncattr(attr_name, attr_value)
 
-                            #         #pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_" #\[fore\|aft\]" 
-                            #         #substitution = f"{band_name}_BAND_" 
-                            #         attr_value = re.sub(pattern, substitution, attr_value)
-                            #         #var_data.setncattr(attr_name, attr_value)
-
-                            #         # Checking whther there is any patter left of the following format 
-                            #         pattern = r"\[L\|C\|X\|KU\|KA\]_BAND" 
-                            #         substitution = f"{band_name}_BAND" 
-                            #         attr_value = re.sub(pattern, substitution, attr_value)
+                                    # Checking whther there is any patter left of the following format 
+                                    pattern = r"\[L\|C\|X\|KU\|KA\]_BAND" 
+                                    substitution = f"{band_name}_BAND" 
+                                    attr_value = re.sub(pattern, substitution, attr_value)
 
 
-                            #         pattern = r"\[fore\|aft\]" 
-                            #         if self.config.split_fore_aft: 
-                            #             substitution = f"fore" if "_fore" in var_name \
-                            #                     else f"aft" 
-                            #         else: 
-                            #             # Just leave it the way it is 
-                            #             substitution = f"[fore|aft]" 
-                            #         attr_value = re.sub(pattern, substitution, attr_value)
+                                    pattern = r"\[fore\|aft\]" 
+                                    if self.config.split_fore_aft: 
+                                        substitution = "fore" if "_fore" in var_name \
+                                                else "aft" 
+                                    else: 
+                                        # Just leave it the way it is 
+                                        substitution = "[fore|aft]" 
+                                    attr_value = re.sub(pattern, substitution, attr_value)
 
-                            #         # Setting comment attribute 
-                            #         var_data.setncattr(attr_name, attr_value)
+                                    # Setting comment attribute 
+                                    var_data.setncattr(attr_name, attr_value)
 
 
     #def create_cdf_var(self, var_shape, var_name, var_val, band_group, group_vals):
@@ -810,3 +917,36 @@ class ProductGenerator:
         else:
             # Return a generic message or handle error for unknown shapes
             raise ValueError(f"Unsupported shape with {len(var_shape)} dimensions: {var_shape}")
+
+
+
+    # TODO: Since it defines the name of operational processor, 
+    # we are not using this method now + it needs to be finished 
+    def get_processor_filename(self): 
+
+        if self.config.projection_definition == "N": 
+            proj_str = "N" 
+        elif self.config.projection_definition == "S": 
+            proj_str = "S" 
+        elif self.config.projection_definition == "G": 
+            proj_str = "G" 
+        elif self.config.projection_definition == "PS_N": 
+            proj_str = "P" 
+        elif self.config.projection_definition == "PS_S": 
+            proj_str = "Q" 
+
+        # Get the current date and time
+        l1c_utc_time = datetime.datetime.now()
+
+        # Format the date and time as "YYYYMMDDHHMMSS"
+        l1c_utc_time = l1c_utc_time.strftime("%Y%m%d%H%M%S")
+
+        #print(GRIDS.keys())
+        #print(self.config.grid_definition)
+        grid_res = re.search(r'(\d+(?:\.\d+)?)(?=km)', self.config.grid_definition).group() 
+
+        grid_type = self.config.grid_type[1:]
+
+        outfile = f"W_NO-ST-OSLOSAT{self.config.input_data_type}-{grid_type}_C_ESA_{l1c_utc_time}_G_D_YYYYMMDDHHMMSS_YYYYMMDDHHMMSS_T_N_{proj_str}_{grid_res}.nc"
+
+        return outfile 
