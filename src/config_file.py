@@ -268,7 +268,7 @@ class ConfigFile:
             variables_to_regrid = 'ReGridderParams/variables_to_regrid'
         )
 
-        if self.regridding_algorithm == 'BG' or self.regridding_algorithm=='RSIR':
+        if self.regridding_algorithm in ['BG', 'RSIR', 'LW', 'CG']:
 
             self.source_antenna_method = self.validate_source_antenna_method(
                 config_object = config_object,
@@ -350,6 +350,20 @@ class ConfigFile:
             self.bg_smoothing = self.validate_bg_smoothing(
                 config_object=config_object,
                 bg_smoothing='ReGridderParams/bg_smoothing'
+            )
+
+        if self.regridding_algorithm in ['LW', 'CG']:
+            self.max_number_iteration = self.validate_max_number_iteration(
+                config_object=config_object,
+                max_number_iteration='ReGridderParams/max_number_iteration'
+            )
+            self.relative_tolerance = self.validate_relative_tolerance(
+                config_object=config_object,
+                relative_tolerance='ReGridderParams/relative_tolerance'
+            )
+            self.regularization_parameter = self.validate_regularization_parameter(
+                config_object=config_object,
+                regularization_parameter='ReGridderParams/regularization_parameter'
             )
 
     @staticmethod
@@ -617,7 +631,7 @@ class ConfigFile:
         str
             Validated regridding algorithm
         """
-        valid_input = ['NN', 'DIB', 'IDS', 'BG', 'RSIR']
+        valid_input = ['NN', 'DIB', 'IDS', 'BG', 'RSIR', 'LW', 'CG']
         if config_object.find(regridding_algorithm).text in valid_input:
             return config_object.find(regridding_algorithm).text
         raise ValueError(
@@ -914,6 +928,21 @@ class ConfigFile:
     def validate_rsir_iteration(config_object, rsir_iteration):
             value = config_object.find(rsir_iteration).text
             return int(value)
+
+    @staticmethod
+    def validate_max_number_iteration(config_object, max_number_iteration):
+            value = config_object.find(max_number_iteration).text
+            return int(value)
+
+    @staticmethod
+    def validate_relative_tolerance(config_object, relative_tolerance):
+            value = config_object.find(relative_tolerance).text
+            return float(value)
+
+    @staticmethod
+    def validate_regularization_parameter(config_object, regularization_parameter):
+            value = config_object.find(regularization_parameter).text
+            return float(value)
 
     @staticmethod
     def validate_MRF_grid_definition(config_object, MRF_grid_definition):

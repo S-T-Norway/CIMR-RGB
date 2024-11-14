@@ -6,6 +6,7 @@ from ids import IDSInterp
 from dib import DIBInterp
 from bg import BGInterp
 from rsir import rSIRInterp
+from iterative_methods import IterativeInterp
 from grid_generator import GridGenerator, GRIDS
 from pyresample import kd_tree, geometry
 
@@ -22,7 +23,9 @@ class ReGridder:
             'DIB': lambda band=None: DIBInterp(self.config),
             'IDS': lambda band=None: IDSInterp(self.config),
             'BG': lambda band: BGInterp(self.config, band),
-            'RSIR': lambda band: rSIRInterp(self.config, band)
+            'RSIR': lambda band: rSIRInterp(self.config, band),
+            'LW': lambda band: IterativeInterp(self.config, band, 'LW'), 
+            'CG': lambda band: IterativeInterp(self.config, band, 'CG')
         }
 
     def get_algorithm(self, algorithm_name, band=None):
