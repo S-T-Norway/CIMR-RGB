@@ -617,7 +617,7 @@ class ConfigFile:
                 return config_object.find(source_band).text.split()
             raise ValueError(
                 f"Invalid Source Band, check configuration file. "
-                f"Valid target bands are: {valid_input}"
+                f"Valid source bands are: {valid_input}."
             )
 
         if input_data_type == "SMAP":
@@ -625,11 +625,15 @@ class ConfigFile:
 
         if input_data_type == "CIMR":
             valid_input = ['L', 'C', 'X', 'KA', 'KU']
-            if config_object.find(source_band).text in valid_input:
+            print(config_object.find(source_band).text) 
+            print(all(item in valid_input for item in config_object.find(source_band).text.split())) 
+            if all(item in valid_input for item in config_object.find(source_band).text.split()): 
                 return config_object.find(source_band).text.split()
+            #if config_object.find(source_band).text.split() in valid_input:
+            #    return config_object.find(source_band).text.split()
             raise ValueError(
-                f"Invalid Target Band, check configuration file. "
-                f"Valid target bands are: {valid_input}"
+                f"Invalid Source Band, check configuration file. "
+                f"Valid source bands are: {valid_input}."
             )
 
 

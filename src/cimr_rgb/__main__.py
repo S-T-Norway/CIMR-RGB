@@ -301,6 +301,12 @@ def main():
     if rgb_config.input_data_type == 'CIMR':
 
         data_dict_out = regridder.regrid_l1c(data_dict)
+        timed_func        = RGBLogging.rgb_decorated(
+                decorate  = rgb_config.logpar_decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = rgb_config.logger
+                )(regridder.regrid_l1c)
+        data_dict_out     = timed_func(data_dict)
 
     # Generate L1C product according to CDL 
     ProductGenerator(rgb_config).generate_l1c_product(data_dict = data_dict_out) 

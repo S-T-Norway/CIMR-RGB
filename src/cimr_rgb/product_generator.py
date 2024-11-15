@@ -1,3 +1,4 @@
+from logging import config
 import re 
 #import pickle 
 import pathlib as pb 
@@ -633,9 +634,18 @@ class ProductGenerator:
             dataset.createDimension('x', None)
             dataset.createDimension('y', None)
 
+            print(self.config.target_band)
+
             # Creating nested groups according to cdl 
-            projection_group  = dataset.createGroup(f"{self.config.projection_definition}") 
-            data_group        = projection_group.createGroup("Data")
+            if self.config.grid_type == "L1C": 
+                top_group  = dataset.createGroup(f"{self.config.projection_definition}") 
+            elif self.config.grid_type == "L1R":
+                # target_band is a list 
+                top_group  = dataset.createGroup(f"{self.config.target_band[0]}_BAND_TARGET") 
+            #exit() 
+            #top_group  = dataset.createGroup(f"{self.config.projection_definition}") 
+            # Don't need this field as of latest diagram 
+            #data_group        = projection_group.createGroup("Data")
 
             # Loop through the parameters defined inside CDL and compare their
             # names to the ones provided inside pickled file. If they coincide
@@ -647,7 +657,8 @@ class ProductGenerator:
 
                 self.logger.info(f"Creating group: {group_field}")#. Group val: {group_vals}")
 
-                group = data_group.createGroup(group_field)
+                #group = data_group.createGroup(group_field)
+                group = top_group.createGroup(group_field)
 
                 # Some fields of Quality_information are not sub group of bands 
                 #if group_field == "Quality_information": 
