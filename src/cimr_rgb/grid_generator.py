@@ -42,7 +42,6 @@ GRIDS = {'EASE2_G1km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83
                          'res': 36000.0, 'n_cols': 500, 'n_rows': 500, 'lat_min': 0},
          'EASE2_S36km': {'epsg': 6932, 'x_min': -9000000.0, 'y_max': 9000000.0,
                          'res': 36000.0, 'n_cols': 500, 'n_rows': 500, 'lat_min': 0},
-         # Polar Stereographic Projection Grids
          'STEREO_N6.25km': {'epsg': 3413, 'x_min': -3850000, 'y_max': 5850000,
                             'res': 6250, 'n_cols': 1216, 'n_rows': 1792, 'lat_min': 60},
          'STEREO_N12.5km': {'epsg': 3413, 'x_min': -3850000, 'y_max': 5850000,
@@ -54,10 +53,16 @@ GRIDS = {'EASE2_G1km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83
          'STEREO_S12.5km': {'epsg': 3976, 'x_min': -3950000, 'y_max': 4350000,
                             'res': 12500, 'n_cols': 632, 'n_rows': 664, 'lat_min': -60},
          'STEREO_S25km': {'epsg': 3976, 'x_min': -3950000, 'y_max': 4350000,
-                          'res': 25000, 'n_cols': 316, 'n_rows': 332, 'lat_min': -60}
+                          'res': 25000, 'n_cols': 316, 'n_rows': 332, 'lat_min': -60},
+         'MERC_G25km': {'epsg': 3395, 'x_min':-20037508.342789244, 'y_max': 19929239.11337915,
+                       'res': 25000, 'n_cols': 1604, 'n_rows': 1595, 'lat_min': -85, 'lat_max': 85},
+         'MERC_G12.5km': {'epsg': 3395, 'x_min':-20037508.342789244, 'y_max': 19929239.11337915,
+                       'res': 12500, 'n_cols': 3207, 'n_rows':3189 , 'lat_min': -85, 'lat_max': 85},
+         'MERC_G6.25km': {'epsg': 3395, 'x_min':-20037508.342789244, 'y_max': 19929239.11337915,
+                          'res': 6250, 'n_cols': 6413, 'n_rows': 6378, 'lat_min': -85, 'lat_max': 85},
          }
 
-# TODO: Abandon the usage of proj4 strings in favor of newer format?
+
 PROJECTIONS = {
     'G': "+proj=cea +lat_ts=30 +lon_0=0 +lat_0=0 "
          "+x_0=0 +y_0=0 +datum=WGS84 +ellps=WGS84 +units=m +no_defs +type=crs",
@@ -73,7 +78,7 @@ PROJECTIONS = {
              "+datum=WGS84 +units=m +no_defs +type=crs",
     'UPS_S': "+proj=stere +lat_0=-90 +lon_0=0 +k=0.994 +x_0=2000000 +y_0=2000000 "
              "+datum=WGS84 +units=m +no_defs +type=crs",
-    'MERC_G': "+proj=merc +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 "
+    'MERC_G': "+proj=merc +k=1 +lon_0=0 +x_0=0 +y_0=0 "
               "+datum=WGS84 +units=m +no_defs +type=crs"
 }
 
@@ -231,6 +236,33 @@ class GridGenerator:
 
         # TODO: Finish the implementation of this one
 
+    def generate_grid_xy_mercator(self, return_resolution: bool = False
+                               ) -> (np.ndarray | float, np.ndarray | float):
+
+        mercator_proj = pyproj.Proj(PROJECTIONS[self.projection_definition])
+
+        # Define bounding box in degrees
+        min_lon, max_lon = -180, 180  # Longitude range in degrees
+        min_lat, max_lat = GRIDS[self.grid_definition]['lat_min'], GRIDS[self.grid_definition]['lat_max']  # Latitude range in degrees (Mercator excludes poles)
+
+        # Define resolution in meters
+        resolution_m = GRIDS[self.grid_definition]['res']  # Set the desired grid resolution in meters (e.g., 10 km)
+
+        # Convert bounding box to Mercator x, y using pyproj
+        min_x, min_y = mercator_proj(min_lon, min_lat)
+        max_x, max_y = mercator_proj(max_lon, max_lat)
+
+        # Calculate the number of points to ensure equal spacing
+        num_x = int((max_x - min_x) / resolution_m) + 1  # Number of points in the x-direction
+        num_y = int((max_y - min_y) / resolution_m) + 1  # Number of points in the y-direction
+
+        # Generate x (longitude) and y (latitude) arrays in meters
+        x = np.linspace(min_x, max_x, num_x)  # Evenly spaced x-coordinates
+        y = np.linspace(max_y, min_y, num_y)  # Evenly spaced y-coordinates, top-to-bottom
+
+        # Create 2D grid
+        grid_x, grid_y = np.meshgrid(x, y)
+        return x, y
 
     def generate_grid_xy(self, return_resolution: bool = False
                          ) -> (np.ndarray | float, np.ndarray | float):
@@ -260,6 +292,10 @@ class GridGenerator:
         elif "STEREO" in self.grid_definition:
             result = self.generate_grid_xy_stereo(return_resolution=return_resolution)
 
+        elif "MERC" in self.grid_definition:
+            return_resolution=False
+            result = self.generate_grid_xy_mercator(return_resolution=return_resolution)
+
         else:
             raise NotImplementedError(f"Grid {self.grid_definition} is not implemented.")
 
@@ -268,8 +304,6 @@ class GridGenerator:
             return result[0], result[1], result[2]
 
         return result[0], result[1]
-
-
 
     def generate_grid_lonlat(self):
         """
@@ -291,9 +325,6 @@ class GridGenerator:
 
         return lons, lats
 
-    # -------------------------------------------------------------------------
-    # Direct Projections: (lon, lat) -> (x, y)
-    # -------------------------------------------------------------------------
     def lonlat_to_xy_laea(self, lon: np.ndarray | float, lat: np.ndarray | float,
                           pole: str = 'N') -> (np.ndarray | float, np.ndarray | float):
         """
@@ -376,7 +407,6 @@ class GridGenerator:
 
         return x, y
 
-    # TODO: Add native implementation?
     def lonlat_to_xy_stereo(self,
                             lon: np.ndarray | float,
                             lat: np.ndarray | float,
@@ -514,87 +544,6 @@ class GridGenerator:
 
         return x, y
 
-    # TODO: Left this to restore to how it was. Should be removed once finished
-    # and ready to do pull request.
-    # def lonlat_to_xy(self, lon, lat):
-    #    """
-    #    Converts longitude and latitude coordinates to x and y coordinates for a given projection.
-
-    #    Parameters
-    #    ----------
-    #    lon: (float or numpy.ndarray of float)
-    #        Longitude/s in decimal degrees
-    #    lat: (float or numpy.ndarray of float)
-    #        Latitude/s in decimal degrees
-
-    #    Returns
-    #    -------
-    #    x: (float or numpy.ndarray of float)
-    #        x-coordinate/s
-    #    y: (float or numpy.ndarray of float)
-    #        y-coordinate/s
-    #    """
-
-    #    print(f"lon shape {lon.shape}")
-
-    #    epsilon = 1e-6
-    #    params = self.projection.split()
-    #    lon_0 = float(next((param.split('=')[1] for param in params if 'lon_0' in param), None))
-    #    dlon = lon - lon_0
-    #    phi = np.deg2rad(lat)
-    #    lam = np.deg2rad(dlon)
-    #    sin_phi = np.sin(phi)
-
-    #    q = (1 - E2) * (
-    #        (sin_phi / (1 - E2 * sin_phi ** 2)) -
-    #        (1 / (2 * E)) * np.log((1 - E * sin_phi) / (1 + E * sin_phi))
-    #    )
-
-    #    # qp=q(phi=90)
-    #    qp = 1 - (
-    #        ((1 - E2) / (2 * E)) * np.log((1 - E) / (1 + E))
-    #    )
-
-    #    if self.projection_definition == 'G':
-    #        lat_ts_value = float(
-    #            next(
-    #                (param.split('=')[1] for param in params if 'lat_ts' in param),
-    #                None
-    #            )
-    #        )
-    #        sin_phi_1 = np.sin(np.deg2rad(lat_ts_value))
-    #        cos_phi_1 = np.cos(np.deg2rad(lat_ts_value))
-    #        k0 = cos_phi_1 / np.sqrt(1 - (E2 * sin_phi_1 * sin_phi_1))
-    #        x = MAP_EQUATORIAL_RADIUS * k0 * lam
-    #        y = (MAP_EQUATORIAL_RADIUS * q) / (2 * k0)
-
-    #        return x, y
-
-    #    if self.projection_definition == 'N':
-    #        pole_diff = abs(qp - q)
-    #        inds = pole_diff >= epsilon
-    #        rho = MAP_EQUATORIAL_RADIUS * np.sqrt(qp - q) * inds
-
-    #        x = rho * np.sin(lam)
-    #        y = -rho * np.cos(lam)
-
-    #        return x, y
-
-    #    if self.projection_definition == 'S':
-    #        pole_diff = abs(qp + q)
-    #        inds = pole_diff >= epsilon
-    #        rho = MAP_EQUATORIAL_RADIUS * np.sqrt(qp + q) * inds
-    #        x = rho * np.sin(lam)
-    #        y = rho * np.cos(lam)
-
-    #        return x, y
-
-    #    if self.projection_definition == 'S':
-    #        pass
-
-    # -------------------------------------------------------------------------
-    # Inverse Projections: (x, y) -> (lon, lat)
-    # -------------------------------------------------------------------------
     def xy_to_lonlat_laea(self,
                           x: np.ndarray | float,
                           y: np.ndarray | float,
@@ -746,9 +695,9 @@ class GridGenerator:
 
         projection = PROJECTIONS['MERC_G']
         projection = pyproj.Proj(projection)
-        x, y = projection(longitude=lon, latitude=lat)
+        lon, lat = projection(x, y, inverse=True)
 
-        return x, y
+        return lon, lat
 
     def xy_to_lonlat(self,
                      x: np.ndarray | float,
@@ -811,65 +760,6 @@ class GridGenerator:
 
         # def xy_to_lonlat(self, x, y):
 
-    #    """
-    #    Converts x and y coordinates to longitude and latitude coordinates for a given projection.
-    #    Parameters
-    #    ----------
-    #    x: (float or numpy.ndarray of float)
-    #        x-coordinate/s
-    #    y: (float or numpy.ndarray of float)
-    #        y-coordinate/s
-
-    #    Returns
-    #    -------
-    #    lon: (float or numpy.ndarray of float):
-    #        Longitude/s in decimal degrees
-    #    lat: (float or numpy.ndarray of float)
-    #        Latitude/s in decimal degrees
-    #    """
-
-    #    params = self.projection.split()
-    #    print(params)
-    #    lon_0 = float(next((param.split('=')[1] for param in params if 'lon_0' in param), None))
-    #    E4 = E ** 4
-    #    E6 = E ** 6
-    #    qp = 1 - (((1 - E2) / (2 * E)) * np.log((1 - E) / (1 + E)))
-    #    beta = None
-    #    lam = None
-
-    #    if self.projection_definition == 'G':
-    #        lat_ts_value = float(
-    #            next(
-    #                (param.split('=')[1] for param in params if 'lat_ts' in param),
-    #                None
-    #            )
-    #        )
-    #        sin_phi_1 = np.sin(np.deg2rad(lat_ts_value))
-    #        cos_phi_1 = np.cos(np.deg2rad(lat_ts_value))
-    #        k0 = cos_phi_1 / np.sqrt(1 - (E2 * sin_phi_1 * sin_phi_1))
-    #        beta = np.arcsin((2 * y * k0) / (MAP_EQUATORIAL_RADIUS * qp))
-    #        lam = x / (MAP_EQUATORIAL_RADIUS * k0)
-
-    #    elif self.projection_definition == 'N':
-    #        rho = np.sqrt(x ** 2 + y ** 2)
-    #        beta = np.arcsin(1 - (rho ** 2 / (MAP_EQUATORIAL_RADIUS ** 2 * qp)))
-    #        lam = np.arctan2(x, -y)
-
-    #    elif self.projection_definition == 'S':
-    #        rho = np.sqrt(x ** 2 + y ** 2)
-    #        beta = -1 * np.arcsin(1 - (rho ** 2 / (MAP_EQUATORIAL_RADIUS ** 2 * qp)))
-    #        lam = np.arctan2(x, y)
-
-    #    phi = (beta +
-    #           ((E2 / 3) + (31 * E4 / 180) + (517 * E6 / 5040)) * np.sin(2 * beta) +
-    #           ((23 * E4 / 360) + (251 * E6 / 3780)) * np.sin(4 * beta) +
-    #           (761 * E6 / 45360) * np.sin(6 * beta))
-
-    #    lat = np.rad2deg(phi)
-    #    lon = lon_0 + np.rad2deg(lam)
-
-    #    return lon, lat
-
     def xy_to_rowcol(self, x, y):
         """
         Converts x and y coordinates to row and column indices for a given grid definition.
@@ -920,5 +810,9 @@ class GridGenerator:
                         grid_area = np.array(dataset.variables['cell_area'][:])
                         dataset.close()
                         break
+            elif "MERC" in self.grid_definition:
+                # Todo: calculation of actual mercator grid area
+                grid_area = resolution**2
+                grid_area = np.ones((self.n_rows, self.n_cols)) * grid_area
             self.grid_area = grid_area
         return self.grid_area

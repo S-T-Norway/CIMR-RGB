@@ -85,7 +85,6 @@ class DataIngestion:
         self.config = config_object
         self.logger = config_object.logger 
 
-
     def remove_out_of_bounds(self, data_dict):
 
         grid = GRIDS[self.config.grid_definition]
@@ -106,6 +105,9 @@ class DataIngestion:
                 out_of_bounds_lat = where(data_dict['latitude'] < grid['lat_min'])
             elif self.config.projection_definition == 'PS_S':
                 out_of_bounds_lat = where(data_dict['latitude'] > grid['lat_min'])
+        elif 'MERC' in self.config.grid_definition:
+           out_of_bounds_lat = where((data_dict['latitude'] > grid['lat_max']) | (data_dict['latitude'] < grid['lat_min']))
+
 
 
         source_x, source_y = GridGenerator(self.config,
@@ -124,7 +126,6 @@ class DataIngestion:
                 data_dict[variable][out_of_bounds_lat] = nan
 
         return data_dict
-
 
     @staticmethod
     def amsr2_coreg_extraction(coreg_parameters):
@@ -152,7 +153,6 @@ class DataIngestion:
             else:
                 params_floats.append(float(param[1:]))
         return params_floats
-
 
     def read_hdf5(self):
         """
@@ -488,7 +488,6 @@ class DataIngestion:
 
         return data_dict
 
-
     @staticmethod
     def apply_smap_qc(variable_dict):
         """
@@ -508,7 +507,6 @@ class DataIngestion:
             variable_dict[variable][quality_filter == 1] = nan
 
         return variable_dict
-
 
     def clean_data(self, data_dict):
         """
@@ -687,7 +685,6 @@ class DataIngestion:
 
         return lats_lo, lons_lo
 
-
     def combine_cimr_feeds(self, variable_dict, num_feed_horns):
         """
         :param data_dict:
@@ -727,7 +724,6 @@ class DataIngestion:
         variable_dict['feed_horn_number'] = float32(feed_horn_number.flatten('C'))
 
         return variable_dict
-
 
     def ingest_amsr2(self):
         """
@@ -788,7 +784,6 @@ class DataIngestion:
 
         return data_dict
 
-
     def ingest_smap(self):
         """
         Ingests AMSR2 data from the user specified path
@@ -827,7 +822,6 @@ class DataIngestion:
 
         return data_dict
 
-
     def ingest_cimr(self):
         """
 
@@ -839,7 +833,6 @@ class DataIngestion:
 
         # Apply QC as and when
         return data_dict
-
 
     def ingest_data(self):
         """
