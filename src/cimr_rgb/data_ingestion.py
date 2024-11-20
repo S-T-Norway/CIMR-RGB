@@ -426,7 +426,7 @@ class DataIngestion:
                                 variable_dict[variable] = data
 
                 # Calculate max altitude for ap_radius calculation (same for all bands)
-                if self.config.regridding_algorithm in ['BG', 'RSIR']:
+                if self.config.regridding_algorithm in ['BG', 'RSIR', 'LW', 'CG']:
                     if self.config.grid_type == 'L1R' and band in self.config.target_band:
                         pass
                     else:

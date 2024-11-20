@@ -315,7 +315,10 @@ class AntennaPattern:
         elif self.config.input_data_type == "CIMR":
             attitude = attitude.reshape(3,3)
             feed_offset_phi = deg2rad(self.config.scan_angle_feed_offsets[self.band][int(feed_horn_number)])
-            feed_offset_theta = np.arcsin(self.config.v0[self.band][int(feed_horn_number)] / (-np.sin(feed_offset_phi))) - tilt_angle
+            if feed_offset_phi != 0.:  
+                feed_offset_theta = np.arcsin(self.config.v0[self.band][int(feed_horn_number)] / (-np.sin(feed_offset_phi))) - tilt_angle
+            else:
+                feed_offset_theta = np.arcsin(self.config.u0[self.band][int(feed_horn_number)]) - tilt_angle
 
         adjust_lon = 0
         adjust_lat = 0

@@ -780,8 +780,8 @@ class GridGenerator:
             Column index/indices
         """
         _, _, res = self.generate_grid_xy(return_resolution=True)
-        n_cols = GRIDS[self.grid_type]['n_cols']
-        n_rows = GRIDS[self.grid_type]['n_rows']
+        n_cols = self.n_cols
+        n_rows = self.n_rows
         r0 = (n_cols - 1) / 2
         s0 = (n_rows - 1) / 2
         col = r0 + (x / res)
@@ -791,6 +791,28 @@ class GridGenerator:
         # TBD
 
         return row, col
+
+    def rowcol_to_xy(self, row, col):
+        _, _, res = self.generate_grid_xy(return_resolution=True)
+        n_cols = self.n_cols
+        n_rows = self.n_rows
+        r0 = (n_cols - 1) / 2
+        s0 = (n_rows - 1) / 2
+        x  = res*(col-r0)
+        y  = res*(s0-row)
+        return x, y
+
+    def rowcol_to_lonlat(self, row, col):
+        _, _, res = self.generate_grid_xy(return_resolution=True)
+        n_cols = self.n_cols
+        n_rows = self.n_rows
+        r0 = (n_cols - 1) / 2
+        s0 = (n_rows - 1) / 2
+        x  = res*(col-r0)
+        y  = res*(s0-row)
+        return self.xy_to_lonlat(x, y)
+
+
 
     def get_grid_area(self):
         if self.grid_area is None:
