@@ -16,9 +16,9 @@ import argparse
 from numpy import full, nan, array
 
 # ---- Testing ----
-#import matplotlib
-#tkagg = matplotlib.use('TkAgg')
-#import matplotlib.pyplot as plt
+import matplotlib
+tkagg = matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 # -----------------
 
 from cimr_rgb.config_file       import ConfigFile
@@ -309,7 +309,19 @@ def main():
         data_dict_out     = timed_func(data_dict)
 
     # Generate L1C product according to CDL 
-    ProductGenerator(rgb_config).generate_l1c_product(data_dict = data_dict_out) 
+    # ProductGenerator(rgb_config).generate_l1c_product(data_dict = data_dict_out)
+
+    # Intermediate results check
+    # Put in the variables you want from the data_dict_out in data_dict.
+    grid_shape = GRIDS[rgb_config.grid_definition]['n_rows'], GRIDS[rgb_config.grid_definition]['n_cols']
+    # # # create nan array with shape of grid_shape
+    grid = full(grid_shape, nan)
+    variable = data_dict_out['L']['bt_h_fore']
+    cell_row = data_dict_out['L']['cell_row_fore']
+    cell_col = data_dict_out['L']['cell_col_fore']
+    for i in range(len(cell_row)):
+        grid[cell_row[i], cell_col[i]] = variable[i]
+    plt.imshow(grid)
 
     
 
