@@ -16,13 +16,13 @@ import argparse
 from numpy import full, nan, array
 
 # ---- Testing ----
-import matplotlib
-tkagg = matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
+#import matplotlib
+#tkagg = matplotlib.use('TkAgg')
+#import matplotlib.pyplot as plt
 # -----------------
 
-from cimr_rgb.config_file import ConfigFile
-from cimr_rgb.data_ingestion import DataIngestion
+from cimr_rgb.config_file       import ConfigFile
+from cimr_rgb.data_ingestion    import DataIngestion
 from cimr_rgb.grid_generator    import GridGenerator, GRIDS
 from cimr_rgb.regridder         import ReGridder
 from cimr_rgb.rgb_logging       import RGBLogging
@@ -32,6 +32,7 @@ from cimr_rgb.product_generator import ProductGenerator
 #from inspect_SMAP_l1c import compare_smap_l1c
 
 
+# TODO: Change description for configuration parameters 
 def get_rgb_configuration(parser: argparse.ArgumentParser, 
                           #config_file: pb.Path #= pb.Path(pb.Path(__file__).parents[1]).joinpath("output/logs/rgb_config.xml") 
                           ) -> ConfigFile: 
@@ -93,33 +94,74 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
     # The command line parameters take the following form: 
     # config_params = {'name': ['p1', 'parameter1', 'type', 'description']} 
     valid_config_params = {
-        'inputData/type'     : 
-            ['t', 'input-data-type', str, "Value for inputData/type parameter."], 
-        'inputData/path'     : 
-            ['p', 'input-data-path', str, "Value for inputData/path parameter."], 
-        'inputData/targetBand': 
-            ['T', 'target-band',  str, "Value for inputData/target parameter."], 
-        'inputData/sourceBand': 
-            ['S', 'source-band',  str, "Value for inputData/source parameter."], 
-        'inputData/splitForeAft': 
-            ['f', 'split-fore-aft',  str, "Value for inputData/splitForeAft parameter."], 
-        'outputData/saveTodisk': 
-            ['s', 'save-to-disk',  str, "Value for outputData/saveTodisk parameter."], 
-        'outputData/outputPath': 
-            ['o', 'output-path',  str, "Value for outputData/outputPath parameter."], 
-        'GridParams/gridType': 
-            ['g', 'grid-type', str, "Value for GridParams/gridType parameter."], 
-        'GridParams/gridDefinition': 
-            ['d', 'grid-definition', str, "Value for GridParams/gridDefinition parameter."], 
-        'GridParams/projectionDefinition': 
-            ['P', 'projection-definition', str, "Value for GridParams/projectionDefinition parameter."], 
-        'ReGridderParams/regriddingAlgorithm': 
-            ['a', 'regridding-algorithm', str, "Value for ReGridderParams/regriddingAlgorithm parameter."], 
-        # TODO: Create validation methods for loggers  
-        'LoggingParams/configPath': 
-            ['c', 'logging-params-config', str, "Value for LoggingParams/configPath parameter."], 
+        # Input data parameters 
+        'InputData/type'     : 
+            ['t', 'input-data-type', str, "Value for InputData/type parameter."], 
+        'InputData/path'     : 
+            ['p', 'input-data-path', str, "Value for InputData/path parameter."], 
+        'InputData/antenna_patterns_path': 
+            ['app', 'antenna-patterns-path',  str, "Value for InputData/antenna_patterns_path parameter."], 
+        'InputData/split_fore_aft': 
+            ['sfa', 'split-fore-aft',  str, "Value for InputData/split_fore_aft parameter."], 
+        'InputData/source_band': 
+            ['sb', 'source-band',  str, "Value for InputData/source_band parameter."], 
+        'InputData/target_band': 
+            ['tb', 'target-band',  str, "Value for InputData/target_band parameter."], 
+        'InputData/quality_control': 
+            ['qc', 'quality-control',  str, "Value for InputData/quality_control parameter."], 
+        # TODO: Add LMT parameter 
+        # Grid parameters 
+        'GridParams/grid_type': 
+            ['gt', 'grid-type', str, "Value for GridParams/grid_type parameter."], 
+        'GridParams/grid_definition': 
+            ['gd', 'grid-definition', str, "Value for GridParams/grid_definition parameter."], 
+        'GridParams/projection_definition': 
+            ['pd', 'projection-definition', str, "Value for GridParams/projection_definition parameter."], 
+        'GridParams/reduced_grid_inds': 
+            ['rg', 'reduced-grid-inds', str, "Value for GridParams/reduced_grid_inds parameter."], 
+        # Regridder parameters 
+        'ReGridderParams/regridding_algorithm': 
+            ['ra', 'regridding-algorithm', str, "Value for ReGridderParams/regridding_algorithm parameter."], 
+        'ReGridderParams/search_radius': 
+            ['sr', 'search-radius', str, "Value for ReGridderParams/search_radius parameter."], 
+        'ReGridderParams/max_neighbours': 
+            ['mn', 'max-neighbours', str, "Value for ReGridderParams/max_neighbours parameter."], 
+        'ReGridderParams/variables_to_regrid': 
+            ['vtr', 'variables-to-regrid', str, "Value for ReGridderParams/variables_to_regrid parameter."], 
+        'ReGridderParams/source_antenna_method': 
+            ['sam', 'source-antenna-method', str, "Value for ReGridderParams/source_antenna_method parameter."], 
+        'ReGridderParams/target_antenna_method': 
+            ['tam', 'target-antenna-method', str, "Value for ReGridderParams/target_antenna_method parameter."], 
+        'ReGridderParams/polarisation_method': 
+            ['pm', 'polarisation-method', str, "Value for ReGridderParams/polarisation_method parameter."], 
+        'ReGridderParams/source_antenna_threshold': 
+            ['sat', 'source-antenna-threshold', str, "Value for ReGridderParams/source_antenna_threshold parameter."], 
+        'ReGridderParams/target_antenna_threshold': 
+            ['tat', 'target-antenna-threshold', str, "Value for ReGridderParams/target_antenna_threshold parameter."], 
+        'ReGridderParams/MRF_grid_definition': 
+            ['mat', 'mrf-grid-definition', str, "Value for ReGridderParams/MRF_grid_definition parameter."], 
+        'ReGridderParams/MRF_projection_definition': 
+            ['mpt', 'mrf-projection-definition', str, "Value for ReGridderParams/MRF_projection_definition parameter."], 
+        'ReGridderParams/source_gaussian_params': 
+            ['sgp', 'source-gaussian-params', str, "Value for ReGridderParams/source_gaussian_params parameter."], 
+        'ReGridderParams/target_gaussian_params': 
+            ['tgp', 'target-gaussian-params', str, "Value for ReGridderParams/target_gaussian_params parameter."], 
+        'ReGridderParams/boresight_shift': 
+            ['bs', 'boresight-shift', str, "Value for ReGridderParams/boresight_shift parameter."], 
+        'ReGridderParams/rsir_iteration': 
+            ['rsir', 'rsir-iteration', str, "Value for ReGridderParams/rsir_iteration parameter."], 
+        'ReGridderParams/bg_smoothing': 
+            ['bgs', 'bg-smoothing', str, "Value for ReGridderParams/bg_smoothing parameter."], 
+        # Output data parameters 
+        'OutputData/save_to_disk': 
+            ['std', 'save-to-disk',  str, "Value for OutputData/save_to_disk parameter."], 
+        'OutputData/output_path': 
+            ['op', 'output-path',  str, "Value for OutputData/output_path parameter."], 
+        # Logging params 
+        'LoggingParams/config_path': 
+            ['cp', 'logging-params-config', str, "Value for LoggingParams/config_path parameter."], 
         'LoggingParams/decorate': 
-            ['D', 'logging-params-decorate', str, "Value for LoggingParams/decorate parameter."], 
+            ['d', 'logging-params-decorate', str, "Value for LoggingParams/decorate parameter."], 
     }
 
 
@@ -137,6 +179,8 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
 
     root, tree = ConfigFile.read_config(rgb_config_path)
 
+    # TODO: LoggingParams may not work properly here. Check it 
+    # 
     # Looping through valid parameters and assign its value if parameter is not
     # empty. Else, use default value provided via parameter file. 
     for key, value in valid_config_params.items():
@@ -154,25 +198,16 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
         elif element is None: 
             raise ValueError(f"Key '{key}' not found in the XML configuration.")
 
-
-    #print(modified_pars)
-    #print(root.find("outputData/outputPath").text)
-    #exit() 
-    # TODO: Use the function in grasp module that checks the filepath for
-    # correctness 
-
     # Creating output directory based on the parameter provided via cmd or xml
     # file. Once this directory created, we also create `logs` folder to store
     # logs of the run. 
-    outputdir = pb.Path(root.find("outputData/outputPath").text).resolve()
+    outputdir = pb.Path(root.find("OutputData/output_path").text).resolve()
     if not pb.Path(outputdir).exists(): 
         pb.Path(outputdir).mkdir() 
 
 
     # Appending the name of configuration file to the output directory path  
     file_to_write = outputdir.joinpath(rgb_config_path.name) 
-    #print(file_to_write)
-    #exit() 
         
     # Write the updated XML back to a new file
     tree.write(file_to_write, encoding="utf-8", xml_declaration=True)
@@ -266,6 +301,12 @@ def main():
     if rgb_config.input_data_type == 'CIMR':
 
         data_dict_out = regridder.regrid_l1c(data_dict)
+        timed_func        = RGBLogging.rgb_decorated(
+                decorate  = rgb_config.logpar_decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = rgb_config.logger
+                )(regridder.regrid_l1c)
+        data_dict_out     = timed_func(data_dict)
 
     # Generate L1C product according to CDL 
     ProductGenerator(rgb_config).generate_l1c_product(data_dict = data_dict_out) 

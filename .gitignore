@@ -4,6 +4,7 @@ result
 output/ 
 output/* 
 dpr/L1C/CIMR/RGB/*   
+dpr/L1B/CIMR/*   
 # The file is too big to put it in the repo 
 dpr/L1B/SMAP/RadiometerAntPattern_170830_v011.h5 
 dpr/antenna_patterns/CIMR/*
