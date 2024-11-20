@@ -162,12 +162,14 @@ class BGInterp:
         indexes = samples_dict['indexes']
         fill_value = len(variable_dict['longitude'])
         weights = full((indexes.shape[0], indexes.shape[1]), nan)
-        grid_area = GridGenerator(self.config, self.config.projection_definition, self.config.grid_definition).get_grid_area()
 
         for target_cell in tqdm(range(indexes.shape[0])):
 
             # Getting the target lon, lat
             if self.config.grid_type == 'L1C':
+                grid_area = GridGenerator(self.config, self.config.projection_definition,
+                                          self.config.grid_definition).get_grid_area()
+
                 target_lon, target_lat = (target_grid[0].flatten('C')[samples_dict['grid_1d_index'][target_cell]],
                                           target_grid[1].flatten('C')[samples_dict['grid_1d_index'][target_cell]])
 
