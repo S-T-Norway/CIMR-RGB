@@ -35,18 +35,6 @@ class AntennaPattern:
 
             self.max_ap_radius = self.estimate_max_ap_radius(ap_dict)
 
-            #### test function to see the antenna pattern before projecting.. do not remove for now 
-
-            # dx = 0.1
-            # x,y = np.meshgrid(np.linspace(-dx, dx, 100), np.linspace(-dx, dx, 100))
-            # z = np.sqrt(1 - x**2 - y**2)
-            # theta = np.arccos(z / 1.)
-            # phi = np.sign(y) * np.arccos(x / np.sqrt(x**2+y**2))
-            # phi[phi<0] += 2*pi
-            # print(theta.min(), theta.max(), phi.min(), phi.max())
-            # plt.imshow(foo(phi, theta))
-            # plt.show()
-
         elif self.antenna_method == 'gaussian_projected':  #in this case I guess only scalar gain available
 
             #for consistency, create a number of horn corresponding to the band, all with same gaussian pattern
@@ -511,7 +499,7 @@ class GaussianAntennaPattern:
         sigma_max = np.maximum(sigmax, sigmay)
         return np.sqrt(-2. * sigma_max**2 * np.log(self.antenna_threshold))
 
-
+@staticmethod
 def haversine_distance(lon1, lat1, lon2, lat2):
 
     Rearth  = (6378137. + 6356752.)/2. #m
@@ -527,7 +515,7 @@ def haversine_distance(lon1, lat1, lon2, lat2):
 
     return distance #m
 
-
+@staticmethod
 def make_integration_grid(int_projection_definition, int_grid_definition, longitude, latitude, ap_radii):
 
     #TODO: still an unlucky case that would not work here. What if the source patterns centers are across the IDL ?

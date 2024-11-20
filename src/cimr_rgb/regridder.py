@@ -33,10 +33,10 @@ class ReGridder:
     def get_grid(self, data_dict=None):
         # Get target grid
         if self.config.grid_type == 'L1C':
-            target_x, target_y, res = GridGenerator(self.config,
+            target_x, target_y = GridGenerator(self.config,
                                                     projection_definition=self.config.projection_definition,
                                                     grid_definition=self.config.grid_definition).generate_grid_xy(
-                return_resolution=True
+                return_resolution=False
             )
             x_shape = len(target_x)
             y_shape = len(target_y)
@@ -164,7 +164,7 @@ class ReGridder:
 
         return samples_dict
 
-    def sample_selection(self, variable_dict, target_grid=None):
+    def sample_selection(self, variable_dict, target_grid):
 
         samples_dict = self.get_l1c_samples(variable_dict, target_grid)
 
