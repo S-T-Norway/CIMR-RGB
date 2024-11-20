@@ -98,7 +98,7 @@ class ConfigFile:
         self.antenna_patterns_path = self.validate_input_antenna_patterns_path(
             config_object        =  config_object,
             antenna_patterns_path = 'InputData/antenna_patterns_path',
-            data_type = self.input_data_type
+            input_data_type = self.input_data_type
         )
 
         self.dpr_path        = path.join(path.dirname(getcwd()), 'dpr')
