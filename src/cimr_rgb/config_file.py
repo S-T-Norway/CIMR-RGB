@@ -95,13 +95,11 @@ class ConfigFile:
             input_data_path  = 'inputData/path'
         )
 
-        self.antenna_pattern_path = self.validate_input_antenna_pattern_path(
+        self.antenna_pattern_path = self.validate_antenna_pattern_path(
             config_object        =  config_object,
             antenna_pattern_path = 'inputData/antenna_pattern_path',
-            data_type = self.input_data_type
+            input_data_type = self.input_data_type
         )
-
-        self.dpr_path        = path.join(path.dirname(getcwd()), 'dpr')
 
         self.quality_control = self.validate_quality_control(
             config_object=config_object,
@@ -248,7 +246,7 @@ class ConfigFile:
                 '89a': (None, 'Brightness Temperature (89.0GHz-A,'),
                 '89b': (None, 'Brightness Temperature (89.0GHz-B,')
             }
-            self.kernel_size = config_object.find('ReGridderParams/kernelSize').text
+
             self.scan_geometry = {
                 '6': (1, 1),
                 '7': (1, 1),
@@ -470,7 +468,7 @@ class ConfigFile:
             raise FileNotFoundError(f"File\n {input_data_path}\n not found. Check file location.")
 
     @staticmethod
-    def validate_input_antenna_pattern_path(config_object, antenna_pattern_path, data_type):
+    def validate_antenna_pattern_path(config_object, antenna_pattern_path, input_data_type):
         """
         Validates the input data path and returns the value if valid
         Parameters
@@ -489,13 +487,13 @@ class ConfigFile:
         antenna_pattern_path = pb.Path(config_object.find(antenna_pattern_path).text).resolve()
 
         if antenna_pattern_path.exists():
-            if data_type == 'SMAP':
+            if input_data_type == 'SMAP':
                 try:
                     relative_path = 'SMAP/RadiometerAntPattern_170830_v011.h5'
                     antenna_pattern_path = path.join(antenna_pattern_path, relative_path)
                 except AttributeError as e:
                     raise ValueError(f"Error: SMAP Antenna Pattern not found in dpr") from e
-            elif data_type == 'CIMR':
+            elif input_data_type == 'CIMR':
                 try:
                     relative_path = 'CIMR'
                     antenna_pattern_path = path.join(antenna_pattern_path, relative_path)
@@ -574,7 +572,7 @@ class ConfigFile:
                             f" Valid target bands are: {valid_input} or any combination of individual bands.")
                 return config_object.find(target_band).text.split()
 
-        if input_data_type == "CIMR":
+        elif input_data_type == "CIMR":
             if grid_type == "L1C":
                 valid_input = ['L', 'C', 'X', 'KA', 'KU', 'All']
             elif grid_type == "L1R":
@@ -624,12 +622,15 @@ class ConfigFile:
 
         if input_data_type == "CIMR":
             valid_input = ['L', 'C', 'X', 'KA', 'KU']
-            if config_object.find(source_band).text in valid_input:
-                return config_object.find(source_band).text.split()
-            raise ValueError(
-                f"Invalid Target Band, check configuration file. "
-                f"Valid target bands are: {valid_input}"
-            )
+            for band in config_object.find(source_band).text.split():
+                if band in valid_input:
+                    continue
+                else:
+                    raise ValueError(
+                        f"Invalid Target Band, check configuration file. "
+                        f"Valid target bands are: {valid_input}"
+                    )
+            return config_object.find(source_band).text.split()
 
 
 
@@ -657,7 +658,7 @@ class ConfigFile:
                        'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km',
                        'STEREO_N25km', 'STEREO_S25km', 'STEREO_N6.25km',
                        'STEREO_N12.5km', 'STEREO_S6.25km', 'STEREO_S12.5km',
-                       'STEREO_S25km']
+                       'STEREO_S25km', 'MERC_G25km', 'MERC_G12.5km', 'MERC_G6.25km']
 
         if config_object.find(grid_definition).text in valid_input:
             return config_object.find(grid_definition).text
@@ -693,6 +694,9 @@ class ConfigFile:
 
             elif 'STEREO' in grid_definition:
                 valid_input = ['PS_N', 'PS_S']
+
+            elif 'MERC' in grid_definition:
+                valid_input = ['MERC_G']
 
             if config_object.find(projection_definition).text in valid_input:
                 return config_object.find(projection_definition).text
@@ -989,11 +993,11 @@ class ConfigFile:
         # We should add default values.
         value = config_object.find(source_gaussian_params).text
         params = value.split()
-        # Check we only have 3 params
-        if len(params) != 3:
+        # Check we only have 2 params
+        if len(params) != 2:
             raise ValueError(
                 f"Invalid source gaussian parameters. Check Configuration File."
-                f" There should be 3 parameters for the source gaussian"
+                f" There should be 2 parameters for the source gaussian"
             )
         try:
             float_params = [float(param) for param in params]
@@ -1007,11 +1011,11 @@ class ConfigFile:
         # We should add default values.
         value = config_object.find(target_gaussian_params).text
         params = value.split()
-        # Check we only have 3 params
-        if len(params) != 3:
+        # Check we only have 2 params
+        if len(params) != 2:
             raise ValueError(
                 f"Invalid source gaussian parameters. Check Configuration File."
-                f" There should be 3 parameters for the source gaussian"
+                f" There should be 2 parameters for the source gaussian"
             )
         try:
             float_params = [float(param) for param in params]
