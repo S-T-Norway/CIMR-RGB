@@ -1,8 +1,8 @@
 from numpy import concatenate, logical_and, zeros, zeros_like, linalg, meshgrid, atleast_1d, minimum, maximum, dot, arange
 import numpy as np
 import matplotlib.pyplot as plt
-from grid_generator import GridGenerator
-from ap_processing import AntennaPattern, make_integration_grid
+from .grid_generator import GridGenerator
+from .ap_processing import AntennaPattern, make_integration_grid
 from tqdm import tqdm
 
 
@@ -88,7 +88,7 @@ def conjugate_gradient_ne(A, Y, lambda_param=1e-4, n_iter=1000, rtol=1e-5):
     return X
 
 
-class IterativeInterp:
+class MIIinterp:
 
     #this can be called ONLY for L1c
 

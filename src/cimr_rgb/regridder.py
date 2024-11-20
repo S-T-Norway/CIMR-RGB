@@ -12,7 +12,7 @@ from .dib            import DIBInterp
 from .bg             import BGInterp
 from .rsir           import rSIRInterp
 from .grid_generator import GridGenerator, GRIDS
-from .iterative_methods import IterativeInterp
+from .iterative_methods import MIIinterp
 
 
 class ReGridder:
@@ -24,8 +24,8 @@ class ReGridder:
             'IDS': lambda band=None: IDSInterp(self.config),
             'BG': lambda band: BGInterp(self.config, band),
             'RSIR': lambda band: rSIRInterp(self.config, band),
-            'LW': lambda band: IterativeInterp(self.config, band, 'LW'),
-            'CG': lambda band: IterativeInterp(self.config, band, 'CG')
+            'LW': lambda band: MIIinterp(self.config, band, 'LW'),
+            'CG': lambda band: MIIinterp(self.config, band, 'CG')
         }
 
     def get_algorithm(self, algorithm_name, band=None):
