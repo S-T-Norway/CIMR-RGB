@@ -10,8 +10,8 @@ from xml.etree.ElementTree import ParseError, parse
 from operator import truediv
 from numpy import sqrt
 
-from .grid_generator import GRIDS
-from .rgb_logging    import RGBLogging 
+from cimr_rgb.grid_generator import GRIDS
+from cimr_rgb.rgb_logging    import RGBLogging 
 
 
 class ConfigFile:
@@ -134,7 +134,7 @@ class ConfigFile:
 
         self.grid_definition = self.validate_grid_definition(
             config_object    = config_object,
-            grid_type        = self.grid_type,
+            #grid_type        = self.grid_type,
             grid_definition  = 'GridParams/grid_definition'
         )
 
@@ -165,7 +165,7 @@ class ConfigFile:
             config_object=config_object,
             search_radius='ReGridderParams/search_radius',
             grid_definition=self.grid_definition,
-            grid_type=self.grid_type,
+            grid_type=self.grid_type, 
             input_data_type=self.input_data_type
         )
 
@@ -454,7 +454,7 @@ class ConfigFile:
         valid_input = ['AMSR2', 'SMAP', 'CIMR']
 
         if config_object.find(input_data_type).text in valid_input:
-            return config_object.find(input_data_type).text
+             return config_object.find(input_data_type).text
 
         raise ValueError(f"Invalid input data type. Valid input data types are: {valid_input}")
 
@@ -575,6 +575,8 @@ class ConfigFile:
             Validated target band
         """
 
+        # TODO: Add validate_input_data_type here? Otherwise this method just passes through 
+
         if input_data_type == "AMSR2":
             valid_input = ['6', '7', '10', '18', '23', '36', '89a', '89b', 'All']
             config_input = config_object.find(target_band).text.split()
@@ -649,7 +651,8 @@ class ConfigFile:
 
 
     @staticmethod
-    def validate_grid_definition(config_object, grid_type, grid_definition):
+    #def validate_grid_definition(config_object, grid_type, grid_definition):
+    def validate_grid_definition(config_object, grid_definition):
         """
         Validates the grid definition and returns the value if valid
 
@@ -682,6 +685,7 @@ class ConfigFile:
         )
 
 
+    # TODO: Check the docstring, seems to have an incorrect description 
     @staticmethod
     def validate_projection_definition(config_object, grid_definition, projection_definition):
         """
@@ -712,11 +716,13 @@ class ConfigFile:
             elif 'MERC' in grid_definition:
                 valid_input = ['MERC_G']
 
-            if config_object.find(projection_definition).text in valid_input:
-                return config_object.find(projection_definition).text
+            proj_val = config_object.find(projection_definition).text
+            if proj_val in valid_input:
+                return proj_val #config_object.find(projection_definition).text
             raise ValueError(
-                f"Invalid Projection Definition, check configuration file."
-                f" Valid projection definitions are: {valid_input}"
+                f"Grid Definiton `{grid_definition}` received invalid projection definition: `{proj_val}`; " 
+                f"check configuration file."
+                f" Valid projection definitions are: `{valid_input}`"
             )
         else:
             return None
@@ -765,14 +771,18 @@ class ConfigFile:
         str
             Validated split fore aft
         """
+
         if input_data_type == 'AMSR2':
             return False
+
         valid_input = ['True', 'False']
+
         if config_object.find(split_fore_aft).text in valid_input:
             if config_object.find(split_fore_aft).text == 'True':
                 return True
             else:
                 return False
+
         raise ValueError(
             f"Invalid split fore aft. Check Configuration File."
             f" Valid split fore aft are: {valid_input}"
@@ -781,11 +791,20 @@ class ConfigFile:
 
     @staticmethod
     def validate_save_to_disk(config_object, save_to_disk):
-        value = bool(config_object.find(save_to_disk).text)
-        if value is not True and value is not False:
+
+        #value = bool(config_object.find(save_to_disk).text)
+        value = config_object.find(save_to_disk).text 
+
+        #if value is not True and value is not False:
+        if value not in ['True', 'False']: 
             raise ValueError(
-                f"Invalid saveToDisk. Check Configuration File."
-                f" SaveToDisk must be either True or False")
+                f"Invalid `save_to_disk`. Check Configuration File."
+                f" `save_to_disk` must be either True or False")
+        elif value == 'True': 
+            value = True 
+        elif value == 'False': 
+            value = False 
+
         return value
 
 
@@ -806,17 +825,44 @@ class ConfigFile:
         int
             Validated search radius
         """
+
+
+        # TODO: Do we need these here? 
+        # Validation steps 
+        #input_data_type = ConfigFile.validate_input_data_type(
+        #    config_object    = config_object,
+        #    input_data_type  = 'InputData/type'
+        #    )
+
+        #grid_type = ConfigFile.validate_grid_type(
+        #    config_object   = config_object,
+        #    grid_type       = 'GridParams/grid_type',
+        #    input_data_type = input_data_type
+        #)
+
         value = config_object.find(search_radius).text
-        if value is not None:
-            value = float(value)*1000
+
+
+        if value is None or value.strip() == "":
+            value = None
         else:
+             # Ensure the value is numeric
+            try:
+                value = float(value) * 1000
+            except ValueError:
+                raise ValueError(f"Invalid `search_radius`: {value}. Must be a numeric value.")
+
+
+        if value is None:
             if grid_type == 'L1C':
                 value = sqrt(2 * (GRIDS[grid_definition]['res'] / 2) ** 2)
             elif grid_type == 'L1R':
                 if input_data_type == 'CIMR':
-                    return 73000/2 # Largets CIMR footprint radius, maybe needs tailoring
+                    return 73000 / 2 # Largets CIMR footprint radius, maybe needs tailoring
                 elif input_data_type == 'AMSR2':
-                    return 62000/2 # Largest AMSR2 footprint radius, maybe needs tailoring
+                    return 62000 / 2 # Largest AMSR2 footprint radius, maybe needs tailoring
+                else:
+                    raise ValueError(f"Invalid `input_data_type`: {input_data_type}")
 
         return value
 
@@ -842,12 +888,18 @@ class ConfigFile:
             elif band_to_remap == 'KU':
                 num_scans = 74
                 num_earth_samples = 7692*8
+        else:
+            raise ValueError(f"Invalid `input_data_type`: {input_data_type}")
+
         return num_scans, num_earth_samples
+
 
 
     @staticmethod
     def validate_variables_to_regrid(config_object, input_data_type, variables_to_regrid):
+
         value = config_object.find(variables_to_regrid).text
+
         if input_data_type == 'SMAP':
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                          'processing_scan_angle', 'longitude', 'latitude', 'faraday_rot_angle', 'nedt_h',
@@ -858,15 +910,21 @@ class ConfigFile:
                             'processing_scan_angle', 'longitude', 'latitude']
 
         elif input_data_type == 'AMSR2':
+
             valid_input = ['bt_h', 'bt_v', 'longitude', 'latitude', 'regridding_n_samples']
 
+            default_vars = ['bt_h', 'bt_v']
+
         elif input_data_type == 'CIMR':
+
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                            'processing_scan_angle', 'longitude', 'latitude', 'nedt_h', 'nedt_v', 'nedt_3', 'nedt_4',
                            'regridding_n_samples', 'regridding_l1b_orphans', 'acq_time_utc' , 'azimuth', 'oza']
 
             default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
                             'processing_scan_angle', 'longitude', 'latitude']
+        else:
+            raise ValueError(f"Invalid `input_data_type`: {input_data_type}")
 
         if value is not None:
             for variable in value.split():
@@ -883,39 +941,51 @@ class ConfigFile:
 
     @staticmethod
     def validate_max_neighbours(config_object, max_neighbours, regridding_algorithm):
+
         # The default values here can be tweeked for input data type and Band
         if regridding_algorithm == 'NN':
             return 1
         else:
             value = config_object.find(max_neighbours).text
+
             if value is not None:
                 value = int(value)
             else:
                 value = 1000
+
             return value
+
 
     @staticmethod
     def validate_source_antenna_method(config_object, source_antenna_method):
+
         valid_input = ['gaussian', 'real', 'gaussian_projected']
-        value = config_object.find(source_antenna_method)
-        if value is None:
+        
+        value = config_object.find(source_antenna_method).text 
+        
+        if value is None or value.strip() == "":
             return 'real'
-        elif value.text in valid_input:
-            return value.text
+        elif value in valid_input:
+            return value
         else:
             raise ValueError(
                 f"Invalid antenna method. Check Configuration File."
                 f" Valid antenna methods are: {valid_input}"
             )
 
+
+
     @staticmethod
     def validate_target_antenna_method(config_object, target_antenna_method):
+
         valid_input = ['gaussian', 'real', 'gaussian_projected']
-        value = config_object.find(target_antenna_method)
-        if value is None:
+
+        value = config_object.find(target_antenna_method).text 
+
+        if value is None or value.strip() == "":
             return 'real'
-        elif value.text in valid_input:
-            return value.text
+        elif value in valid_input:
+            return value 
         else:
             raise ValueError(
                 f"Invalid antenna method. Check Configuration File."
@@ -925,31 +995,40 @@ class ConfigFile:
 
     @staticmethod
     def validate_source_antenna_threshold(config_object, source_antenna_threshold):
-        if config_object.find(source_antenna_threshold).text is None:
+
+        value = config_object.find(source_antenna_threshold).text 
+
+        if value is None or value.strip() == "":
             # We should have a default set of values for each Antenna Pattern
             # For now, I will just choose 9dB
             return None
 
         try:
-            return float(config_object.find(source_antenna_threshold).text)
+
+            return float(value) 
+
         except:
             raise ValueError(
-                f"Invalid antenna threshold. Check Configuration File."
+                f"Invalid antenna threshold: {value}. Check Configuration File."
                 f" Antenna threshold must be a float or integer"
             )
 
+
     @staticmethod
     def validate_target_antenna_threshold(config_object, target_antenna_threshold):
-        if config_object.find(target_antenna_threshold).text is None:
+
+        value = config_object.find(target_antenna_threshold).text 
+
+        if value is None or value.strip() == "":
             # We should have a default set of values for each Antenna Pattern
             # For now, I will just choose 9dB
             return 9.
 
         try:
-            return float(config_object.find(target_antenna_threshold).text)
+            return float(value) 
         except:
             raise ValueError(
-                f"Invalid antenna threshold. Check Configuration File."
+                f"Invalid antenna threshold: {value}. Check Configuration File."
                 f" Antenna threshold must be a float or integer"
             )
 

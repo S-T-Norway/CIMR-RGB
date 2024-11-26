@@ -3,9 +3,10 @@
     <InputData>
       <!--<type>SMAP</type>-->
       <type>SMAP</type>
-    <!--<path>./dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>-->
-    <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>
-      <antenna_patterns_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/antenna_patterns</antenna_patterns_path>
+    <path>./dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>
+    <!-- <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path> -->
+      <!-- <antenna_patterns_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/antenna_patterns</antenna_patterns_path> -->
+      <antenna_patterns_path>./dpr/antenna_patterns</antenna_patterns_path>
       <split_fore_aft>True</split_fore_aft>
       <source_band>C</source_band>
       <target_band>L</target_band>
@@ -21,7 +22,8 @@
     </GridParams>
     <ReGridderParams>
       <regridding_algorithm>IDS</regridding_algorithm>
-      <search_radius>18</search_radius>
+    <!--<search_radius>18</search_radius>-->
+      <search_radius> </search_radius>
       <max_neighbours>20</max_neighbours>
       <variables_to_regrid></variables_to_regrid>
       <source_antenna_method>gaussian</source_antenna_method>
@@ -39,10 +41,11 @@
     </ReGridderParams>
     <OutputData>
       <save_to_disk>True</save_to_disk>
-      <output_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/output</output_path>
+      <!-- <output_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/output</output_path> -->
+    <output_path>./output/cimr_rgb</output_path>
     </OutputData>
     <LoggingParams>
-      <config_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/src/cimr_rgb/logger_config.json</config_path>
+      <config_path>./src/cimr_rgb/logger_config.json</config_path>
 	    <decorate>True</decorate>
     </LoggingParams> 
 </config>
