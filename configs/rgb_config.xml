@@ -1,11 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <config>
     <InputData>
-      <!--<type>SMAP</type>-->
       <type>SMAP</type>
-    <!--<path>./dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>-->
-    <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>
-      <antenna_patterns_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/antenna_patterns</antenna_patterns_path>
+      <path>Insert path to l1b file</path>
+      <antenna_patterns_path>Insert path to antenna patterns</antenna_patterns_path>
       <split_fore_aft>True</split_fore_aft>
       <source_band>C</source_band>
       <target_band>L</target_band>
@@ -13,11 +11,10 @@
       <quality_control>True</quality_control>
     </InputData>
     <GridParams>
-    <!--<grid_type>L1C</grid_type>-->
       <grid_type>L1C</grid_type>
       <grid_definition>EASE2_G9km</grid_definition>
       <projection_definition>G</projection_definition>
-      <reduced_grid_inds></reduced_grid_inds> # 800 900 3200 3260 south 1450 1460 1780 1800 north 650 660 1250 1260
+      <reduced_grid_inds></reduced_grid_inds>
     </GridParams>
     <ReGridderParams>
       <regridding_algorithm>IDS</regridding_algorithm>
@@ -39,10 +36,10 @@
     </ReGridderParams>
     <OutputData>
       <save_to_disk>True</save_to_disk>
-      <output_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/output</output_path>
+      <output_path>insert path to output directory</output_path>
     </OutputData>
     <LoggingParams>
-      <config_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/src/cimr_rgb/logger_config.json</config_path>
+      <config_path>Insert path to logging config</config_path>
 	    <decorate>True</decorate>
     </LoggingParams> 
 </config>
