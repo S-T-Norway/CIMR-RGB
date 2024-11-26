@@ -17,26 +17,32 @@ authors = [
 keywords = ["satellites", "microwave radiometry"] 
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
-    # Add any dependencies here if necessary
-    "netCDF4", 
-    "colorama", 
-    "numpy >= 1.24.6", 
-    "pyresample >= 1.28.2",
-    "scipy >= 1.13.0", 
-    "h5py >= 3.11.0", 
-    #"netCDF >= 1.7.1.post2", 
-    "pyproj >= 3.6.1", 
-    "tqdm >= 4.66.4", 
-    "psutil >= 5.9.8", 
-    "cartopy >= 0.23.0",
-    "pytest"
+  # Add any dependencies here if necessary
+  "netCDF4", 
+  "colorama", 
+  "numpy >= 1.24.6", 
+  "pyresample >= 1.28.2",
+  "scipy >= 1.13.0", 
+  "h5py >= 3.11.0", 
+  #"netCDF >= 1.7.1.post2", 
+  "pyproj >= 3.6.1", 
+  "tqdm >= 4.66.4", 
+  "psutil >= 5.9.8", 
+  "cartopy >= 0.23.0",
 ]
+
+
+[project.optional-dependencies]
+test = ["pytest"] 
 
 
 [tool.pytest.ini_options]
 addopts = [
-    "--import-mode=importlib",
+  "--import-mode=importlib",
+  "-v", 
+  "-ra", 
 ] 
+testpaths = ["tests"]
 
 
 [tool.setuptools]

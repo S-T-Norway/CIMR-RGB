@@ -16,7 +16,7 @@
     <GridParams>
     <!--<grid_type>L1C</grid_type>-->
       <grid_type>L1C</grid_type>
-      <grid_definition>EASE2_G9km</grid_definition>
+      <grid_definition>EASE2_G9km</grid_definition> 
       <projection_definition>G</projection_definition>
       <reduced_grid_inds></reduced_grid_inds> # 800 900 3200 3260 south 1450 1460 1780 1800 north 650 660 1250 1260
     </GridParams>
