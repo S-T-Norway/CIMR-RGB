@@ -11,7 +11,8 @@ import sys
 #sys.path.append(os.path.join(os.path.dirname(os.getcwd()), "tests"))
 import pathlib as pb 
 import pickle
-import argparse 
+import argparse
+
 
 from numpy import full, nan, array
 
@@ -19,6 +20,9 @@ from numpy import full, nan, array
 import matplotlib
 tkagg = matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+plt.ion()
+sys.path.append('/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests')
+from inspect_SMAP_l1c import compare_smap_l1c
 # -----------------
 
 from cimr_rgb.config_file       import ConfigFile
@@ -310,18 +314,20 @@ def main():
 
     # Generate L1C product according to CDL 
     # ProductGenerator(rgb_config).generate_l1c_product(data_dict = data_dict_out)
+    l1c_path = "/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1C/SMAP/NASA/SMAP_L1C_TB_47185_D_20231201T212059_R19240_002.h5"
+    plot = compare_smap_l1c(rgb_config, l1c_path).plot_diff(data_dict_out, 'bt_h_fore')
 
-    # Intermediate results check
-    # Put in the variables you want from the data_dict_out in data_dict.
-    grid_shape = GRIDS[rgb_config.grid_definition]['n_rows'], GRIDS[rgb_config.grid_definition]['n_cols']
-    # # # create nan array with shape of grid_shape
-    grid = full(grid_shape, nan)
-    variable = data_dict_out['L']['bt_h_fore']
-    cell_row = data_dict_out['L']['cell_row_fore']
-    cell_col = data_dict_out['L']['cell_col_fore']
-    for i in range(len(cell_row)):
-        grid[cell_row[i], cell_col[i]] = variable[i]
-    plt.imshow(grid)
+    # # Intermediate results check
+    # # Put in the variables you want from the data_dict_out in data_dict.
+    # grid_shape = GRIDS[rgb_config.grid_definition]['n_rows'], GRIDS[rgb_config.grid_definition]['n_cols']
+    # # # # create nan array with shape of grid_shape
+    # grid = full(grid_shape, nan)
+    # variable = data_dict_out['L']['bt_h_fore']
+    # cell_row = data_dict_out['L']['cell_row_fore']
+    # cell_col = data_dict_out['L']['cell_col_fore']
+    # for i in range(len(cell_row)):
+    #     grid[cell_row[i], cell_col[i]] = variable[i]
+    # plt.imshow(grid)
 
     
 
