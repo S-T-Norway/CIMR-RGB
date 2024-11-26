@@ -8,6 +8,7 @@ tkagg = matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import pickle
 from grid_generator import GRIDS
+plt.ion()
 
 
 def plot_to_grid(var, row, col, grid):
@@ -100,6 +101,15 @@ class compare_smap_l1c:
         im3 = axs[2].imshow(diff[row_min:row_max,col_min:col_max], cmap=cmap)
         axs[2].set_title('Difference')
         fig.colorbar(im3, ax=axs[2])
+        import time
+        plt.show()
+        time.sleep(5)
+        print(matplotlib.get_backend())
+        print(f"average_error = {np.nanmean(abs(diff))}")
+        ED = (diff / grid_smap) * 100
+        print(f"average_percentage_error = {np.nanmean(ED)}")
+        plt.figure()
+        plt.imshow(diff)
         plt.show()
 
 
