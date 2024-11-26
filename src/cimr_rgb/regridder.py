@@ -13,7 +13,9 @@ from .bg             import BGInterp
 from .rsir           import rSIRInterp
 from .grid_generator import GridGenerator, GRIDS
 from .iterative_methods import MIIinterp
+from .utils import great_circle_distance
 
+EARTH_RADIUS = 6378000
 
 class ReGridder:
     def __init__(self, config):
@@ -233,8 +235,20 @@ class ReGridder:
 
         return row, col
 
-    def sample_selection_old_method(self, variable_dict, target_grid):
+    def sample_selection_brute_force(self, variable_dict):
         samples_dict = {}
+
+        target_x, target_y = GridGenerator(self.config,
+                                           projection_definition=self.config.projection_definition,
+                                           grid_definition=self.config.grid_definition).generate_grid_xy(
+            return_resolution=False
+        )
+        target_lon, target_lat = GridGenerator(self.config,
+                                               projection_definition=self.config.projection_definition,
+                                               grid_definition=self.config.grid_definition).xy_to_lonlat(
+            x=target_x,
+            y=target_y
+        )
 
         if self.config.split_fore_aft:
             for scan_direction in ['fore', 'aft']:
@@ -246,51 +260,26 @@ class ReGridder:
                     lon = source_lon,
                     lat = source_lat
                 )
-                # Think this can b
-                target_x, target_y = GridGenerator(self.config,
-                                                   projection_definition=self.config.projection_definition,
-                                                   grid_definition=self.config.grid_definition).generate_grid_xy(
-                    return_resolution=False
-                )
-                target_lon, target_lat = GridGenerator(self.config,
-                                                       projection_definition=self.config.projection_definition,
-                                                       grid_definition=self.config.grid_definition).xy_to_lonlat(
-                    x = target_x,
-                    y = target_y
-                )
 
-                pixel_map = zeros(source_x.shape)
+                pixel_map = zeros(source_x.shape[0])
                 distances = zeros(source_x.shape[0])
                 grid_shape = (GRIDS[self.config.grid_definition]['n_rows'], GRIDS[self.config.grid_definition]['n_cols'])
 
                 for count, source_measurement in enumerate(source_x):
-                    # is this
                     x_distances = abs(target_x - source_measurement)
                     y_distances = abs(target_y - source_y[count])
                     x_index = where(x_distances == nanmin(x_distances))[0][0]
                     y_index = where(y_distances == nanmin(y_distances))[0][0]
                     pixel_map[count] = ravel_multi_index((y_index, x_index), grid_shape)
-                    great_circle = True
-                    if great_circle:
-                        R = 6378000
-                        lon_1, lat_1 = source_lon[count], source_lat[count]
-                        lon_2, lat_2 = target_lon[x_index], target_lat[y_index]
-                        phi1, phi2 = np.radians(lat_1), np.radians(lat_2)
-                        lambda1, lambda2 = np.radians(lon_1), np.radians(lon_2)
-                        # Spherical Law of Cosines formula
-                        delta_sigma = np.arccos(
-                            np.sin(phi1) * np.sin(phi2) + np.cos(phi1) * np.cos(phi2) * np.cos(lambda2 - lambda1)
-                        )
-                        distances[count] = R * delta_sigma
-
-                    else:
-                        distances[count] = sqrt(x_distances[x_index]**2 + y_distances[y_index]**2)
+                    lon_1, lat_1 = source_lon[count], source_lat[count]
+                    lon_2, lat_2 = target_lon[x_index], target_lat[y_index]
+                    distances[count] = great_circle_distance(lon_1, lat_1, lon_2, lat_2)
 
                 # Package the pixel dictionary into the same format as pyresample
                 samples_dict_temp = {}
                 target_grid_1d_len = grid_shape[0]*grid_shape[1]
                 fill_value = len(variable_dict[f'longitude_{scan_direction}'])
-                unique_pixel, unique_index, unique_inverse, unique_counts = unique(pixel_map, return_index = True,return_inverse=True, return_counts=True)
+                unique_pixel, unique_counts = unique(pixel_map, return_counts=True)
 
                 distances_out = full((len(unique_pixel), max(unique_counts)), inf)
                 indexes = full(shape=(len(unique_pixel), max(unique_counts)), fill_value=fill_value)
@@ -302,19 +291,59 @@ class ReGridder:
                     distances_out[count, 0:len(pixel_inds)] = distances[pixel_inds]
                     grid_1d_index[count] = int(pixel)
 
-                # Also need to remove those above the search radius
-
                 samples_dict_temp['distances'] = distances_out
                 samples_dict_temp['indexes'] = indexes
                 samples_dict_temp['grid_1d_index'] = grid_1d_index
                 samples_dict[scan_direction] = samples_dict_temp
+        else:
+            source_lon, source_lat = variable_dict[f'longitude'], variable_dict[
+                f'latitude']
+            source_x, source_y = GridGenerator(self.config,
+                                               projection_definition=self.config.projection_definition,
+                                               grid_definition=self.config.grid_definition).lonlat_to_xy(
+                lon=source_lon,
+                lat=source_lat
+            )
 
-        # Does something here to variable dict as well, i think removes the samples we dont use
-        # using the pyresample equivalent of valid_input_index. Also need to apply the search radius
+            pixel_map = zeros(source_x.shape[0])
+            distances = zeros(source_x.shape[0])
+            grid_shape = (GRIDS[self.config.grid_definition]['n_rows'], GRIDS[self.config.grid_definition]['n_cols'])
+
+            for count, source_measurement in enumerate(source_x):
+                x_distances = abs(target_x - source_measurement)
+                y_distances = abs(target_y - source_y[count])
+                x_index = where(x_distances == nanmin(x_distances))[0][0]
+                y_index = where(y_distances == nanmin(y_distances))[0][0]
+                pixel_map[count] = ravel_multi_index((y_index, x_index), grid_shape)
+                lon_1, lat_1 = source_lon[count], source_lat[count]
+                lon_2, lat_2 = target_lon[x_index], target_lat[y_index]
+                distances[count] = great_circle_distance(lon_1, lat_1, lon_2, lat_2)
+
+            # Package the pixel dictionary into the same format as pyresample
+            samples_dict_temp = {}
+            target_grid_1d_len = grid_shape[0] * grid_shape[1]
+            fill_value = len(variable_dict[f'longitude'])
+            unique_pixel, unique_counts = unique(pixel_map, return_counts=True)
+
+            distances_out = full((len(unique_pixel), max(unique_counts)), inf)
+            indexes = full(shape=(len(unique_pixel), max(unique_counts)), fill_value=fill_value)
+            grid_1d_index = full(len(unique_pixel), fill_value)
+
+            for count, pixel in enumerate(unique_pixel):
+                pixel_inds = where(pixel_map == pixel)[0]
+                indexes[count, 0:len(pixel_inds)] = pixel_inds
+                distances_out[count, 0:len(pixel_inds)] = distances[pixel_inds]
+                grid_1d_index[count] = int(pixel)
+
+            samples_dict_temp['distances'] = distances_out
+            samples_dict_temp['indexes'] = indexes
+            samples_dict_temp['grid_1d_index'] = grid_1d_index
+            samples_dict = samples_dict_temp
+
         return samples_dict, variable_dict
 
 
-    def regrid_l1c(self, data_dict): # Need to change the name of this.
+    def regrid_data(self, data_dict): # Need to change the name of this.
 
         # Get target grid
         if self.config.grid_type == 'L1C':
@@ -331,7 +360,10 @@ class ReGridder:
             print(f"Regridding band: {band}")
 
             variable_dict = data_dict[band]
-            samples_dict, variable_dict = self.sample_selection_old_method(variable_dict, target_grid)
+            if self.config.search_radius:
+                samples_dict, variable_dict = self.sample_selection(variable_dict, target_grid)
+            else:
+                samples_dict, variable_dict = self.sample_selection_brute_force(variable_dict)
 
             if self.config.split_fore_aft:
                 variable_dict_out = {}

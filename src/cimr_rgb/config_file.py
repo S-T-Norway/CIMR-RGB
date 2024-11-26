@@ -811,7 +811,7 @@ class ConfigFile:
             value = float(value)*1000
         else:
             if grid_type == 'L1C':
-                value = sqrt(2 * (GRIDS[grid_definition]['res'] / 2) ** 2)
+                value = None
             elif grid_type == 'L1R':
                 if input_data_type == 'CIMR':
                     return 73000/2 # Largets CIMR footprint radius, maybe needs tailoring

@@ -106,6 +106,8 @@ class compare_smap_l1c:
         time.sleep(5)
         print(matplotlib.get_backend())
         print(f"average_error = {np.nanmean(abs(diff))}")
+        ED = (diff / grid_smap) * 100
+        print(f"average_percentage_error = {np.nanmean(ED)}")
         plt.figure()
         plt.imshow(diff)
         plt.show()

@@ -2,9 +2,9 @@
 Utility functions for the RGB.
 """
 
-from numpy import delete, r_, array, linalg, column_stack, cos, sin
+from numpy import delete, r_, array, linalg, column_stack, cos, sin, radians, arccos
 
-
+EARTH_RADIUS = 6378000
 
 
 def remove_overlap(array, overlap):
@@ -114,3 +114,13 @@ def rotation_matrix(axis, angle):
                            [0, 0, 1]])
 
     return matrix
+
+def great_circle_distance(lon_1, lat_1, lon_2, lat_2):
+    phi1, phi2 = radians(lat_1), radians(lat_2)
+    lambda1, lambda2 = radians(lon_1), radians(lon_2)
+    # Spherical Law of Cosines formula
+    delta_sigma = arccos(
+        sin(phi1) * sin(phi2) + cos(phi1) * cos(phi2) * cos(lambda2 - lambda1)
+    )
+    distance = EARTH_RADIUS * delta_sigma
+    return distance
