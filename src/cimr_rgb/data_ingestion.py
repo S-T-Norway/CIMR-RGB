@@ -89,10 +89,11 @@ class DataIngestion:
 
         grid = GRIDS[self.config.grid_definition]
 
-        x_bound_min = grid['x_min'] - 0.5 * grid['res']
-        x_bound_max = grid['x_min'] + grid['n_cols']*grid['res'] + 0.5 * grid['res']
-        y_bound_max = grid['y_max'] + 0.5 * grid['res']
-        y_bound_min = grid['y_max'] - grid['n_rows']*grid['res'] - 0.5 * grid['res']
+        x_bound_min = grid['x_min']
+        x_bound_max = grid['x_min'] + grid['n_cols']*grid['res']
+        y_bound_max = grid['y_max']
+        y_bound_min = grid['y_max'] - grid['n_rows']*grid['res']
+
         if 'EASE2' in self.config.grid_definition:
             if 'N' in self.config.projection_definition:
                 out_of_bounds_lat = where(data_dict['latitude']< grid['lat_min'])

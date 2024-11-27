@@ -6,8 +6,8 @@ import logging
 from os import path, getcwd
 import sys
 from xml.etree.ElementTree import ParseError, parse
-
 from operator import truediv
+
 from numpy import sqrt
 
 from cimr_rgb.grid_generator import GRIDS
@@ -855,7 +855,7 @@ class ConfigFile:
 
         if value is None:
             if grid_type == 'L1C':
-                value = sqrt(2 * (GRIDS[grid_definition]['res'] / 2) ** 2)
+                value = None
             elif grid_type == 'L1R':
                 if input_data_type == 'CIMR':
                     return 73000 / 2 # Largets CIMR footprint radius, maybe needs tailoring

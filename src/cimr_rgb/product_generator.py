@@ -105,7 +105,7 @@ CDL = {
             "rotation angles Earth samples used in the " + \
             "interpolation of that grid cell." 
         }, 
-        "ndet_h": {
+        "nedt_h": {
             "units": "K",
             "long_name": "Radiometric resolution of each measured BT.", 
             "grid_mapping": "crs",
@@ -116,7 +116,7 @@ CDL = {
             #"_FillValue": nc.default_fillvals['f8'], 
             "comment": "Radiometric resolution of each measured BT." 
         }, 
-        "ndet_v": {
+        "nedt_v": {
             "units": "K",
             "long_name": "Radiometric resolution of each measured BT.", 
             "grid_mapping": "crs",
@@ -127,7 +127,7 @@ CDL = {
             #"_FillValue": nc.default_fillvals['f8'], 
             "comment": "Radiometric resolution of each measured BT." 
         }, 
-        "ndet_3": {
+        "nedt_3": {
             "units": "K",
             "long_name": "Radiometric resolution of each measured BT.", 
             "grid_mapping": "crs",
@@ -138,7 +138,7 @@ CDL = {
             #"_FillValue": nc.default_fillvals['f8'], 
             "comment": "Radiometric resolution of each measured BT." 
         }, 
-        "ndet_4": {
+        "nedt_4": {
             "units": "K",
             "long_name": "Radiometric resolution of each measured BT.", 
             "grid_mapping": "crs",
