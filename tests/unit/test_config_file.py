@@ -1,7 +1,7 @@
-import os 
+#import os 
 import pathlib as pb 
 from xml.etree.ElementTree import Element, SubElement, ElementTree 
-import tempfile 
+#import tempfile 
 import itertools as it  
 
 import numpy as np 

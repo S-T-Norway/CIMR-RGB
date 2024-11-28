@@ -14,10 +14,10 @@ from datetime import datetime, timezone, timedelta
 from numpy import (array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile, repeat, arange,
                    isnan, delete, where, concatenate, full, newaxis, float32, asarray, any, atleast_1d)
 
-from .rgb_logging    import RGBLogging 
-from .config_file    import ConfigFile
-from .utils          import remove_overlap
-from .grid_generator import GRIDS, GridGenerator
+from cimr_rgb.rgb_logging    import RGBLogging 
+from cimr_rgb.config_file    import ConfigFile
+from cimr_rgb.utils          import remove_overlap
+from cimr_rgb.grid_generator import GRIDS, GridGenerator
 
 
 # SMAP Constants
@@ -95,17 +95,24 @@ class DataIngestion:
         y_bound_min = grid['y_max'] - grid['n_rows']*grid['res']
 
         if 'EASE2' in self.config.grid_definition:
+
             if 'N' in self.config.projection_definition:
-                out_of_bounds_lat = where(data_dict['latitude']< grid['lat_min'])
+                out_of_bounds_lat = where(data_dict['latitude'] < grid['lat_min'])
+
             elif 'G' in self.config.projection_definition:
                 out_of_bounds_lat = where((data_dict['latitude'] > grid['lat_max']) | (data_dict['latitude'] < grid['lat_min']))
+            
             elif 'S' in self.config.projection_definition:
                 out_of_bounds_lat = where(data_dict['latitude'] > grid['lat_min'])
+
         elif 'STEREO' in self.config.grid_definition:
+
             if self.config.projection_definition == 'PS_N':
                 out_of_bounds_lat = where(data_dict['latitude'] < grid['lat_min'])
+
             elif self.config.projection_definition == 'PS_S':
                 out_of_bounds_lat = where(data_dict['latitude'] > grid['lat_min'])
+
         elif 'MERC' in self.config.grid_definition:
            out_of_bounds_lat = where((data_dict['latitude'] > grid['lat_max']) | (data_dict['latitude'] < grid['lat_min']))
 
@@ -489,6 +496,7 @@ class DataIngestion:
 
         return data_dict
 
+
     @staticmethod
     def apply_smap_qc(variable_dict):
         """
@@ -496,7 +504,9 @@ class DataIngestion:
         """
 
         quality_filter = zeros(variable_dict['scan_quality_flag'].shape)
+
         for quality_flag in ['scan_quality_flag', 'data_quality_h', 'data_quality_v', 'data_quality_3', 'data_quality_4']:
+
             if quality_flag in variable_dict.keys():
                 print(quality_flag)
                 quality_filter[variable_dict[quality_flag] != 0] = 1
@@ -508,6 +518,7 @@ class DataIngestion:
             variable_dict[variable][quality_filter == 1] = nan
 
         return variable_dict
+
 
     def clean_data(self, data_dict):
         """
