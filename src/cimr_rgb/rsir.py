@@ -5,7 +5,7 @@ from pyresample import kd_tree, geometry
 from scipy.spatial import KDTree
 
 # ---- Testing ----
-import matplotlib
+# import matplotlib
 # tkagg = matplotlib.use('TkAgg')
 # import matplotlib.pyplot as plt
 # plt.ion()
