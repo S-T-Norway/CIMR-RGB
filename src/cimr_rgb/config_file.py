@@ -6,8 +6,8 @@ import logging
 from os import path, getcwd
 import sys
 from xml.etree.ElementTree import ParseError, parse
-from operator import truediv
 
+from operator import truediv
 from numpy import sqrt
 
 from cimr_rgb.grid_generator import GRIDS
@@ -165,7 +165,7 @@ class ConfigFile:
             config_object=config_object,
             search_radius='ReGridderParams/search_radius',
             grid_definition=self.grid_definition,
-            grid_type=self.grid_type, 
+            grid_type=self.grid_type,
             input_data_type=self.input_data_type
         )
 
@@ -247,6 +247,16 @@ class ConfigFile:
                 '36': (5, 'Brightness Temperature (36.5GHz,'),
                 '89a': (None, 'Brightness Temperature (89.0GHz-A,'),
                 '89b': (None, 'Brightness Temperature (89.0GHz-B,')
+            }
+
+            self.variable_key_map = {
+                'x_position': 'Navigation Data',
+                'y_position': 'Navigation Data',
+                'z_position': 'Navigation Data',
+                'x_velocity': 'Navigation Data',
+                'y_velocity': 'Navigation Data',
+                'z_velocity': 'Navigation Data',
+                'azimuth': 'Earth Azimuth'
             }
 
             self.scan_geometry = {
@@ -454,7 +464,7 @@ class ConfigFile:
         valid_input = ['AMSR2', 'SMAP', 'CIMR']
 
         if config_object.find(input_data_type).text in valid_input:
-             return config_object.find(input_data_type).text
+            return config_object.find(input_data_type).text
 
         raise ValueError(f"Invalid input data type. Valid input data types are: {valid_input}")
 
@@ -771,18 +781,14 @@ class ConfigFile:
         str
             Validated split fore aft
         """
-
         if input_data_type == 'AMSR2':
             return False
-
         valid_input = ['True', 'False']
-
         if config_object.find(split_fore_aft).text in valid_input:
             if config_object.find(split_fore_aft).text == 'True':
                 return True
             else:
                 return False
-
         raise ValueError(
             f"Invalid split fore aft. Check Configuration File."
             f" Valid split fore aft are: {valid_input}"
@@ -825,21 +831,6 @@ class ConfigFile:
         int
             Validated search radius
         """
-
-
-        # TODO: Do we need these here? 
-        # Validation steps 
-        #input_data_type = ConfigFile.validate_input_data_type(
-        #    config_object    = config_object,
-        #    input_data_type  = 'InputData/type'
-        #    )
-
-        #grid_type = ConfigFile.validate_grid_type(
-        #    config_object   = config_object,
-        #    grid_type       = 'GridParams/grid_type',
-        #    input_data_type = input_data_type
-        #)
-
         value = config_object.find(search_radius).text
 
 
@@ -888,11 +879,10 @@ class ConfigFile:
             elif band_to_remap == 'KU':
                 num_scans = 74
                 num_earth_samples = 7692*8
-        else:
-            raise ValueError(f"Invalid `input_data_type`: {input_data_type}")
+        # else:
+        #     raise ValueError(f"Invalid `input_data_type`: {input_data_type}")
 
         return num_scans, num_earth_samples
-
 
 
     @staticmethod
@@ -911,9 +901,11 @@ class ConfigFile:
 
         elif input_data_type == 'AMSR2':
 
-            valid_input = ['bt_h', 'bt_v', 'longitude', 'latitude', 'regridding_n_samples']
+            valid_input = ['bt_h', 'bt_v', 'longitude', 'latitude', 'regridding_n_samples',
+                           'x_position', 'y_position', 'z_position', 'x_velocity',
+                           'y_velocity', 'z_velocity', 'azimuth']
 
-            default_vars = ['bt_h', 'bt_v']
+            default_vars = ['bt_h', 'bt_v', 'longitude', 'latitude']
 
         elif input_data_type == 'CIMR':
 
@@ -960,9 +952,9 @@ class ConfigFile:
     def validate_source_antenna_method(config_object, source_antenna_method):
 
         valid_input = ['gaussian', 'real', 'gaussian_projected']
-        
-        value = config_object.find(source_antenna_method).text 
-        
+
+        value = config_object.find(source_antenna_method).text
+
         if value is None or value.strip() == "":
             return 'real'
         elif value in valid_input:
@@ -980,12 +972,12 @@ class ConfigFile:
 
         valid_input = ['gaussian', 'real', 'gaussian_projected']
 
-        value = config_object.find(target_antenna_method).text 
+        value = config_object.find(target_antenna_method).text
 
         if value is None or value.strip() == "":
             return 'real'
         elif value in valid_input:
-            return value 
+            return value
         else:
             raise ValueError(
                 f"Invalid antenna method. Check Configuration File."
@@ -996,7 +988,7 @@ class ConfigFile:
     @staticmethod
     def validate_source_antenna_threshold(config_object, source_antenna_threshold):
 
-        value = config_object.find(source_antenna_threshold).text 
+        value = config_object.find(source_antenna_threshold).text
 
         if value is None or value.strip() == "":
             # We should have a default set of values for each Antenna Pattern
@@ -1005,7 +997,7 @@ class ConfigFile:
 
         try:
 
-            return float(value) 
+            return float(value)
 
         except:
             raise ValueError(
@@ -1017,7 +1009,7 @@ class ConfigFile:
     @staticmethod
     def validate_target_antenna_threshold(config_object, target_antenna_threshold):
 
-        value = config_object.find(target_antenna_threshold).text 
+        value = config_object.find(target_antenna_threshold).text
 
         if value is None or value.strip() == "":
             # We should have a default set of values for each Antenna Pattern
@@ -1025,7 +1017,7 @@ class ConfigFile:
             return 9.
 
         try:
-            return float(value) 
+            return float(value)
         except:
             raise ValueError(
                 f"Invalid antenna threshold: {value}. Check Configuration File."
@@ -1037,18 +1029,18 @@ class ConfigFile:
 
         valid_input = ['scalar', 'mueller']
 
-        value = config_object.find(polarisation_method).text 
+        value = config_object.find(polarisation_method).text
 
         if value is None or value.strip() == "":
             return 'scalar'
-        
+
         if value not in valid_input:
             raise ValueError(
                 f"Invalid polarisation method: `{value}`. Check Configuration File."
                 f" Valid polarisation methods are: `{valid_input}`."
             )
         else:
-            return value 
+            return value
 
 
     @staticmethod
@@ -1076,20 +1068,20 @@ class ConfigFile:
 
 
 
-    # TODO: 
-    # - Add a proper validation to check if the indices actually fall 
-    #   within the grid that the user wants to check. 
+    # TODO:
+    # - Add a proper validation to check if the indices actually fall
+    #   within the grid that the user wants to check.
     # - Also need to add L1r
     @staticmethod
     def validate_reduced_grid_inds(config_object, reduced_grid_inds):
 
-        value = config_object.find(reduced_grid_inds).text 
+        value = config_object.find(reduced_grid_inds).text
         if value is None or value.strip() == "":
             return None
         else:
             value = value.split()
 
-        try: 
+        try:
 
             if len(value) != 4:
                 raise ValueError(
@@ -1116,9 +1108,7 @@ class ConfigFile:
         except ValueError:
             raise ValueError(
                 f"Invalid `reduced_grid_inds`: {value}. Ensure it contains 4 valid integers "
-                "(row_min, row_max, col_min, col_max).") 
-        
-
+                "(row_min, row_max, col_min, col_max).")
 
     @staticmethod
     def validate_source_gaussian_params(config_object, source_gaussian_params):
@@ -1126,7 +1116,7 @@ class ConfigFile:
         # We should add default values.
         value = config_object.find(source_gaussian_params).text
 
-        # TODO: Do we need this check here? 
+        # TODO: Do we need this check here?
         if value is None or value.strip() == "":
             raise ValueError("Missing source Gaussian parameters in the configuration file.")
 
@@ -1149,16 +1139,16 @@ class ConfigFile:
         return float_params
 
 
-    # TODO: Addd default values 
+    # TODO: Addd default values
     @staticmethod
     def validate_target_gaussian_params(config_object, target_gaussian_params):
 
         # We should add default values.
         value = config_object.find(target_gaussian_params).text
-        
+
         if value is None or value.strip() == "":
             raise ValueError("Missing target Gaussian parameters in the configuration file.")
-        
+
         params = value.split()
 
         # Check we only have 2 params
@@ -1203,7 +1193,7 @@ class ConfigFile:
 
             if iteration < 0:
                 raise ValueError("rSIR iteration value must be a non-negative integer.")
-        
+
             return iteration
 
         except ValueError as e:
@@ -1232,11 +1222,11 @@ class ConfigFile:
             value = config_object.find(max_number_iteration).text
             if value is None:
                 raise ValueError("Missing maximum number of iteration value in the configuration file.")
-            
+
             max_iterations = int(value)
             if max_iterations < 0:
                 raise ValueError("Maximum number of iterations must be a non-negative integer.")
-            
+
             return max_iterations
         except ValueError as e:
             raise ValueError("Invalid maximum number of iteration value. It must be a non-negative integer.") from e
@@ -1264,11 +1254,11 @@ class ConfigFile:
             value = config_object.find(relative_tolerance).text
             if value is None:
                 raise ValueError("Missing relative tolerance value in the configuration file.")
-            
+
             tolerance = float(value)
             if tolerance < 0:
                 raise ValueError("Relative tolerance must be a non-negative float.")
-            
+
             return tolerance
         except ValueError as e:
             raise ValueError("Invalid relative tolerance value. It must be a non-negative float.") from e
@@ -1298,7 +1288,7 @@ class ConfigFile:
 
             if value is None:
                 raise ValueError("Missing regularization parameter value in the configuration file.")
-            
+
             return float(value)
 
         except ValueError as e:
@@ -1307,7 +1297,7 @@ class ConfigFile:
 
 
 
-    # TODO: Figure out whether we need this try except statement 
+    # TODO: Figure out whether we need this try except statement
     @staticmethod
     def validate_MRF_grid_definition(config_object, MRF_grid_definition):
         """
@@ -1322,9 +1312,9 @@ class ConfigFile:
 
         Raises:
         - ValueError: If the value is missing or not a valid grid definition.
-        """ 
+        """
 
-        try: 
+        try:
             value = config_object.find(MRF_grid_definition).text
 
             valid_input = ['EASE2_G3km', 'EASE2_G1km' ,'EASE2_G9km', 'EASE2_N9km', 'EASE2_S9km',
@@ -1365,7 +1355,7 @@ class ConfigFile:
         """
 
 
-        value = config_object.find(MRF_projection_definition).text 
+        value = config_object.find(MRF_projection_definition).text
 
         valid_input = ['G', 'N', 'S']
 
@@ -1375,7 +1365,7 @@ class ConfigFile:
                 f"Ensure a valid projection is specified, i.e.: {valid_input}."
             )
 
-        value = value.strip() 
+        value = value.strip()
 
         if value in valid_input:
             return value
@@ -1404,14 +1394,14 @@ class ConfigFile:
         - ValueError: If the value is not a valid float.
         """
 
-        try: 
+        try:
             value = config_object.find(bg_smoothing).text
-            
+
             if value is not None:
                 value = float(value)
             else:
                 value = 0
-            
+
             return value
 
         except ValueError as e:
@@ -1446,7 +1436,7 @@ class ConfigFile:
         if input_data_type == 'AMSR2':
 
             return False
-        
+
         elif input_data_type == 'CIMR':
 
             return False
@@ -1463,7 +1453,7 @@ class ConfigFile:
                     return True
 
                 else:
-                
+
                     return False
 
             raise ValueError(

@@ -210,7 +210,7 @@ class DataIngestion:
                     overlap=overlap
                 )
 
-                # Extract 89b data if required
+                # Extract 89b data if required, we always need lats 89a
                 if '89b' in self.config.target_band or '89b' in self.config.source_band:
                     lats_89b = remove_overlap(
                         array=data['Latitude of Observation Point for 89B'][:],
@@ -228,14 +228,61 @@ class DataIngestion:
                 # Extract BTs of all relevant bands
                 bands_to_open = set(self.config.target_band + self.config.source_band)
 
+
                 for band in bands_to_open:
                     variable_dict = {}
                     key = self.config.key_mappings[band][1]
-                    bt_h, bt_v = data[key + 'H)'], data[key + 'V)']
-                    bt_h_scale= bt_h.attrs['SCALE FACTOR']
-                    bt_v_scale = bt_v.attrs['SCALE FACTOR']
-                    variable_dict['bt_v'] = remove_overlap(bt_v, overlap) * bt_v_scale
-                    variable_dict['bt_h'] = remove_overlap(bt_h, overlap) * bt_h_scale
+                    for variable in self.config.variables_to_regrid:
+                        if variable in ['bt_v', 'bt_h']:
+                            if variable == 'bt_v':
+                                bt = data[key + 'V)']
+                            elif variable == 'bt_h':
+                                bt = data[key + 'H)']
+                            bt_scale = bt.attrs['SCALE FACTOR']
+                            variable_dict[variable] = remove_overlap(bt, overlap) * bt_scale
+                            continue
+                        if variable in ['latitude', 'longitude', 'regridding_n_samples',
+                                        'regridding_l1b_orphans']:
+                            continue
+
+                        variable_key = self.config.variable_key_map[variable]
+                        if variable in ['x_position', 'y_position', 'z_position', 'x_velocity','y_velocity', 'z_velocity']:
+
+                            navigation_data = remove_overlap(data[variable_key], overlap)
+                            if variable == 'x_position':
+                                    variable_dict[variable] = navigation_data[:, 0]
+                            elif variable == 'y_position':
+                                    variable_dict[variable] = navigation_data[:, 1]
+                            elif variable == 'z_position':
+                                variable_dict[variable] = navigation_data[:, 2]
+                            elif variable == 'x_velocity':
+                                variable_dict[variable] = navigation_data[:, 3]
+                            elif variable == 'y_velocity':
+                                    variable_dict[variable] = navigation_data[:, 4]
+                            elif variable == 'z_velocity':
+                                    variable_dict[variable] = navigation_data[:, 5]
+                            continue
+                        else:
+                            scale = data[variable_key].attrs['SCALE FACTOR']
+                            variable_dict[variable] = remove_overlap(data[variable_key], overlap)*scale
+
+                    # # Turn the 1D (once per scan) variables into 2D variables
+                    for variable in variable_dict:
+                        if band in ['89a', '89b']:
+                            num_samples = AM2_DEF_SNUM_HI
+                        else:
+                            num_samples = AM2_DEF_SNUM_LOW
+                        if len(variable_dict[variable].shape) == 1:
+                            variable_dict[variable] = tile(variable_dict[variable], (num_samples, 1)).T
+
+                    # Duplicate the variables that only provide a measurement on the odd footprint
+                    # of the 89A channel. Not an ideal solution, but unless users request something different
+                    # we will go with this for now.
+                    if band in ['89a', '89b']:
+                        for variable in variable_dict:
+                            if variable_dict[variable].shape[1] == AM2_DEF_SNUM_LOW:
+                                variable_dict[variable] = repeat(variable_dict[variable], 2, axis=1)
+
                     data_dict[band] = variable_dict
 
                 return data_dict, coreg_a, coreg_b, lats_89a, lons_89a, lats_89b, lons_89b
@@ -749,11 +796,6 @@ class DataIngestion:
         """
 
         data_dict, coreg_a, coreg_b, lats_89a, lons_89a, lats_89b, lons_89b = self.read_hdf5()
-
-        # if self.config.grid_type == "L1R":
-        #     required_locations = ['source', 'target']
-        # else:
-        #     required_locations = ['source']
 
         for band in data_dict:
             if band == '89a':
