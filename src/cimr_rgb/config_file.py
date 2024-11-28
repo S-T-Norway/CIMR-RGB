@@ -249,6 +249,16 @@ class ConfigFile:
                 '89b': (None, 'Brightness Temperature (89.0GHz-B,')
             }
 
+            self.variable_key_map = {
+                'x_position': 'Navigation Data',
+                'y_position': 'Navigation Data',
+                'z_position': 'Navigation Data',
+                'x_velocity': 'Navigation Data',
+                'y_velocity': 'Navigation Data',
+                'z_velocity': 'Navigation Data',
+                'azimuth': 'Earth Azimuth'
+            }
+
             self.scan_geometry = {
                 '6': (1, 1),
                 '7': (1, 1),
@@ -858,7 +868,10 @@ class ConfigFile:
                             'processing_scan_angle', 'longitude', 'latitude']
 
         elif input_data_type == 'AMSR2':
-            valid_input = ['bt_h', 'bt_v', 'longitude', 'latitude', 'regridding_n_samples']
+            valid_input = ['bt_h', 'bt_v', 'longitude', 'latitude', 'regridding_n_samples',
+                           'x_position', 'y_position', 'z_position', 'x_velocity',
+                           'y_velocity', 'z_velocity', 'azimuth']
+            default_vars = ['bt_h', 'bt_v', 'longitude', 'latitude']
 
         elif input_data_type == 'CIMR':
             valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
