@@ -1,3 +1,5 @@
+import logging 
+
 import numpy as np
 from numpy import meshgrid, isinf, where, full, nan, nanmin, zeros, unravel_index, all, sqrt, sum, ones, unique, inf, isnan, ravel_multi_index
 from pyresample import kd_tree, geometry
@@ -6,14 +8,15 @@ from pyresample import kd_tree, geometry
 #tkagg = matplotlib.use('TkAgg')
 #import matplotlib.pyplot as plt
 
-from .nn             import NNInterp
-from .ids            import IDSInterp
-from .dib            import DIBInterp
-from .bg             import BGInterp
-from .rsir           import rSIRInterp
-from .grid_generator import GridGenerator, GRIDS
-from .iterative_methods import MIIinterp
-from .utils import great_circle_distance
+from cimr_rgb.nn                import NNInterp
+from cimr_rgb.ids               import IDSInterp
+from cimr_rgb.dib               import DIBInterp
+from cimr_rgb.bg                import BGInterp
+from cimr_rgb.rsir              import rSIRInterp
+from cimr_rgb.grid_generator    import GridGenerator, GRIDS
+from cimr_rgb.iterative_methods import MIIinterp
+from cimr_rgb.utils             import great_circle_distance
+from cimr_rgb.rgb_logging       import RGBLogging
 
 EARTH_RADIUS = 6378000
 
@@ -30,8 +33,18 @@ class ReGridder:
             'CG': lambda band: MIIinterp(self.config, band, 'CG')
         }
 
+        if config.logger is not None: 
+            self.logger = config.logger 
+        else:
+            # No formatting will be performed 
+            self.logger = logging.getLogger(__name__)
+            self.logger.addHandler(logging.NullHandler()) 
+
+
     def get_algorithm(self, algorithm_name, band=None):
+
         algo = self.algos.get(algorithm_name)
+
         return algo(band)
 
     # Check if you need the full data dict once the function is complete
@@ -254,6 +267,7 @@ class ReGridder:
             for scan_direction in ['fore', 'aft']:
 
                 source_lon, source_lat = variable_dict[f'longitude_{scan_direction}'], variable_dict[f'latitude_{scan_direction}']
+
                 source_x, source_y = GridGenerator(self.config,
                                                    projection_definition=self.config.projection_definition,
                                                    grid_definition=self.config.grid_definition).lonlat_to_xy(
@@ -321,8 +335,11 @@ class ReGridder:
 
             # Package the pixel dictionary into the same format as pyresample
             samples_dict_temp = {}
+
             target_grid_1d_len = grid_shape[0] * grid_shape[1]
+
             fill_value = len(variable_dict[f'longitude'])
+
             unique_pixel, unique_counts = unique(pixel_map, return_counts=True)
 
             distances_out = full((len(unique_pixel), max(unique_counts)), inf)
@@ -357,7 +374,8 @@ class ReGridder:
         for band in data_dict:
             if band not in self.config.source_band and self.config.grid_type == 'L1R':
                 continue
-            print(f"Regridding band: {band}")
+
+            self.logger.info(f"Regridding band: `{band}`")
 
             variable_dict = data_dict[band]
             if self.config.search_radius:
@@ -366,9 +384,12 @@ class ReGridder:
                 samples_dict, variable_dict = self.sample_selection_brute_force(variable_dict)
 
             if self.config.split_fore_aft:
+
                 variable_dict_out = {}
+
                 for scan_direction in ['fore', 'aft']:
-                    print(scan_direction)
+
+                    self.logger.info(f"Scan direction is: `{scan_direction}`")
 
                     # Create an argument dictionary for interp_variable_dict, not all the algorithms need
                     # all the arguments.
@@ -384,10 +405,29 @@ class ReGridder:
                     # Regrid Variables
                     algorithm = self.get_algorithm(algorithm_name=self.config.regridding_algorithm,
                                                    band=band)
-                    variable_dict_out[scan_direction] = algorithm.interp_variable_dict(**args)
+
+                    # Tracking performance of this method 
+                    #variable_dict_out[scan_direction] = algorithm.interp_variable_dict(**args)
+
+                    tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                        decorate  = self.config.logpar_decorate, 
+                        decorator = RGBLogging.track_perf, 
+                        logger    = self.logger 
+                        )(algorithm.interp_variable_dict)  
+
+                    variable_dict_out[scan_direction] = tracked_func(**args) 
 
                     # Add cell_row and cell_col indexes
-                    cell_row, cell_col = self.create_output_grid_inds(grid_1d_index=samples_dict[scan_direction]['grid_1d_index'])
+                    #cell_row, cell_col = self.create_output_grid_inds(grid_1d_index=samples_dict[scan_direction]['grid_1d_index'])
+
+                    tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                        decorate  = self.config.logpar_decorate, 
+                        decorator = RGBLogging.track_perf, 
+                        logger    = self.logger 
+                        )(self.create_output_grid_inds) 
+
+                    cell_row, cell_col = tracked_func(grid_1d_index=samples_dict[scan_direction]['grid_1d_index'])
+
                     variable_dict_out[scan_direction][f'cell_row_{scan_direction}'] = cell_row
                     variable_dict_out[scan_direction][f'cell_col_{scan_direction}'] = cell_col
 
@@ -494,7 +534,8 @@ class ReGridder:
                     variable_dict_out['regridding_l1b_orphans'] = l1b_orphans
 
             data_dict_out[band] = variable_dict_out
-            print(f"Finished regridding band: {band}")
+
+            self.logger.info(f"Finished regridding band: `{band}`")
 
         return data_dict_out
 

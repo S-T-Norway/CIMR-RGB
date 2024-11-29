@@ -268,7 +268,8 @@ def resolve_config_path(path_string: pb.Path | str) -> pb.Path:
     elif '$' in str(path_string) and '~' in str(path_string): 
         error_output = ("`outdir` contains both $ and ~ which " + 
                        "will result in incorrect path resolution. " + 
-                       f"Check `outdir` variable in {config_file}") 
+                       #f"Check `outdir` variable in {config_file}") 
+                       f"Check `outdir` variable in configuration file.") 
         raise ValueError(error_output)
     else: 
         # If we have a relative path, we expand it 
@@ -341,10 +342,10 @@ def get_bool_from_string(par_val: str, par_name: str) -> bool:
     par_val = par_val.lower() 
 
     if par_val == "true": 
-        par_val = True
+        par_val_out = True
     elif par_val == "false": 
-        par_val = False 
+        par_val_out = False 
     else: 
         raise ValueError(f"Parameter `{par_name}` can either be True or False.")
 
-    return par_val 
+    return par_val_out  

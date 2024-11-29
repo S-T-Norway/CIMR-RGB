@@ -6,12 +6,15 @@ import logging
 from os import path, getcwd
 import sys
 from xml.etree.ElementTree import ParseError, parse
+import typing 
 
 from operator import truediv
 from numpy import sqrt
 
 from cimr_rgb.grid_generator import GRIDS
 from cimr_rgb.rgb_logging    import RGBLogging 
+#from cimr_grasp.grasp_io     import rec_create_dir       
+import cimr_grasp.grasp_io as grasp_io        
 
 
 class ConfigFile:
@@ -49,11 +52,18 @@ class ConfigFile:
 
         config_object, tree  = self.read_config(config_file_path)
 
-        # TODO: Add validation for this parameter 
-        #       Add possibility to create output dirs recursively (nested)
-        self.output_path  = pb.Path(config_object.find("OutputData/output_path").text).resolve()
-        if not pb.Path(self.output_path).exists(): 
-            pb.Path(self.output_path).mkdir() 
+        self.output_path = self.validate_output_directory_path(
+                config_object, 
+                output_path = "OutputData/output_path", 
+                logger  = None 
+                ) 
+        #self.output_path  = pb.Path(config_object.find("OutputData/output_path").text).resolve()
+        #print(self.output_path) 
+        #self.output_path  = grasp_io.resolve_config_path(self.output_path) 
+        #print(self.output_path) 
+        #grasp_io.rec_create_dir(self.output_path) 
+        #if not pb.Path(self.output_path).exists(): 
+        #    pb.Path(self.output_path).mkdir() 
 
 
         # TODO: Put this into its own validation method? 
@@ -75,7 +85,9 @@ class ConfigFile:
 
         # Initialising RGB logging 
         rgb_logging          = RGBLogging(logdir = logdir, log_config = self.logpar_config) 
-        self.logger          = rgb_logging.get_logger("rgb") 
+        self.logger_name     = config_object.find("LoggingParams/logger_name").text 
+        self.logger          = rgb_logging.get_logger(self.logger_name) 
+        #self.logger          = rgb_logging.get_logger("rgb-logger") 
 
         if self.logpar_config is None: 
             # Configuring the logger object by adding the NullHandler as per
@@ -421,6 +433,7 @@ class ConfigFile:
                 regularization_parameter='ReGridderParams/regularization_parameter'
             )
 
+
     @staticmethod
     def read_config(config_file_path):
         """
@@ -441,6 +454,134 @@ class ConfigFile:
         except ParseError as e:
             raise ValueError(f"Error parsing the configuration file: {e}") from e
         return root, tree
+
+
+    @staticmethod
+    def validate_output_directory_path(
+            config_object, 
+            output_path: str = "OutputData/output_path", 
+            logger: typing.Optional[logging.Logger] = None  
+            )-> pb.Path: 
+        """
+        Validates, resolves, and creates the output directory path specified in the configuration object.
+
+        This method:
+        1. Retrieves the `output_path` element from the provided `config_object` (XML root).
+        2. Resolves the path to handle relative paths, environment variables (`$VAR`), 
+           and home directory symbols (`~`) using the `resolve_config_path` method.
+        3. Recursively creates the directory structure if it does not already exist using `rec_create_dir`.
+
+        Parameters:
+        -----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        
+        output_path : str, optional
+            The XML path to the `output_path` element (default is `"OutputData/output_path"`).
+
+        logger : Optional[logging.Logger], optional 
+            A custom logging object. If `None`, no logging will be performed. 
+
+        Returns:
+        --------
+        pb.Path
+            The fully resolved and validated output directory path as a `Path` object.
+
+        Raises:
+        -------
+        ValueError:
+            If the `output_path` element is missing or empty in the configuration object.
+        
+        FileNotFoundError:
+            If resolving the path results in a directory that cannot be accessed or created.
+        
+        PermissionError:
+            If there are insufficient permissions to create or access the directory.
+        
+        Exception:
+            Any unexpected errors during directory validation or creation.
+
+        Notes:
+        ------
+        - Logs messages at DEBUG level if directories are created or already exist.
+        - Uses helper methods `resolve_config_path` and `rec_create_dir` for path resolution and creation.
+
+        Example:
+        --------
+        Assuming an XML configuration object contains the following:
+        ```xml
+        <OutputData>
+            <output_path>~/my_project/output</output_path>
+        </OutputData>
+        ```
+        Call:
+        ```python
+        resolved_path = ConfigFile.validate_output_directory_path(config_object)
+        print(resolved_path)  # Output: '/home/user/my_project/output'
+        ```
+        """ 
+
+        #outputdir       = pb.Path(config_object.find(output_path).text) 
+        #outputdir       = grasp_io.resolve_config_path(
+        #    path_string = outputdir 
+        #) 
+        ## recursively creating (nested) output directories 
+        #grasp_io.rec_create_dir(outputdir) 
+
+
+        try:
+
+            # Initialize the empty logger if None is provided
+            if logger is None:
+                logger = logging.getLogger(__name__)
+                logger.addHandler(logging.NullHandler()) 
+
+
+            # Retrieve the output path text from the configuration object
+            outputdir_element = config_object.find(output_path)
+            if outputdir_element is None or outputdir_element.text.strip() == "":
+                raise ValueError(
+                    f"Missing or empty `output_path` element in configuration file: {output_path}"
+                )
+
+            outputdir = pb.Path(outputdir_element.text)
+
+            # Resolve the path using the helper method
+            outputdir = grasp_io.resolve_config_path(path_string = outputdir)
+
+            if logger:
+                logger.debug(f"Resolved output directory path: {outputdir}")
+
+            # Create the directory structure if necessary
+            grasp_io.rec_create_dir(path=outputdir)
+
+            return outputdir
+
+        except ValueError as ve:
+            if logger:
+                logger.error(f"ValueError: {ve}")
+            else:
+                print(f"ValueError: {ve}")
+            raise
+        except FileNotFoundError as fnf:
+            if logger:
+                logger.error(f"FileNotFoundError: Unable to access path `{output_path}` - {fnf}")
+            else:
+                print(f"FileNotFoundError: Unable to access path `{output_path}` - {fnf}")
+            raise
+        except PermissionError as pe:
+            if logger:
+                logger.error(f"PermissionError: Insufficient permissions for path `{output_path}` - {pe}")
+            else:
+                print(f"PermissionError: Insufficient permissions for path `{output_path}` - {pe}")
+            raise
+        except Exception as e:
+            if logger:
+                logger.error(f"An unexpected error occurred while validating the output directory: {e}")
+            else:
+                print(f"An unexpected error occurred while validating the output directory: {e}")
+            raise 
+
 
 
     @staticmethod

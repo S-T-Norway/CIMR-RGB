@@ -629,12 +629,54 @@ class ProductGenerator:
                 dataset.setncattr(attr, value)
 
 
+            # The L1R template has the following dims: 
+
+            # CIMR_E2ESv110_L1B_Product_Format_v0.6.nc
+
+            # netcdf CIMR_E2ESv110_L1B_Product_Format_v0.6 {
+            # dimensions:
+            # 	n_feeds_L_BAND = 1 ;
+            # 	n_feeds_C_BAND = 4 ;
+            # 	n_feeds_X_BAND = 4 ;
+            # 	n_feeds_KU_BAND = 8 ;
+            # 	n_feeds_KA_BAND = 8 ;
+            # 	n_scans = 2 ;
+            # 	n_samples_L_BAND = 138 ;
+            # 	n_samples_C_BAND = 549 ;
+            # 	n_samples_X_BAND = 561 ;
+            # 	n_samples_KU_BAND = 1538 ;
+            # 	n_samples_KA_BAND = 2079 ;
+            if self.config.grid_type == "L1R": 
+                dataset.createDimension('n_feeds_X_BAND', 4) #None)
+                dataset.createDimension('n_feeds_C_BAND', 4) #None)
+                dataset.createDimension('n_feeds_L_BAND', 1) #None)
+                dataset.createDimension('n_feeds_KU_BAND', 8) #None)
+                dataset.createDimension('n_feeds_KA_BAND', 8) #None)
+
+                dataset.createDimension('n_scans', 2) #None)
+                dataset.createDimension('n_samples_X_BAND', 561) #None)
+                dataset.createDimension('n_samples_C_BAND', 549) #None)
+                dataset.createDimension('n_samples_L_BAND', 138) #None)
+                dataset.createDimension('n_samples_KU_BAND', 1538) #None)
+                dataset.createDimension('n_samples_KA_BAND', 2079) #None)
+
+
+            # For L1C dimensions  
+            # time = 0 // currently 1 <= sinlge integer value 
+            # x = {256..16384}
+            # y = {256..16384}
+            # n_l1b_scans = TBD
+            # n_samples = 0
+            # n_feeds_[L_BAND|C_BAND|X_BAND|KA_BAND|KU_BAND] = [1, 4, 4, 8, 8]
+
             # Creating Dimentions according to cdl 
-            dataset.createDimension('time', None)
-            dataset.createDimension('x', None)
+            dataset.createDimension('time', 1) #None)
+            dataset.createDimension('x', None) 
             dataset.createDimension('y', None)
 
             print(self.config.target_band)
+
+
 
             # Creating nested groups according to cdl 
             if self.config.grid_type == "L1C": 
@@ -709,8 +751,26 @@ class ProductGenerator:
                             #print(var_name, var_val.dtype)
                             #exit() 
                             var_type = self.get_netcdf_dtype(var_val.dtype)
-                            var_fill = nc.default_fillvals[var_type]
-                            var_dim  = self.determine_dimension(var_shape)
+                            var_fill = nc.default_fillvals[var_type] 
+
+                            # TODO: 
+                            # For L1r we will have 3 dimensions: scan, sample, and feed <= scan is the same for all bands, but sample and feed are not  
+                            # For L1C we will have 3 dimensions: time, y, and x <= the same for all bands    
+                            # 
+                            # So add if else statement 
+                            if self.config.grid_type == "L1C": 
+
+                                var_dim  = self.determine_dimension_l1c(var_shape)
+
+                            elif self.config.grid_type == "L1R":
+
+                                var_dim  = self.determine_dimension_l1r(band_name, var_shape)
+
+
+                            # TODO: Create a generic method  
+                            # var_dim  = self.determine_dimension(grid_type, band_name, var_shape)
+
+
 
                             self.logger.info(f"{group_field}, {band_name}, {var_name}, {var_type}, {var_fill}, {var_dim}")
 
@@ -906,8 +966,8 @@ class ProductGenerator:
         tuple
             A tuple containing the dimension names:
             - ('x',) for 1D shapes (e.g., (10000,))
-            - ('x', 'y') for 2D shapes (e.g., (10000, 10000))
-            - ('time', 'x', 'y') for 3D shapes (e.g., (1, 111, 111))
+            - ('y', 'x') for 2D shapes (e.g., (10000, 10000))
+            - ('time', 'y', 'x') for 3D shapes (e.g., (1, 111, 111))
         
         Exceptions
         ----------
@@ -921,13 +981,20 @@ class ProductGenerator:
             return ('x',)
         elif len(var_shape) == 2:
             # 2D case
-            return ('x', 'y')
+            return ('y', 'x')
         elif len(var_shape) == 3:
             # 3D case
-            return ('time', 'x', 'y')
+            return ('time', 'y', 'x')
         else:
             # Return a generic message or handle error for unknown shapes
             raise ValueError(f"Unsupported shape with {len(var_shape)} dimensions: {var_shape}")
+
+
+    def determine_dimension_l1r(self, band_name, var_shape): 
+        ... 
+
+    def determine_dimension_l1c(self, var_shape): 
+        ... 
 
 
 
