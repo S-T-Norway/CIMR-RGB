@@ -26,7 +26,10 @@ SMAP_FILL_FLOAT_32 = -9999.0
 # AMSR2 Constants
 AM2_DEF_SNUM_HI = 486
 AM2_DEF_SNUM_LOW = 243
+LMT = 2200
 MV = -9999.0
+TAI_UTC_OFFSET = 37
+TAI_EPOCH = datetime(1993, 1, 1, 0, 0)
 
 
 class DataIngestion:
@@ -239,6 +242,17 @@ class DataIngestion:
                             continue
 
                         variable_key = self.config.variable_key_map[variable]
+
+                        if variable == 'acq_time_utc':
+                            acq_time = remove_overlap(data[variable_key], overlap)
+                            datetime_obj = []
+                            for timestamp in acq_time:
+                                tai_seconds = float(timestamp)
+                                utc_datetime = TAI_EPOCH + timedelta(seconds=tai_seconds - TAI_UTC_OFFSET)
+                                datetime_obj.append(utc_datetime.timestamp())
+                            variable_dict[variable] = array(datetime_obj)
+                            continue
+
                         if variable in ['x_position', 'y_position', 'z_position', 'x_velocity','y_velocity', 'z_velocity']:
 
                             navigation_data = remove_overlap(data[variable_key], overlap)

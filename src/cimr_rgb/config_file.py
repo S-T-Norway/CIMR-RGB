@@ -256,7 +256,9 @@ class ConfigFile:
                 'x_velocity': 'Navigation Data',
                 'y_velocity': 'Navigation Data',
                 'z_velocity': 'Navigation Data',
-                'azimuth': 'Earth Azimuth'
+                'azimuth': 'Earth Azimuth',
+                'solar_azimuth': 'Sun Azimuth',
+                'acq_time_utc': 'Scan Time',
             }
 
             self.scan_geometry = {
@@ -914,11 +916,11 @@ class ConfigFile:
 
             valid_input = ['bt_h', 'bt_v', 'longitude', 'latitude', 'regridding_n_samples',
                            'x_position', 'y_position', 'z_position', 'x_velocity',
-                           'y_velocity', 'z_velocity', 'azimuth']
+                           'y_velocity', 'z_velocity', 'azimuth', 'solar_azimuth', 'acq_time_utc']
 
             default_vars = ['bt_h', 'bt_v', 'longitude', 'latitude', 'regridding_n_samples',
                            'x_position', 'y_position', 'z_position', 'x_velocity',
-                           'y_velocity', 'z_velocity', 'azimuth']
+                           'y_velocity', 'z_velocity', 'azimuth', 'solar_azimuth', 'acq_time_utc']
 
         elif input_data_type == 'CIMR':
 
