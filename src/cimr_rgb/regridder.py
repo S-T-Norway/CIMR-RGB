@@ -1,10 +1,10 @@
 import numpy as np
-from numpy import meshgrid, isinf, where, full, nan, nanmin, zeros, unravel_index, all, sqrt, sum, ones, unique, inf, isnan, ravel_multi_index
+from numpy import meshgrid, isinf, where, full, nan, nanmin, zeros, unravel_index, all, sum, ones, unique, inf, ravel_multi_index, split, stack
 from pyresample import kd_tree, geometry
 
-#import matplotlib
-#tkagg = matplotlib.use('TkAgg')
-#import matplotlib.pyplot as plt
+# import matplotlib
+# tkagg = matplotlib.use('TkAgg')
+# import matplotlib.pyplot as plt
 
 from .nn             import NNInterp
 from .ids            import IDSInterp
@@ -226,7 +226,6 @@ class ReGridder:
             row, col = unravel_index(grid_1d_index, grid_shape)
         elif self.config.grid_type == 'L1R':
             # Now we need to build the grid from the original size of the swath
-            # from the input product, where do we have this shape saved?
             grid_shape = self.config.num_target_scans, self.config.num_target_samples
             # Im not sure grid_1D index is valid because it is referring to the shape once things have been removed
             # as of yet I dont think anything is being removed, but if I were to for example apply quality control
@@ -342,6 +341,48 @@ class ReGridder:
 
         return samples_dict, variable_dict
 
+    def reshape_output_l1r_dict(self, data_dict_out):
+        data_dict_reshaped = {}
+
+        for band in data_dict_out:
+            variable_dict = data_dict_out[band]
+            variable_dict_reshape = {}
+
+            # Get output geomtry
+            num_feed_horns = int(self.config.num_horns[self.config.target_band[0]])
+            output_scans = int(self.config.scan_geometry[self.config.target_band[0]][0])
+            output_samples = int(self.config.scan_geometry[self.config.target_band[0]][1])
+
+            # Build the scan geometry
+            for variable in variable_dict:
+                reshaped_variable = full((output_scans, output_samples), nan)
+                if 'fore' in variable:
+                    scan_direction = '_fore'
+                elif 'aft' in variable:
+                    scan_direction = '_aft'
+                else:
+                    scan_direction = ''
+
+                if variable in ['regridding_l1b_orphans']:
+                    variable_dict_reshape[variable] = variable_dict[variable]
+                    continue
+
+                cell_row = variable_dict[f'cell_row{scan_direction}']
+                cell_col = variable_dict[f'cell_col{scan_direction}']
+
+                for count, sample in enumerate(variable_dict[variable]):
+                    reshaped_variable[int(cell_row[count]), int(cell_col[count])] = sample
+
+                # Now the variable is reconstructed, split back into feedhorn geometry
+                reshaped_variable = split(reshaped_variable, num_feed_horns, axis=1)
+                reshaped_variable = stack(reshaped_variable, axis=2)
+
+                variable_dict_reshape[variable] = reshaped_variable
+
+            data_dict_reshaped[band] = variable_dict_reshape
+
+            return data_dict_reshaped
+
 
     def regrid_data(self, data_dict): # Need to change the name of this.
 
@@ -391,6 +432,10 @@ class ReGridder:
                     variable_dict_out[scan_direction][f'cell_row_{scan_direction}'] = cell_row
                     variable_dict_out[scan_direction][f'cell_col_{scan_direction}'] = cell_col
 
+                    # Testing - rebuilding the scan geometry
+                    test = 0
+
+
                     # Add regridding_n_samples
                     if 'regridding_n_samples' in self.config.variables_to_regrid:
                         if samples_dict[scan_direction]['distances'].ndim == 1:
@@ -399,7 +444,7 @@ class ReGridder:
                             variable_dict_out[scan_direction][f"regridding_n_samples_{scan_direction}"] = (
                                 sum(~isinf(samples_dict[scan_direction]['distances']), axis=1))
 
-                    # Add regridding_l1b_orphans
+                    # Add regridding_l1b_orphans (make own function)
                     if 'regridding_l1b_orphans' in self.config.variables_to_regrid:
                         fill_value = len(variable_dict[f"longitude_{scan_direction}"])
                         unique_indexes = unique(samples_dict[scan_direction]['indexes'][
@@ -425,11 +470,6 @@ class ReGridder:
                                 l1b_orphans[feed_horn_scans, feed_horn_samples, feed_horn] = 1
 
                         variable_dict_out[scan_direction][f'regridding_l1b_orphans_{scan_direction}'] = l1b_orphans
-
-
-
-
-
 
                 # Combine fore and aft variables into single dictionary
                 combined_dict = {**variable_dict_out['fore'], **variable_dict_out['aft']}
@@ -496,11 +536,11 @@ class ReGridder:
             data_dict_out[band] = variable_dict_out
             print(f"Finished regridding band: {band}")
 
+        # Reshape CIMR data
+        if self.config.grid_type == 'L1R':
+            data_dict_out = self.reshape_output_l1r_dict(data_dict_out)
+
         return data_dict_out
-
-
-
-
 
 
 
