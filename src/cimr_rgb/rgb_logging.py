@@ -1,3 +1,4 @@
+import sys 
 import pathlib as pb 
 import time, datetime  
 import json 
@@ -188,6 +189,10 @@ class RGBLogging:
 
         def outer_wrapper(func: typing.Callable): 
             if decorate and decorator is not None and logger is not None: 
+
+                #logger.info("---------------------")
+                logger.info(f"`{func.__name__}`")
+
                 return decorator(func, logger) 
             return func
 
@@ -275,7 +280,7 @@ class RGBLogging:
             logger.info(f"`{func.__name__}` -- CPU Total Time: {total_cpu_time:.2f}s") 
             logger.info(f"`{func.__name__}` -- Process-Specific CPU Usage (Before): {cpu_usage_start:.2f}%") 
             logger.info(f"`{func.__name__}` -- Process-Specific CPU Usage (After): {cpu_usage_end:.2f}%") 
-            logger.info(f"`{func.__name__}` -- Memory Usage Change: {memory_usage_change:.6f}MB") 
+            logger.info(f"`{func.__name__}` -- Memory Usage Change: {memory_usage_change:.6f} MB") 
 
             logger.info("---------------------")
             
@@ -284,6 +289,61 @@ class RGBLogging:
 
         return perf_wrapper  
     
+
+    @staticmethod 
+    def handle_error(error: Exception, message: str, logger: logging.Logger, level="error"):
+        """
+        Centralized method for handling and logging errors.
+
+        Parameters:
+        ----------
+        error : Exception
+            The exception instance.
+        message : str
+            A custom message to log alongside the exception.
+        level : str, optional
+            The logging level: "error", "warning", or "critical" (default: "error").
+        """
+
+        if level == "error":
+
+            logger.error(f"{error}: {message}", exc_info=True)
+
+        elif level == "warning":
+
+            logger.warning(f"{error}: {message}")
+
+        elif level == "critical":
+
+            logger.critical(f"{error}: {message}")
+
+        else:
+            logger.info(f"{error}: {message}")
+
+
+
+
+
+    def setup_global_exception_handler(self, logger):
+        """
+        Redirect uncaught exceptions to the logger.
+        """
+
+        def handle_exception(exc_type, exc_value, exc_traceback):
+
+            if issubclass(exc_type, KeyboardInterrupt):
+
+                sys.__excepthook__(exc_type, exc_value, exc_traceback)
+
+                return
+
+            logger.critical(
+                "Uncaught exception",
+                exc_info=(exc_type, exc_value, exc_traceback),
+            )
+
+        sys.excepthook = handle_exception
+
 
 
     # TODO: This function should simplify the call for decorator, but is really not needed. 

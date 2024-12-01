@@ -647,22 +647,22 @@ class ProductGenerator:
             # 	n_samples_KU_BAND = 1538 ;
             # 	n_samples_KA_BAND = 2079 ;
             if self.config.grid_type == "L1R": 
+                dataset.createDimension('n_feeds_L_BAND', 1) #None)
                 dataset.createDimension('n_feeds_X_BAND', 4) #None)
                 dataset.createDimension('n_feeds_C_BAND', 4) #None)
-                dataset.createDimension('n_feeds_L_BAND', 1) #None)
                 dataset.createDimension('n_feeds_KU_BAND', 8) #None)
                 dataset.createDimension('n_feeds_KA_BAND', 8) #None)
 
                 dataset.createDimension('n_scans', 2) #None)
+                dataset.createDimension('n_samples_L_BAND', 138) #None)
                 dataset.createDimension('n_samples_X_BAND', 561) #None)
                 dataset.createDimension('n_samples_C_BAND', 549) #None)
-                dataset.createDimension('n_samples_L_BAND', 138) #None)
                 dataset.createDimension('n_samples_KU_BAND', 1538) #None)
                 dataset.createDimension('n_samples_KA_BAND', 2079) #None)
 
 
             # For L1C dimensions  
-            # time = 0 // currently 1 <= sinlge integer value 
+            # time = 0 // currently 1 <= single integer value 
             # x = {256..16384}
             # y = {256..16384}
             # n_l1b_scans = TBD
@@ -671,8 +671,8 @@ class ProductGenerator:
 
             # Creating Dimentions according to cdl 
             dataset.createDimension('time', 1) #None)
-            dataset.createDimension('x', None) 
             dataset.createDimension('y', None)
+            dataset.createDimension('x', None) 
 
             print(self.config.target_band)
 

@@ -1,19 +1,21 @@
 """
 This script reads the configuration file and validates the chosen parameters.
 """
+import sys
 import pathlib as pb 
 import logging 
-from os import path, getcwd
-import sys
-from xml.etree.ElementTree import ParseError, parse
 import typing 
-
+import importlib.resources as pkg_resources 
+import json 
+from os import path, getcwd
+from xml.etree.ElementTree import ParseError, parse
 from operator import truediv
+
 from numpy import sqrt
 
+from cimr_rgb import configs  # Import the package where your JSON is located
 from cimr_rgb.grid_generator import GRIDS
 from cimr_rgb.rgb_logging    import RGBLogging 
-#from cimr_grasp.grasp_io     import rec_create_dir       
 import cimr_grasp.grasp_io as grasp_io        
 
 
@@ -57,43 +59,54 @@ class ConfigFile:
                 output_path = "OutputData/output_path", 
                 logger  = None 
                 ) 
-        #self.output_path  = pb.Path(config_object.find("OutputData/output_path").text).resolve()
-        #print(self.output_path) 
-        #self.output_path  = grasp_io.resolve_config_path(self.output_path) 
-        #print(self.output_path) 
-        #grasp_io.rec_create_dir(self.output_path) 
-        #if not pb.Path(self.output_path).exists(): 
-        #    pb.Path(self.output_path).mkdir() 
-
 
         # TODO: Put this into its own validation method? 
         # -----------
         # Path to logger_config.json 
         # -----------
-        self.logpar_config   = config_object.find("LoggingParams/config_path").text
-
         # Creating output directory for logs (to save log files there)  
         logdir  = pb.Path(self.output_path).joinpath("logs")
-        if not pb.Path(logdir).exists(): 
-            pb.Path(logdir).mkdir() 
+        # Create the directory structure if necessary
+        grasp_io.rec_create_dir(path = logdir)
 
-        if self.logpar_config is not None: 
+        # Getting the parh to config file in JSON format 
+        self.logpar_config   = config_object.find("LoggingParams/config_path").text
+
+        # If the paramter was left empty, we open the default configuration file from cimr-rgb package 
+        if self.logpar_config is None or self.logpar_config.strip() == "": 
+            
+            # Loading default CIMR RGB Log Config file as dictionary 
+            # (the one which is installed as part of the package)
+            with pkg_resources.open_text(configs, "cimr_rgb_logger_config.json") as f:
+                self.logpar_config = json.load(f)
+        
+        elif str(self.logpar_config).lower() == "none": 
+            # Configuring the logger object by adding the NullHandler as per
+            # python's official documentation. In this way we do not interfere with
+            # library users' logging functionality.  
+            self.logger_name = __name__ 
+            self.logger = logging.getLogger(self.logger_name)
+            self.logger.addHandler(logging.NullHandler())
+
+            self.logpar_config = None 
+
+        else: 
             self.logpar_config = pb.Path(self.logpar_config).resolve()  
+
+        # Initialising RGB logging (can be an empty object) 
+        rgb_logging          = RGBLogging(
+                logdir       = logdir, 
+                log_config   = self.logpar_config
+        ) 
+
+        if str(self.logpar_config).lower() != "none": #or self.logpar_config.strip() == "": 
+            self.logger_name     = config_object.find("LoggingParams/logger_name").text 
+            self.logger          = rgb_logging.get_logger(self.logger_name) 
 
         # Whether to use RGB decorator  
         self.logpar_decorate = bool(config_object.find("LoggingParams/decorate").text) 
 
-        # Initialising RGB logging 
-        rgb_logging          = RGBLogging(logdir = logdir, log_config = self.logpar_config) 
-        self.logger_name     = config_object.find("LoggingParams/logger_name").text 
-        self.logger          = rgb_logging.get_logger(self.logger_name) 
-        #self.logger          = rgb_logging.get_logger("rgb-logger") 
-
-        if self.logpar_config is None: 
-            # Configuring the logger object by adding the NullHandler as per
-            # python's official documentation. In this way we do not interfere with
-            # library users' logging functionality.  
-            self.logger.addHandler(logging.NullHandler())
+        rgb_logging.setup_global_exception_handler(logger = self.logger) 
         # -----------
 
 
@@ -197,11 +210,12 @@ class ConfigFile:
                 if self.target_band == self.source_band:
                     raise ValueError("Error: Source and Target bands cannot be the same")
             except ValueError as e:
-                print(f"{e}")
+                #print(f"{e}")
+                self.logger.error(f"{e}")
                 sys.exit(1)
 
         self.reduced_grid_inds = self.validate_reduced_grid_inds(
-            config_object=config_object,
+            config_object = config_object,
             reduced_grid_inds='GridParams/reduced_grid_inds'
         )
 

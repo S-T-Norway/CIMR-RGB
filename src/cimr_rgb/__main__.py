@@ -87,15 +87,6 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
         Modified XML configuration if any of the commandline arguments were provided. 
     """
 
-    # converting the relative path into absolute one if needed 
-    #if not pb.Path(config_file).is_absolute(): 
-    #    config_file = pb.Path(config_file).resolve() 
-
-    #print(config_file.name)
-    #print(config_file)
-    #exit() 
-
-
     # The command line parameters take the following form: 
     # config_params = {'name': ['p1', 'parameter1', 'type', 'description']} 
     valid_config_params = {
@@ -208,12 +199,10 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
     # logs of the run. 
     #outputdir = pb.Path(root.find("OutputData/output_path").text).resolve()
     # outputdir = pb.Path(root.find("OutputData/output_path").text) 
-    # print(outputdir) 
     # outputdir       = grasp_io.resolve_config_path(
     #     path_string = outputdir 
     # ) 
     # #outputdir  = grasp_io.resolve_config_path(outputdir) 
-    # print(outputdir) 
     # #if not pb.Path(outputdir).exists(): 
     # #    pb.Path(outputdir).mkdir() 
     # grasp_io.rec_create_dir(outputdir) 
@@ -235,14 +224,14 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
 
     logger     = rgb_config.logger 
 
-    
-
-    for key, value in modified_pars.items(): 
-        logger.info(f"Parameter: `{key}` received commandline value: `{value}`") 
-
     logger.info("---------")
 
     logger.info(f"CIMR RGB Configuration")
+
+    logger.info("---------")
+
+    for key, value in modified_pars.items(): 
+        logger.info(f"Parameter: `{key}` received commandline value: `{value}`") 
 
     logger.info("---------")
     
