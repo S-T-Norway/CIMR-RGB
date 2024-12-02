@@ -41,7 +41,7 @@
     <LoggingParams>
       <logger_name>rgb-logger</logger_name>
     <!--<config_path>./src/cimr_rgb/logger_config.json</config_path>-->
-      <config_path></config_path>
+      <config_path>None</config_path>
       <decorate>True</decorate>
     </LoggingParams> 
 </config>
