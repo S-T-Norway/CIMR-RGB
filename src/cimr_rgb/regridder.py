@@ -367,6 +367,10 @@ class ReGridder:
                     variable_dict_reshape[variable] = variable_dict[variable]
                     continue
 
+                if variable in [f"cell_row{scan_direction}", f"cell_col{scan_direction}"]:
+                    # Don't include cell_row or cell_col in output dict for L1R
+                    continue
+
                 cell_row = variable_dict[f'cell_row{scan_direction}']
                 cell_col = variable_dict[f'cell_col{scan_direction}']
 
