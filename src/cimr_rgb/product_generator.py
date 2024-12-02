@@ -427,7 +427,7 @@ class ProductGenerator:
         
 
 
-    def generate_l1c_product(self, data_dict: dict): 
+    def generate_product(self, data_dict: dict): 
 
         # (Old dict that contains) Params from CDL. It can be used 
         # later still, so left here as a comment  

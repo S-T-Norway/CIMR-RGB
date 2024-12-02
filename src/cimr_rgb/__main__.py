@@ -338,9 +338,10 @@ def main():
 
     data_dict_out     = timed_func(data_dict)
 
-    exit() 
     # Generate L1C product according to CDL 
-    ProductGenerator(rgb_config).generate_l1c_product(data_dict = data_dict_out)
+    ProductGenerator(rgb_config).generate_product(data_dict = data_dict_out)
+
+    exit() 
 
     # Intermediate results check
     # Put in the variables you want from the data_dict_out in data_dict.
