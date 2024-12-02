@@ -37,7 +37,11 @@ class RGBLogging:
     """
 
     def __init__(self, logdir: pb.Path, 
-                 log_config = None
+                 log_config = None, 
+                 filename = "cimr", 
+                 #name_prefix = "cimr", 
+                 #name_suffix = f"{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')}", 
+                 file_extension = ".log"
                  ) -> None: 
 
         """
@@ -92,17 +96,19 @@ class RGBLogging:
                     log_config = json.load(json_file) 
 
             elif isinstance(log_config, dict): 
-                print(log_config) 
+                #print(log_config) 
                 pass  
             else: 
                 raise TypeError("`log_config` can be str, Path or dictionary.")
 
             #print(log_config['handlers']['file']['filename'])
             # Getting the name of log file 
-            modified_config_name = pb.Path(log_config['handlers']['file']['filename']).name  
+            #modified_config_name = pb.Path(log_config['handlers']['file']['filename']).name  
             # Modifying it to include time signature 
-            modified_config_name = pb.Path(modified_config_name).stem + \
-                                f"_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')}.log" 
+            modified_config_name = filename + file_extension 
+            #modified_config_name = name_prefix + \
+            #                    f"_{name_suffix}" + f"{file_extension}" 
+            #                    f"_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')}" + ".log" 
             # Creating absolute path for the log config file 
             modified_config_name = logdir.joinpath(modified_config_name)
 

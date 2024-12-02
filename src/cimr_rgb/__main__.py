@@ -12,6 +12,7 @@ import sys
 import pathlib as pb 
 import pickle
 import argparse
+import datetime 
 
 
 from numpy import full, nan, array
@@ -213,8 +214,30 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
             logger  = None 
             ) 
 
+    # Creating output directory for logs (to save log files there)  
+    logdir  = pb.Path(outputdir).joinpath("logs")
+    # Create the directory structure if necessary
+    grasp_io.rec_create_dir(path = logdir)
+
+    #print(rgb_config_path.stem)
+    #print(root.find('OutputData/timestamp').text)
+
+    # TODO: Put this into config_file.py for validation  
+    timestamp_elem = root.find("OutputData/timestamp").text
+    timestamp_fmt_elem = root.find("OutputData/timestamp_fmt").text
+    if timestamp_elem is None or timestamp_elem.strip() == "": 
+
+        # Getting the current time stamp to propagate into the software 
+        timestamp_elem = datetime.datetime.now()
+
+        # Format the date and time as "YYYY-MM-DD_HH-MM-SS"
+        timestamp_elem = timestamp_elem.strftime(timestamp_fmt_elem)
+        root.find("OutputData/timestamp").text = timestamp_elem
+    
+
     # Appending the name of configuration file to the output directory path  
-    file_to_write = outputdir.joinpath(rgb_config_path.name) 
+    xml_config_file_name = rgb_config_path.stem + f"_{timestamp_elem}" + ".xml"
+    file_to_write = logdir.joinpath(xml_config_file_name) 
         
     # Write the updated XML back to a new file
     tree.write(file_to_write, encoding="utf-8", xml_declaration=True)

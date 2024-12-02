@@ -7,6 +7,7 @@ import logging
 import typing 
 import importlib.resources as pkg_resources 
 import json 
+import datetime 
 from os import path, getcwd
 from xml.etree.ElementTree import ParseError, parse
 from operator import truediv
@@ -52,6 +53,8 @@ class ConfigFile:
         if not pb.Path(config_file_path).is_absolute(): 
             config_file_path = pb.Path(config_file_path).resolve() 
 
+        #print(f"My name {config_file_path.stem}")
+
         config_object, tree  = self.read_config(config_file_path)
 
         self.output_path = self.validate_output_directory_path(
@@ -59,6 +62,26 @@ class ConfigFile:
                 output_path = "OutputData/output_path", 
                 logger  = None 
                 ) 
+
+
+        # TODO: Get the time stamp which will be propagated to create 
+        #       name for log files, config files and data products
+        self.timestamp      = config_object.find("OutputData/timestamp").text
+        self.timestamp_fmt  = config_object.find("OutputData/timestamp_fmt").text
+        if self.timestamp is None or self.timestamp.strip() == "": 
+
+            # Getting the current time stamp to propagate into the software 
+            self.timestamp = datetime.datetime.now()
+
+            # Format the date and time as "YYYY-MM-DD_HH-MM-SS"
+            self.timestamp = self.timestamp.strftime(self.timestamp_fmt)
+            #config_object.find("OutputData/timestamp").text = timestamp_elem
+
+        #l1c_utc_time = datetime.datetime.now()
+
+        # Format the date and time as "YYYY-MM-DD_HH-MM-SS"
+        #self.timestamp = l1c_utc_time.strftime(self.timestamp_fmt)
+
 
         # TODO: Put this into its own validation method? 
         # -----------
@@ -96,7 +119,9 @@ class ConfigFile:
         # Initialising RGB logging (can be an empty object) 
         rgb_logging          = RGBLogging(
                 logdir       = logdir, 
-                log_config   = self.logpar_config
+                log_config   = self.logpar_config,
+                filename     = pb.Path(config_file_path).stem, 
+                #name_suffix  = self.file_time_signature
         ) 
 
         if str(self.logpar_config).lower() != "none": #or self.logpar_config.strip() == "": 

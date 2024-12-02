@@ -461,60 +461,60 @@ CDL = {
     #         "comment": "Grid row Index for the chosen output grid"
     #     }, 
     # }, 
-    "GLOBAL_ATTRIBUTES" : {
-        "conventions": "CF-1.6",
-        "id": "TBD",
-        "naming_authority": "European Space Agency",
-        "history": "TBD",
-        "source": "TBD",
-        "processing_level": "TBD", #f"{self.config.grid_type}",
-        "comment": "TBD",
-        "acknowledgement": "TBD",
-        "license": "None",
-        "standard_name_vocabulary": "TBD",
-        "date_created": "TBD", #f"{l1c_utc_time}",
-        "creator_name": "TBD",
-        "creator_email": "TBD",
-        "creator_url": "TBD",
-        "institution": "European Space Agency",
-        "project": "CIMR Re-Gridding Toolbox",
-        "program": "TBD",
-        "contributor_name": "TBD",
-        "contributor_role": "TBD",
-        "publisher_name": "TBD",
-        "publisher_email": "TBD",
-        "publisher_url": "TBD",
-        "geospatial_bounds": "TBD",
-        "geospatial_bounds_crs": "TBD",
-        "geospatial_bounds_vertical_crs": "TBD",
-        "geospatial_lat_min": "TBD",
-        "geospatial_lat_max": "TBD",
-        "geospatial_lon_min": "TBD",
-        "geospatial_lon_max": "TBD",
-        "time_coverage_start": "TBD",
-        "time_coverage_end": "TBD",
-        "time_coverage_duration": "TBD",
-        "time_coverage_resolution": "TBD",
-        "geospatial_lat_units": "degrees north",
-        "geospatial_lat_resolution": "TBD",
-        "geospatial_lon_units": "degrees north",
-        "geospatial_lon_resolution": "TBD",
-        "date_modified": "TBD",
-        "date_issued": "TBD",
-        "date_metadata_modified": "TBD",
-        "product_version": "TBD",
-        "platform": "TBD", #f"{self.config.input_data_type}",
-        "instrument": "TBD", #f"{self.config.input_data_type}",
-        "metadata_link": "TBD",
-        "keywords": "TBD",
-        "keywords_vocabulary": "TBD",
-        "references": "TBD",
-        "input_level1b_filenames": "TBD", #f"{pb.Path(self.config.input_data_path).resolve().name}", #"TBD",
-        "level_01_atbd": "TBD",
-        "mission_requirement_document": "TBD",
-        "antenna_pattern_files": "TBD",
-        "antenna_pattern_source": "TBD"
-    }
+    # "GLOBAL_ATTRIBUTES" : {
+    #     "conventions": "CF-1.6",
+    #     "id": "TBD",
+    #     "naming_authority": "European Space Agency",
+    #     "history": "TBD",
+    #     "source": "TBD",
+    #     "processing_level": "TBD", #f"{self.config.grid_type}",
+    #     "comment": "TBD",
+    #     "acknowledgement": "TBD",
+    #     "license": "None",
+    #     "standard_name_vocabulary": "TBD",
+    #     "date_created": "TBD", #f"{l1c_utc_time}",
+    #     "creator_name": "TBD",
+    #     "creator_email": "TBD",
+    #     "creator_url": "TBD",
+    #     "institution": "European Space Agency",
+    #     "project": "CIMR Re-Gridding Toolbox",
+    #     "program": "TBD",
+    #     "contributor_name": "TBD",
+    #     "contributor_role": "TBD",
+    #     "publisher_name": "TBD",
+    #     "publisher_email": "TBD",
+    #     "publisher_url": "TBD",
+    #     "geospatial_bounds": "TBD",
+    #     "geospatial_bounds_crs": "TBD",
+    #     "geospatial_bounds_vertical_crs": "TBD",
+    #     "geospatial_lat_min": "TBD",
+    #     "geospatial_lat_max": "TBD",
+    #     "geospatial_lon_min": "TBD",
+    #     "geospatial_lon_max": "TBD",
+    #     "time_coverage_start": "TBD",
+    #     "time_coverage_end": "TBD",
+    #     "time_coverage_duration": "TBD",
+    #     "time_coverage_resolution": "TBD",
+    #     "geospatial_lat_units": "degrees north",
+    #     "geospatial_lat_resolution": "TBD",
+    #     "geospatial_lon_units": "degrees north",
+    #     "geospatial_lon_resolution": "TBD",
+    #     "date_modified": "TBD",
+    #     "date_issued": "TBD",
+    #     "date_metadata_modified": "TBD",
+    #     "product_version": "TBD",
+    #     "platform": "TBD", #f"{self.config.input_data_type}",
+    #     "instrument": "TBD", #f"{self.config.input_data_type}",
+    #     "metadata_link": "TBD",
+    #     "keywords": "TBD",
+    #     "keywords_vocabulary": "TBD",
+    #     "references": "TBD",
+    #     "input_level1b_filenames": "TBD", #f"{pb.Path(self.config.input_data_path).resolve().name}", #"TBD",
+    #     "level_01_atbd": "TBD",
+    #     "mission_requirement_document": "TBD",
+    #     "antenna_pattern_files": "TBD",
+    #     "antenna_pattern_source": "TBD"
+    # }
 } 
 
 
@@ -618,10 +618,12 @@ class ProductGenerator:
         #outfile = self.get_processor_filename()
         grid_res = re.search(r'(\d+(?:\.\d+)?)km', self.config.grid_definition).group() 
         # Get the current date and time
-        l1c_utc_time = datetime.datetime.now()
+        #l1c_utc_time = datetime.datetime.now()
 
         # Format the date and time as "YYYYMMDDHHMMSS"
-        l1c_utc_time = l1c_utc_time.strftime("%Y%m%d%H%M%S")
+        l1c_utc_time = self.config.timestamp #self.config.file_time_signature #l1c_utc_time.strftime("%Y%m%d%H%M%S")
+        #print(l1c_utc_time)
+        #exit() 
 
         outfile = f"{self.config.input_data_type}_{self.config.grid_type}_{self.config.regridding_algorithm}_{grid_res}_{l1c_utc_time}.nc" 
 
@@ -684,70 +686,73 @@ class ProductGenerator:
         # TODO: - Convert this into a method? 
         #       - Add product_version parameter file into config.xml 
         # Define global attributes
-        # GLOBAL_ATTRIBUTES = {
-        #     "conventions": "CF-1.6",
-        #     "id": "TBD",
-        #     "naming_authority": "European Space Agency",
-        #     "history": "TBD",
-        #     "source": "TBD",
-        #     "processing_level": f"{self.config.grid_type}",
-        #     "comment": "TBD",
-        #     "acknowledgement": "TBD",
-        #     "license": "None",
-        #     "standard_name_vocabulary": "TBD",
-        #     "date_created": f"{l1c_utc_time}",
-        #     "creator_name": "TBD",
-        #     "creator_email": "TBD",
-        #     "creator_url": "TBD",
-        #     "institution": "European Space Agency",
-        #     "project": "CIMR Re-Gridding Toolbox",
-        #     "program": "TBD",
-        #     "contributor_name": "TBD",
-        #     "contributor_role": "TBD",
-        #     "publisher_name": "TBD",
-        #     "publisher_email": "TBD",
-        #     "publisher_url": "TBD",
-        #     "geospatial_bounds": "TBD",
-        #     "geospatial_bounds_crs": "TBD",
-        #     "geospatial_bounds_vertical_crs": "TBD",
-        #     "geospatial_lat_min": "TBD",
-        #     "geospatial_lat_max": "TBD",
-        #     "geospatial_lon_min": "TBD",
-        #     "geospatial_lon_max": "TBD",
-        #     "time_coverage_start": "TBD",
-        #     "time_coverage_end": "TBD",
-        #     "time_coverage_duration": "TBD",
-        #     "time_coverage_resolution": "TBD",
-        #     "geospatial_lat_units": "degrees north",
-        #     "geospatial_lat_resolution": "TBD",
-        #     "geospatial_lon_units": "degrees north",
-        #     "geospatial_lon_resolution": "TBD",
-        #     "date_modified": "TBD",
-        #     "date_issued": "TBD",
-        #     "date_metadata_modified": "TBD",
-        #     "product_version": "TBD",
-        #     "platform": f"{self.config.input_data_type}",
-        #     "instrument": f"{self.config.input_data_type}",
-        #     "metadata_link": "TBD",
-        #     "keywords": "TBD",
-        #     "keywords_vocabulary": "TBD",
-        #     "references": "TBD",
-        #     "input_level1b_filenames": f"{pb.Path(self.config.input_data_path).resolve().name}", #"TBD",
-        #     "level_01_atbd": "TBD",
-        #     "mission_requirement_document": "TBD",
-        #     "antenna_pattern_files": "TBD",
-        #     "antenna_pattern_source": "TBD"
-        # }
+        GLOBAL_ATTRIBUTES = {
+            "conventions": "CF-1.6",
+            "id": "TBD",
+            "naming_authority": "European Space Agency",
+            "history": "TBD",
+            "source": "TBD",
+            "processing_level": f"{self.config.grid_type}",
+            "comment": "TBD",
+            "acknowledgement": "TBD",
+            "license": "None",
+            "standard_name_vocabulary": "TBD",
+            "date_created": f"{l1c_utc_time}",
+            "creator_name": "TBD",
+            "creator_email": "TBD",
+            "creator_url": "TBD",
+            "institution": "European Space Agency",
+            "project": "CIMR Re-Gridding Toolbox",
+            "program": "TBD",
+            "contributor_name": "TBD",
+            "contributor_role": "TBD",
+            "publisher_name": "TBD",
+            "publisher_email": "TBD",
+            "publisher_url": "TBD",
+            "geospatial_bounds": "TBD",
+            "geospatial_bounds_crs": "TBD",
+            "geospatial_bounds_vertical_crs": "TBD",
+            "geospatial_lat_min": "TBD",
+            "geospatial_lat_max": "TBD",
+            "geospatial_lon_min": "TBD",
+            "geospatial_lon_max": "TBD",
+            "time_coverage_start": "TBD",
+            "time_coverage_end": "TBD",
+            "time_coverage_duration": "TBD",
+            "time_coverage_resolution": "TBD",
+            "geospatial_lat_units": "degrees north",
+            "geospatial_lat_resolution": "TBD",
+            "geospatial_lon_units": "degrees north",
+            "geospatial_lon_resolution": "TBD",
+            "date_modified": "TBD",
+            "date_issued": "TBD",
+            "date_metadata_modified": "TBD",
+            "product_version": "TBD",
+            "platform": f"{self.config.input_data_type}",
+            "instrument": f"{self.config.input_data_type}",
+            "metadata_link": "TBD",
+            "keywords": "TBD",
+            "keywords_vocabulary": "TBD",
+            "references": "TBD",
+            "input_level1b_filenames": f"{pb.Path(self.config.input_data_path).resolve().name}", #"TBD",
+            "level_01_atbd": "TBD",
+            "mission_requirement_document": "TBD",
+            "antenna_pattern_files": "TBD",
+            "antenna_pattern_source": "TBD"
+        }
 
         #print(f"L band cell_row_aft:  {data_dict['L']['cell_row_aft']}")
         #print(f"X band cell_row_aft:  {data_dict['X']['cell_row_aft']}")
         #exit() 
 
+
         with nc.Dataset(outfile, "w", format = "NETCDF4") as dataset: 
 
             # Set each global attribute in the netCDF file
-            for attr, value in CDL["GLOBAL_ATTRIBUTES"].items():#GLOBAL_ATTRIBUTES.items():
+            #for attr, value in CDL["GLOBAL_ATTRIBUTES"].items():#GLOBAL_ATTRIBUTES.items():
+            for attr, value in GLOBAL_ATTRIBUTES.items():
                 dataset.setncattr(attr, value)
+
 
 
             # The L1R template has the following dims: 
@@ -770,18 +775,24 @@ class ProductGenerator:
             if self.config.grid_type == "L1R": 
 
                 # TODO: this should be in per band calculations 
-                dataset.createDimension('n_feeds_L_BAND', 1) #None)
-                dataset.createDimension('n_feeds_X_BAND', 4) #None)
-                dataset.createDimension('n_feeds_C_BAND', 4) #None)
-                dataset.createDimension('n_feeds_KU_BAND', 8) #None)
-                dataset.createDimension('n_feeds_KA_BAND', 8) #None)
+                #dataset.createDimension('n_feeds_L_BAND', 1) #None)
+                #dataset.createDimension('n_feeds_X_BAND', 4) #None)
+                #dataset.createDimension('n_feeds_C_BAND', 4) #None)
+                #dataset.createDimension('n_feeds_KU_BAND', 8) #None)
+                #dataset.createDimension('n_feeds_KA_BAND', 8) #None)
 
-                dataset.createDimension('n_scans', 2) #None)
-                dataset.createDimension('n_samples_L_BAND', 138) #None)
-                dataset.createDimension('n_samples_X_BAND', 561) #None)
-                dataset.createDimension('n_samples_C_BAND', 549) #None)
-                dataset.createDimension('n_samples_KU_BAND', 1538) #None)
-                dataset.createDimension('n_samples_KA_BAND', 2079) #None)
+                #dataset.createDimension('n_scans', 2) #None)
+                #dataset.createDimension('n_samples_L_BAND', 138) #None)
+                #dataset.createDimension('n_samples_X_BAND', 561) #None)
+                #dataset.createDimension('n_samples_C_BAND', 549) #None)
+                #dataset.createDimension('n_samples_KU_BAND', 1538) #None)
+                #dataset.createDimension('n_samples_KA_BAND', 2079) #None)
+
+                for band_name in data_dict.keys(): 
+                    dataset.createDimension(f'n_feeds_{band_name}_BAND', None)
+                    dataset.createDimension(f'n_samples_{band_name}_BAND', None)
+
+                dataset.createDimension('n_scans', None)
 
             elif self.config.grid_type == "L1C": 
                 # Also, there should be per band calculations for n_feeds 
@@ -792,9 +803,14 @@ class ProductGenerator:
                 # n_l1b_scans = TBD
                 # n_samples = 0
                 # n_feeds_[L_BAND|C_BAND|X_BAND|KA_BAND|KU_BAND] = [1, 4, 4, 8, 8]
+                for band_name in data_dict.keys(): 
+                    dataset.createDimension(f'n_feeds_{band_name}_BAND', None)
+                    dataset.createDimension(f'n_samples_{band_name}_BAND', None)
+
+                dataset.createDimension('n_scans', None)
 
                 # Creating Dimentions according to cdl 
-                dataset.createDimension('time', None) # 1) #None)
+                dataset.createDimension('time', 1) #None)
                 dataset.createDimension('y', None)
                 dataset.createDimension('x', None) 
 
@@ -805,86 +821,8 @@ class ProductGenerator:
 
                 top_group  = dataset.createGroup(f"{self.config.projection_definition}") 
 
-                # for var_name, var_val in CDL["L1C_SPECIFIC_ATTRIBUTES"].items(): 
-
-                #     # Looping through data dictionary and retrieving its variables (per band) 
-                #     for band_name, band_var in data_dict.items(): 
-
-                #         # Creating a list of complete cariables to regrid based on CDL 
-                #         # and whether user chose to split scans into fore and aft 
-                #         if self.config.split_fore_aft: 
-                #             #print("True")
-                #             #fore = [ key + "_fore" for key in group_vals.keys() ]
-                #             fore = var_name + "_fore"
-                #             #aft  = [ key + "_aft"  for key in group_vals.keys() ]
-                #             aft  = var_name + "_aft"
-                #             regrid_vars = fore + aft 
-                #         else: 
-                #             regrid_vars = var_name #[ key for key in group_vals.keys() ]
-
-                #         # Removing the _fore and _aft from the variable name 
-                #         # to get the metadata from CDL (it is almost the same for 
-                #         # both of them anyway). The idea is to compare actual 
-                #         # variable to the variable from the CDL above  
-                #         regrid_var = var_name.replace("_fore", "") if "_fore" in var_name \
-                #                 else var_name.replace("_aft", "")  if "_aft" in var_name \
-                #                 else var_name
-
-                #         if var_name in regrid_vars: 
-                #             print(var_name)
-
-                # exit() 
-
-
-                # Adding cell_row and cell_col variables 
-                #for var_name, var_val in CDL["L1C_SPECIFIC_ATTRIBUTES"].items(): 
-                #    print(var_name)
-
-                #    # Looping through data dictionary and retrieving its variables (per band) 
-                #    #for band_name, band_var in data_dict.items(): 
-
-                #    #    if var_name in regrid_vars: 
-
-                #    # Creating a list of complete cariables to regrid based on CDL 
-                #    # and whether user chose to split scans into fore and aft 
-                #    #if self.config.split_fore_aft: 
-                #    #    #print("True")
-                #    #    #fore = [ key + "_fore" for key in group_vals.keys() ]
-                #    #    fore = var_name + "_fore"
-                #    #    #aft  = [ key + "_aft"  for key in group_vals.keys() ]
-                #    #    aft  = var_name + "_aft"
-                #    #    regrid_vars = fore + aft 
-                #    #else: 
-                #    #    regrid_vars = var_name #[ key for key in group_vals.keys() ]
-
-                #    #if var_name in regrid_vars: 
-
-
-                #    #for var_name, var_val in band_var.items(): 
-
-                #    var_shape = var_val.shape
-
-                #    # Creating a list of complete cariables to regrid based on CDL 
-                #    # and whether user chose to split scans into fore and aft 
-                #    if self.config.split_fore_aft: 
-                #        #print("True")
-                #        fore = [ key + "_fore" for key in group_vals.keys() ]
-                #        aft  = [ key + "_aft"  for key in group_vals.keys() ]
-                #        regrid_vars = fore + aft 
-                #    else: 
-                #        regrid_vars = [ key for key in group_vals.keys() ]
-
-                #    # Removing the _fore and _aft from the variable name 
-                #    # to get the metadata from CDL (it is almost the same for 
-                #    # both of them anyway). The idea is to compare actual 
-                #    # variable to the variable from the CDL above  
-                #    regrid_var = var_name.replace("_fore", "") if "_fore" in var_name \
-                #            else var_name.replace("_aft", "")  if "_aft" in var_name \
-                #            else var_name
-
-
-
             elif self.config.grid_type == "L1R":
+
                 # target_band is a list 
                 top_group  = dataset.createGroup(f"{self.config.target_band[0]}_BAND_TARGET") 
             #exit() 
@@ -900,6 +838,9 @@ class ProductGenerator:
             # CDL values for CIMR have dimensions (time, x, y) while SMAP has
             # only 1, so we also programmatically figure out the dimensonf of
             # the numpy array provided and save the data accordingly. 
+            # 
+            # [Note]: We start looping in this way and not from data_dict, because 
+            # data_dict may contain _fore|_aft suffixes 
             for group_field, group_vals in CDL["LOCAL_ATTRIBUTES"].items(): 
 
                 #if group_field == "GLOBAL_ATTRIBUTES": 
@@ -917,6 +858,12 @@ class ProductGenerator:
                 # Looping through data dictionary and retrieving its variables (per band) 
                 for band_name, band_var in data_dict.items(): 
 
+                    # Removing/skipping cell_row and cell_col if we encounter L1R 
+                    # (since it is not needed for L1R) 
+                    if self.config.grid_type == "L1R" and \
+                            (band_var == "cell_row" or band_var == "cell_col"):
+                        continue 
+
                     # Processing_flags are defined as a separate field 
                     # and not as sub field of specific band
                     if group_field == "Processing_flags": 
@@ -927,6 +874,25 @@ class ProductGenerator:
                     for var_name, var_val in band_var.items(): 
 
                         var_shape = var_val.shape
+
+                        # TODO: 
+                        # For L1r we will have 3 dimensions: scan, sample, and feed <= scan is the same for all bands, but sample and feed are not  
+                        # For L1C we will have 3 dimensions: time, y, and x <= the same for all bands    
+                        # 
+                        # So add if else statement 
+                        if self.config.grid_type == "L1C": 
+
+                            var_dim  = self.determine_dimension_l1c(var_shape)
+
+                        elif self.config.grid_type == "L1R":
+
+                            var_dim  = self.determine_dimension_l1r(band_name, var_shape)
+                        # Removing cell_row and cell_col from dictionary 
+                        # since it is not needed for L1R 
+
+
+                        # TODO: Create a generic method  
+                        # var_dim  = self.determine_dimension(grid_type, band_name, var_shape)
 
                         # Creating a list of complete cariables to regrid based on CDL 
                         # and whether user chose to split scans into fore and aft 
@@ -948,7 +914,7 @@ class ProductGenerator:
                         #print(var_name, regrid_var)
 
                     
-                        if var_name in regrid_vars: 
+                        if (var_name in regrid_vars) and ("regridding_l1b_orphans" not in var_name): 
 
 
                             #var_type = type(var_val[0,0,0])
@@ -961,25 +927,6 @@ class ProductGenerator:
                             #exit() 
                             var_type = self.get_netcdf_dtype(var_val.dtype)
                             var_fill = nc.default_fillvals[var_type] 
-
-                            # TODO: 
-                            # For L1r we will have 3 dimensions: scan, sample, and feed <= scan is the same for all bands, but sample and feed are not  
-                            # For L1C we will have 3 dimensions: time, y, and x <= the same for all bands    
-                            # 
-                            # So add if else statement 
-                            if self.config.grid_type == "L1C": 
-
-                                var_dim  = self.determine_dimension_l1c(var_shape)
-
-                            elif self.config.grid_type == "L1R":
-
-                                var_dim  = self.determine_dimension_l1r(band_name, var_shape)
-
-
-                            # TODO: Create a generic method  
-                            # var_dim  = self.determine_dimension(grid_type, band_name, var_shape)
-
-
 
                             self.logger.info(f"{group_field}, {band_name}, {var_name}, {var_type}, {var_fill}, {var_dim}")
 
@@ -1007,7 +954,7 @@ class ProductGenerator:
                                 dimensions = var_dim, #('x'), 
                                 fill_value = var_fill #group_vals[regrid_var]["_FillValue"]
                                 ) 
-                            #print("Debug")
+                            #print(var_name)
                             # Assign values to the variable
                             var_data[slices] = var_val
                             #print(var_data)
@@ -1057,6 +1004,31 @@ class ProductGenerator:
 
                                     # Setting comment attribute 
                                     var_data.setncattr(attr_name, attr_value)
+
+
+                        elif (var_name in regrid_vars) and ("regridding_l1b_orphans" in var_name): 
+                        #elif ("regridding_l1b_orphans" in var_name): 
+                            var_dim  = self.determine_dimension_l1r(band_name, var_shape)
+                            var_type = self.get_netcdf_dtype(var_val.dtype)
+                            var_fill = nc.default_fillvals[var_type] 
+
+                            self.logger.info(f"{group_field}, {band_name}, {var_name}, {var_type}, {var_fill}, {var_dim}")
+
+                            # Determine the appropriate slice based on variable shape
+                            slices = tuple(slice(None) for _ in var_shape)
+                            var_data = band_group.createVariable(
+                                varname    = var_name, 
+                                datatype   = var_type, #"double", 
+                                dimensions = var_dim, #('x'), 
+                                fill_value = var_fill #group_vals[regrid_var]["_FillValue"]
+                                ) 
+                            var_data[slices] = var_val
+                            # Loop through the dictionary and set attributes for the variable
+                            for attr_name, attr_value in group_vals[regrid_var].items():
+                                var_data.setncattr(attr_name, attr_value)
+                            #print(var_name)
+                            #print(var_val.shape)
+                            #exit() 
 
 
     #def create_cdf_var(self, var_shape, var_name, var_val, band_group, group_vals):
@@ -1197,10 +1169,10 @@ class ProductGenerator:
             return ('n_feeds',)
         elif len(var_shape) == 2:
             # 2D case
-            return ('n_samples', 'n_feeds')
+            return (f'n_samples_{band_name}_BAND', f'n_feeds_{band_name}_BAND')
         elif len(var_shape) == 3:
             # 3D case
-            return ('n_scans', 'n_samples', 'n_feeds')
+            return ('n_scans', f'n_samples_{band_name}_BAND', f'n_feeds_{band_name}_BAND')
         else:
             # Return a generic message or handle error for unknown shapes
             raise ValueError(f"Unsupported shape with {len(var_shape)} dimensions: {var_shape}")
