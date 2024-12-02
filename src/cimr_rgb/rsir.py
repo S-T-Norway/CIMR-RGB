@@ -5,10 +5,10 @@ from pyresample import kd_tree, geometry
 from scipy.spatial import KDTree
 
 # ---- Testing ----
-import matplotlib
-tkagg = matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-plt.ion()
+# import matplotlib
+# tkagg = matplotlib.use('TkAgg')
+# import matplotlib.pyplot as plt
+# plt.ion()
 
 from .ap_processing  import AntennaPattern, GaussianAntennaPattern, make_integration_grid
 from .grid_generator import GridGenerator, GRIDS

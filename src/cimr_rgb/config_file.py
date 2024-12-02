@@ -282,18 +282,31 @@ class ConfigFile:
                 'x_velocity': 'Navigation Data',
                 'y_velocity': 'Navigation Data',
                 'z_velocity': 'Navigation Data',
-                'azimuth': 'Earth Azimuth'
+                'azimuth': 'Earth Azimuth',
+                'solar_azimuth': 'Sun Azimuth',
+                'acq_time_utc': 'Scan Time',
             }
 
             self.scan_geometry = {
-                '6': (1, 1),
-                '7': (1, 1),
-                '10': (1, 1),
-                '18': (1, 1),
-                '23': (1, 1),
-                '36': (1, 1),
-                '89a': (1, 1),
-                '89b': (1, 1)
+                '6': (1974, 243),
+                '7': (1974, 243),
+                '10': (1974, 243),
+                '18': (1974, 243),
+                '23': (1974, 243),
+                '36': (1974, 243),
+                '89a': (1974, 486),
+                '89b': (1974, 486)
+            }
+
+            self.num_horns = {
+                '89a': 1,
+                '89b': 1,
+                '6': 1,
+                '7': 1,
+                '10': 1,
+                '18': 1,
+                '23': 1,
+                '36': 1,
             }
 
 
@@ -1058,9 +1071,11 @@ class ConfigFile:
 
             valid_input = ['bt_h', 'bt_v', 'longitude', 'latitude', 'regridding_n_samples',
                            'x_position', 'y_position', 'z_position', 'x_velocity',
-                           'y_velocity', 'z_velocity', 'azimuth']
+                           'y_velocity', 'z_velocity', 'azimuth', 'solar_azimuth', 'acq_time_utc']
 
-            default_vars = ['bt_h', 'bt_v', 'longitude', 'latitude']
+            default_vars = ['bt_h', 'bt_v', 'longitude', 'latitude', 'regridding_n_samples',
+                           'x_position', 'y_position', 'z_position', 'x_velocity',
+                           'y_velocity', 'z_velocity', 'azimuth', 'solar_azimuth', 'acq_time_utc']
 
         elif input_data_type == 'CIMR':
 
@@ -1069,7 +1084,8 @@ class ConfigFile:
                            'regridding_n_samples', 'regridding_l1b_orphans', 'acq_time_utc' , 'azimuth', 'oza']
 
             default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
-                            'processing_scan_angle', 'longitude', 'latitude']
+                           'processing_scan_angle', 'longitude', 'latitude', 'nedt_h', 'nedt_v', 'nedt_3', 'nedt_4',
+                           'regridding_n_samples', 'regridding_l1b_orphans', 'acq_time_utc' , 'azimuth', 'oza']
         else:
             raise ValueError(f"Invalid `input_data_type`: {input_data_type}")
 
