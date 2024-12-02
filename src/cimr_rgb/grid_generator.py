@@ -33,7 +33,7 @@ GRIDS = {'EASE2_G1km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83
          'EASE2_N9km': {'epsg': 6931, 'x_min': -9000000.0, 'y_max': 9000000.0,
                         'res': 9000.0, 'n_cols': 2000, 'n_rows': 2000, 'lat_min': 0},
          'EASE2_S3km': {'epsg': 6932, 'x_min': -9000000.0, 'y_max': 9000000.0,
-                        'res': 3000, 'n_cols': 6000, 'n_rows': 6000, 'lat_min': 0, 'lat_min': 0},
+                        'res': 3000, 'n_cols': 6000, 'n_rows': 6000, 'lat_min': 0},#, 'lat_min': 0},
          'EASE2_S9km': {'epsg': 6932, 'x_min': -9000000.0, 'y_max': 9000000.0,
                         'res': 9000.0, 'n_cols': 2000, 'n_rows': 2000, 'lat_min': 0},
          'EASE2_G36km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83,
@@ -234,7 +234,6 @@ class GridGenerator:
 
         return xs, ys
 
-        # TODO: Finish the implementation of this one
 
     def generate_grid_xy_mercator(self, return_resolution: bool = False
                                ) -> (np.ndarray | float, np.ndarray | float):
@@ -262,7 +261,12 @@ class GridGenerator:
 
         # Create 2D grid
         grid_x, grid_y = np.meshgrid(x, y)
+
+        if return_resolution: 
+            return x, y, resolution_m
+
         return x, y
+
 
     def generate_grid_xy(self, return_resolution: bool = False
                          ) -> (np.ndarray | float, np.ndarray | float):
@@ -305,6 +309,8 @@ class GridGenerator:
 
         return result[0], result[1]
 
+
+
     def generate_grid_lonlat(self):
         """
         Generates the grid in longitude and latitude coordinates from a given grid definition
@@ -324,6 +330,7 @@ class GridGenerator:
         lons, lats = pyproj.Proj(self.projection)(grid_x, grid_y, inverse=True)
 
         return lons, lats
+
 
     def lonlat_to_xy_laea(self, lon: np.ndarray | float, lat: np.ndarray | float,
                           pole: str = 'N') -> (np.ndarray | float, np.ndarray | float):
@@ -362,6 +369,7 @@ class GridGenerator:
         y = sign * rho * np.cos(lam)
 
         return x, y
+
 
     def lonlat_to_xy_cea(self,
                          lon: np.ndarray | float,
@@ -406,6 +414,7 @@ class GridGenerator:
         # print(f"lonlat_to_xy_cea: x.shape = {x.shape}")
 
         return x, y
+
 
     def lonlat_to_xy_stereo(self,
                             lon: np.ndarray | float,
@@ -622,7 +631,6 @@ class GridGenerator:
 
         return lon, lat
 
-        # TODO: Add native implementation?
 
     def xy_to_lonlat_stereo(self,
                             x: np.ndarray | float,
@@ -787,7 +795,7 @@ class GridGenerator:
         col = r0 + (x / res)
         row = s0 - (y / res)
 
-        # Make a check that there are is nothing out of range
+        # Make a check that there is nothing out of range
         # TBD
 
         return row, col

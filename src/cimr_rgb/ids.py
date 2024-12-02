@@ -4,6 +4,7 @@ class IDSInterp:
     def __init__(self, config):
         self.config = config
         self.weights = None
+        self.logger  = config.logger 
 
     @staticmethod
     def get_weights(distances):
@@ -51,13 +52,17 @@ class IDSInterp:
 
         weights_sq = weights**2
         nedt = nansum(weights_sq*extracted_values, axis = 1)/(nansum(weights, axis = 1)**2)
+
         return nedt
 
     def interp_variable_dict(self, samples_dict, variable_dict, target_grid=None, scan_direction=None, band=None, **args):
 
         variable_dict_out = {}
+
         for variable in variable_dict:
+
             if scan_direction:
+
                 if scan_direction not in variable:
                     continue
                 elif variable.removesuffix(f'_{scan_direction}') not in self.config.variables_to_regrid:
@@ -68,7 +73,9 @@ class IDSInterp:
                         variable=variable_dict[variable]
                     )
                 else:
-                    print(variable)
+
+                    self.logger.info(f"Regridding: `{variable}`")
+                    
                     variable_dict_out[variable] = self.IDS(
                         samples_dict=samples_dict,
                         variable=variable_dict[variable]

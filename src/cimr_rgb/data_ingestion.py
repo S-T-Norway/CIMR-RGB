@@ -10,14 +10,15 @@ process.
 
 import re
 from datetime import datetime, timezone, timedelta
+import logging 
 
 from numpy import (array, sqrt, cos, pi, sin, zeros, arctan2, arccos, nan, tile, repeat, arange,
                    isnan, delete, where, concatenate, full, newaxis, float32, asarray, any, atleast_1d)
 
-from .rgb_logging    import RGBLogging 
-from .config_file    import ConfigFile
-from .utils          import remove_overlap
-from .grid_generator import GRIDS, GridGenerator
+from cimr_rgb.rgb_logging    import RGBLogging 
+from cimr_rgb.config_file    import ConfigFile
+from cimr_rgb.utils          import remove_overlap
+from cimr_rgb.grid_generator import GRIDS, GridGenerator
 
 
 # SMAP Constants
@@ -86,7 +87,13 @@ class DataIngestion:
             The path to the configuration file that contains the user specified parameters.
         """
         self.config = config_object
-        self.logger = config_object.logger 
+
+        if config_object.logger is not None: 
+            self.logger = config_object.logger 
+        else:
+            self.logger = logging.getLogger(__name__)
+            self.logger.addHandler(logging.NullHandler()) 
+
 
     def remove_out_of_bounds(self, data_dict):
 
@@ -98,17 +105,24 @@ class DataIngestion:
         y_bound_min = grid['y_max'] - grid['n_rows']*grid['res']
 
         if 'EASE2' in self.config.grid_definition:
+
             if 'N' in self.config.projection_definition:
-                out_of_bounds_lat = where(data_dict['latitude']< grid['lat_min'])
+                out_of_bounds_lat = where(data_dict['latitude'] < grid['lat_min'])
+
             elif 'G' in self.config.projection_definition:
                 out_of_bounds_lat = where((data_dict['latitude'] > grid['lat_max']) | (data_dict['latitude'] < grid['lat_min']))
+            
             elif 'S' in self.config.projection_definition:
                 out_of_bounds_lat = where(data_dict['latitude'] > grid['lat_min'])
+
         elif 'STEREO' in self.config.grid_definition:
+
             if self.config.projection_definition == 'PS_N':
                 out_of_bounds_lat = where(data_dict['latitude'] < grid['lat_min'])
+
             elif self.config.projection_definition == 'PS_S':
                 out_of_bounds_lat = where(data_dict['latitude'] > grid['lat_min'])
+
         elif 'MERC' in self.config.grid_definition:
            out_of_bounds_lat = where((data_dict['latitude'] > grid['lat_max']) | (data_dict['latitude'] < grid['lat_min']))
 
@@ -117,15 +131,17 @@ class DataIngestion:
         source_x, source_y = GridGenerator(self.config,
                                            projection_definition=self.config.projection_definition,
                                            grid_definition=self.config.grid_definition).lonlat_to_xy(
-            lon=data_dict['longitude'],
-            lat=data_dict['latitude']
+            lon = data_dict['longitude'],
+            lat = data_dict['latitude']
         )
 
         out_of_bounds_xy = where((source_y < y_bound_min) | (source_y > y_bound_max))
 
         for variable in data_dict:
+
             if len(out_of_bounds_lat[0]) != 0:
                 data_dict[variable][out_of_bounds_xy] = nan
+
             if len(out_of_bounds_xy[0]) != 0:
                 data_dict[variable][out_of_bounds_lat] = nan
 
@@ -493,7 +509,9 @@ class DataIngestion:
                         pass
                     else:
                         if not hasattr(self.config, 'max_altitude'):
-                            print(band)
+                            #print(band)
+                            self.logger.info(band)
+
                             altitude = sqrt(variable_dict['x_position'] ** 2 + variable_dict['y_position'] ** 2 + variable_dict[
                                 'z_position'] ** 2) - 6371000
                             self.config.max_altitude = altitude.max()
@@ -550,25 +568,36 @@ class DataIngestion:
 
         return data_dict
 
-    @staticmethod
-    def apply_smap_qc(variable_dict):
+
+    #@staticmethod
+    #def apply_smap_qc(variable_dict):
+    def apply_smap_qc(self, variable_dict):
         """
         Applies the quality control values to the SMAP data for each polarisation.
         """
 
         quality_filter = zeros(variable_dict['scan_quality_flag'].shape)
+
         for quality_flag in ['scan_quality_flag', 'data_quality_h', 'data_quality_v', 'data_quality_3', 'data_quality_4']:
+
             if quality_flag in variable_dict.keys():
-                print(quality_flag)
+
+                #print(quality_flag)
+                self.logger.info(f"Applying quality control to: `{quality_flag}`")
+
                 quality_filter[variable_dict[quality_flag] != 0] = 1
                 variable_dict.pop(quality_flag)
 
         # Remove bad quality samples from all variables in dict
         for variable in variable_dict:
-            print(variable)
+            #print(variable)
+
+            self.logger.info(f"Removing bad quality samples from: `{variable}`")
+
             variable_dict[variable][quality_filter == 1] = nan
 
         return variable_dict
+
 
     def clean_data(self, data_dict):
         """
@@ -707,7 +736,7 @@ class DataIngestion:
                     #print(f"amsr2latlon conversion: out of range warning:"
                     #      f"Latitude and/or longitude are"
                     #      f"out of range on Scan = {scan} and Sample = {sample}")
-                    self.logger.warning(f"amsr2latlon conversion: out of range warning:"
+                    self.logger.warning(f"amsr2latlon conversion: out of range:"
                           f"Latitude and/or longitude are"
                           f"out of range on Scan = {scan} and Sample = {sample}")
                     lats_lo[scan, sample] = MV
@@ -841,6 +870,7 @@ class DataIngestion:
 
         return data_dict
 
+
     def ingest_smap(self):
         """
         Ingests AMSR2 data from the user specified path
@@ -852,10 +882,10 @@ class DataIngestion:
             Dictionary containing the data extracted from the HDF5 file.
         """
 
-        self.logger.info("read_hdf5")
+        #self.logger.info("read_hdf5")
 
         # Retrieving Data 
-        tracked_func  = RGBLogging.rgb_decorated(
+        tracked_func  = RGBLogging.rgb_decorate_and_execute(
             decorate  = self.config.logpar_decorate, 
             decorator = RGBLogging.track_perf, 
             logger    = self.logger 
@@ -866,7 +896,7 @@ class DataIngestion:
         #data_dict = self.read_hdf5()
 
         # Cleaning Data
-        tracked_func  = RGBLogging.rgb_decorated(
+        tracked_func  = RGBLogging.rgb_decorate_and_execute(
             decorate  = self.config.logpar_decorate, 
             decorator = RGBLogging.track_perf, 
             logger    = self.logger 
@@ -879,6 +909,7 @@ class DataIngestion:
 
         return data_dict
 
+
     def ingest_cimr(self):
         """
 
@@ -890,6 +921,7 @@ class DataIngestion:
 
         # Apply QC as and when
         return data_dict
+
 
     def ingest_data(self):
         """

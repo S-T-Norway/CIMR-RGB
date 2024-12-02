@@ -33,7 +33,7 @@ dependencies = [
 
 
 [project.optional-dependencies]
-test = ["pytest"] 
+tests = ["pytest"] 
 
 
 [tool.pytest.ini_options]
@@ -48,6 +48,10 @@ testpaths = ["tests"]
 [tool.setuptools]
 packages = ["cimr_grasp", "cimr_rgb"]
 package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.package-data]
+cimr_rgb = ["configs/cimr_rgb_logger_config.json"]
 
 
 [project.scripts]

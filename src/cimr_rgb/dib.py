@@ -2,8 +2,10 @@ from numpy import take, isfinite, where, nan, nanmean, clip, where
 
 
 class DIBInterp:
+
     def __init__(self, config):
         self.config = config
+
 
     @staticmethod
     def DIB(samples_dict, variable):
@@ -19,6 +21,7 @@ class DIBInterp:
         average_values = nanmean(extracted_values, axis=1)
 
         return average_values
+
 
     def interp_variable_dict(self, samples_dict, variable_dict, target_grid, scan_direction=None, band=None, **args):
 

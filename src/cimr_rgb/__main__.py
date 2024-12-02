@@ -31,6 +31,7 @@ from cimr_rgb.grid_generator    import GridGenerator, GRIDS
 from cimr_rgb.regridder         import ReGridder
 from cimr_rgb.rgb_logging       import RGBLogging
 from cimr_rgb.product_generator import ProductGenerator
+import cimr_grasp.grasp_io as grasp_io        
 
 # Maksym: I assume this comes frome tests directory 
 #from inspect_SMAP_l1c import compare_smap_l1c
@@ -85,15 +86,6 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
     rgb_config: ConfigFile 
         Modified XML configuration if any of the commandline arguments were provided. 
     """
-
-    # converting the relative path into absolute one if needed 
-    #if not pb.Path(config_file).is_absolute(): 
-    #    config_file = pb.Path(config_file).resolve() 
-
-    #print(config_file.name)
-    #print(config_file)
-    #exit() 
-
 
     # The command line parameters take the following form: 
     # config_params = {'name': ['p1', 'parameter1', 'type', 'description']} 
@@ -205,10 +197,21 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
     # Creating output directory based on the parameter provided via cmd or xml
     # file. Once this directory created, we also create `logs` folder to store
     # logs of the run. 
-    outputdir = pb.Path(root.find("OutputData/output_path").text).resolve()
-    if not pb.Path(outputdir).exists(): 
-        pb.Path(outputdir).mkdir() 
-
+    #outputdir = pb.Path(root.find("OutputData/output_path").text).resolve()
+    # outputdir = pb.Path(root.find("OutputData/output_path").text) 
+    # outputdir       = grasp_io.resolve_config_path(
+    #     path_string = outputdir 
+    # ) 
+    # #outputdir  = grasp_io.resolve_config_path(outputdir) 
+    # #if not pb.Path(outputdir).exists(): 
+    # #    pb.Path(outputdir).mkdir() 
+    # grasp_io.rec_create_dir(outputdir) 
+        
+    outputdir = ConfigFile.validate_output_directory_path(
+            config_object = root, 
+            output_path = "OutputData/output_path", 
+            logger  = None 
+            ) 
 
     # Appending the name of configuration file to the output directory path  
     file_to_write = outputdir.joinpath(rgb_config_path.name) 
@@ -221,12 +224,14 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
 
     logger     = rgb_config.logger 
 
-    for key, value in modified_pars.items(): 
-        logger.info(f"Parameter: `{key}` received commandline value: `{value}`") 
-
     logger.info("---------")
 
     logger.info(f"CIMR RGB Configuration")
+
+    logger.info("---------")
+
+    for key, value in modified_pars.items(): 
+        logger.info(f"Parameter: `{key}` received commandline value: `{value}`") 
 
     logger.info("---------")
     
@@ -242,6 +247,7 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
     logger.info(f"Projection Definition:   {rgb_config.projection_definition}")
 
     logger.info("---------")
+
 
     return rgb_config  
 
@@ -268,8 +274,10 @@ def main():
 
     rgb_config        = get_rgb_configuration(parser = parser)#, config_file = rgb_config_path)
 
+
+    # TODO: The `logger` variable does not seem to be working properly here 
     # Ingest and Extract L1B Data
-    timed_obj         = RGBLogging.rgb_decorated(
+    timed_obj         = RGBLogging.rgb_decorate_and_execute(
             decorate  = rgb_config.logpar_decorate, 
             decorator = RGBLogging.track_perf, 
             logger    = rgb_config.logger 
@@ -277,7 +285,8 @@ def main():
 
     ingestion_object  = timed_obj(rgb_config)
 
-    timed_func        = RGBLogging.rgb_decorated(
+
+    timed_func        = RGBLogging.rgb_decorate_and_execute(
             decorate  = rgb_config.logpar_decorate, 
             decorator = RGBLogging.track_perf, 
             logger    = rgb_config.logger
@@ -285,35 +294,54 @@ def main():
 
     data_dict         = timed_func()  
 
+
     # Regrid Data
-    regridder         = ReGridder(rgb_config)
+    timed_func        = RGBLogging.rgb_decorate_and_execute(
+            decorate  = rgb_config.logpar_decorate, 
+            decorator = RGBLogging.track_perf, 
+            logger    = rgb_config.logger
+            )(ReGridder)
 
-    if rgb_config.input_data_type == 'SMAP':
+    #regridder         = ReGridder(rgb_config)
+    regridder         = timed_func(rgb_config)
 
-        timed_func        = RGBLogging.rgb_decorated(
-                decorate  = rgb_config.logpar_decorate, 
-                decorator = RGBLogging.track_perf, 
-                logger    = rgb_config.logger
-                )(regridder.regrid_data)
 
-        data_dict_out     = timed_func(data_dict)
-        
-    if rgb_config.input_data_type == 'AMSR2':
+    # if rgb_config.input_data_type == 'SMAP':
 
-        data_dict_out = regridder.regrid_data(data_dict)
+    #     timed_func        = RGBLogging.rgb_decorate_and_execute(
+    #             decorate  = rgb_config.logpar_decorate, 
+    #             decorator = RGBLogging.track_perf, 
+    #             logger    = rgb_config.logger
+    #             )(regridder.regrid_data)
 
-    if rgb_config.input_data_type == 'CIMR':
+    #     data_dict_out     = timed_func(data_dict)
+    #     
+    # if rgb_config.input_data_type == 'AMSR2':
 
-        data_dict_out = regridder.regrid_data(data_dict)
-        timed_func        = RGBLogging.rgb_decorated(
-                decorate  = rgb_config.logpar_decorate, 
-                decorator = RGBLogging.track_perf, 
-                logger    = rgb_config.logger
-                )(regridder.regrid_data)
-        data_dict_out     = timed_func(data_dict)
+    #     data_dict_out = regridder.regrid_data(data_dict)
+
+    # if rgb_config.input_data_type == 'CIMR':
+
+    #     #data_dict_out = regridder.regrid_data(data_dict)
+    #     timed_func        = RGBLogging.rgb_decorate_and_execute(
+    #             decorate  = rgb_config.logpar_decorate, 
+    #             decorator = RGBLogging.track_perf, 
+    #             logger    = rgb_config.logger
+    #             )(regridder.regrid_data)
+    #     data_dict_out     = timed_func(data_dict)
+
+    timed_func        = RGBLogging.rgb_decorate_and_execute(
+            decorate  = rgb_config.logpar_decorate, 
+            decorator = RGBLogging.track_perf, 
+            logger    = rgb_config.logger
+            )(regridder.regrid_data)
+
+    data_dict_out     = timed_func(data_dict)
 
     # Generate L1C product according to CDL 
-    ProductGenerator(rgb_config).generate_l1c_product(data_dict = data_dict_out)
+    ProductGenerator(rgb_config).generate_product(data_dict = data_dict_out)
+
+    exit() 
 
     # Intermediate results check
     # Put in the variables you want from the data_dict_out in data_dict.
