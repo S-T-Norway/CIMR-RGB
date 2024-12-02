@@ -1,19 +1,19 @@
 <?xml version='1.0' encoding='utf-8'?>
 <config>
   <InputData>
-    <type>SMAP</type>
-    <path>./dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>
+    <type>CIMR</type>
+    <path>./dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
     <antenna_patterns_path>./dpr/antenna_patterns</antenna_patterns_path>
     <split_fore_aft>True</split_fore_aft>
     <source_band>C</source_band>
-    <target_band>L</target_band>
+    <target_band>L X</target_band>
     <LMT>2200</LMT>
     <quality_control>True</quality_control>
   </InputData>
   <GridParams>
     <grid_type>L1C</grid_type>
-    <grid_definition>EASE2_G9km</grid_definition> 
-    <projection_definition>G</projection_definition>
+    <grid_definition>EASE2_N9km</grid_definition> 
+    <projection_definition>N</projection_definition>
     <reduced_grid_inds></reduced_grid_inds> # 800 900 3200 3260 south 1450 1460 1780 1800 north 650 660 1250 1260
   </GridParams>
   <ReGridderParams>
@@ -40,8 +40,7 @@
   </OutputData>
   <LoggingParams>
     <logger_name>rgb-logger</logger_name>
-  <!--<config_path>./src/cimr_rgb/logger_config.json</config_path>-->
     <config_path></config_path>
-    <decorate>True</decorate>
+	  <decorate>True</decorate>
   </LoggingParams> 
 </config>

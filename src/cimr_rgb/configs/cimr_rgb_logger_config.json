@@ -28,6 +28,9 @@
   },  
   "formatters": { 
     "simple": { 
+       "format": "[%(name)s - %(levelname)s]: %(message)s" 
+    }, 
+    "simple2": { 
        "format": "[%(name)s - %(levelname)s | %(module)s - L%(lineno)d]: %(message)s" 
     }, 
     "advanced": {
