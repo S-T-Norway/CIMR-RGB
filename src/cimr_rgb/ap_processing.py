@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import RegularGridInterpolator
 from pyproj import CRS, Transformer
 
-from .grid_generator import GridGenerator, GRIDS
-from .utils          import normalize, generic_transformation_matrix
+from cimr_rgb.grid_generator import GridGenerator, GRIDS
+from cimr_rgb.utils          import normalize, generic_transformation_matrix
 
 
 class AntennaPattern:
@@ -536,9 +536,11 @@ def make_integration_grid(int_projection_definition, int_grid_definition, longit
     lonsx = np.array(longitude) - np.rad2deg(Rpattern/Rcircle)
     londx = np.array(longitude) + np.rad2deg(Rpattern/Rcircle)
 
-    integration_grid = GridGenerator(None,
-                               projection_definition=int_projection_definition,
-                               grid_definition=int_grid_definition)
+    integration_grid = GridGenerator(
+        config_object = None,
+        projection_definition=int_projection_definition,
+        grid_definition=int_grid_definition
+    )
 
     mask = latup>90
     latup[mask] = 180. - latup[mask]

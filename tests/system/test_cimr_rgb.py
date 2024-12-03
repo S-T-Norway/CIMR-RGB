@@ -73,6 +73,6 @@ def test_system_execution(system_config_path, config_file):
 
     # Validate output (if your system produces a specific output file or log)
     # Example: Check that output logs contain specific messages
-    #assert "Processing completed successfully" in result.stdout
+    assert "Processing completed successfully" in result.stdout
 
 
