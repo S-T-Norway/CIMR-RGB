@@ -42,9 +42,12 @@
     <OutputData>
       <save_to_disk>True</save_to_disk>
       <!-- <output_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/output</output_path> -->
-    <output_path>./output/cimr_rgb</output_path>
+      <output_path>./output/cimr_rgb</output_path>
+      <timestamp></timestamp> 
+      <timestamp_fmt>%Y-%m-%d_%H-%M-%S</timestamp_fmt> 
     </OutputData>
     <LoggingParams>
+      <logger_name>rgb-logger</logger_name>
       <config_path>./src/cimr_rgb/logger_config.json</config_path>
 	    <decorate>True</decorate>
     </LoggingParams> 

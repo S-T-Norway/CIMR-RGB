@@ -12,9 +12,12 @@ import sys
 import pathlib as pb 
 import pickle
 import argparse
+import datetime
+import time  
 
 
 from numpy import full, nan, array
+import psutil 
 
 # ---- Testing ----
 #import matplotlib
@@ -213,8 +216,30 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
             logger  = None 
             ) 
 
+    # Creating output directory for logs (to save log files there)  
+    logdir  = pb.Path(outputdir).joinpath("logs")
+    # Create the directory structure if necessary
+    grasp_io.rec_create_dir(path = logdir)
+
+    #print(rgb_config_path.stem)
+    #print(root.find('OutputData/timestamp').text)
+
+    # TODO: Put this into config_file.py for validation  
+    timestamp_elem = root.find("OutputData/timestamp").text
+    timestamp_fmt_elem = root.find("OutputData/timestamp_fmt").text
+    if timestamp_elem is None or timestamp_elem.strip() == "": 
+
+        # Getting the current time stamp to propagate into the software 
+        timestamp_elem = datetime.datetime.now()
+
+        # Format the date and time as "YYYY-MM-DD_HH-MM-SS"
+        timestamp_elem = timestamp_elem.strftime(timestamp_fmt_elem)
+        root.find("OutputData/timestamp").text = timestamp_elem
+    
+
     # Appending the name of configuration file to the output directory path  
-    file_to_write = outputdir.joinpath(rgb_config_path.name) 
+    xml_config_file_name = rgb_config_path.stem + f"_{timestamp_elem}" + ".xml"
+    file_to_write = logdir.joinpath(xml_config_file_name) 
         
     # Write the updated XML back to a new file
     tree.write(file_to_write, encoding="utf-8", xml_declaration=True)
@@ -224,16 +249,19 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
 
     logger     = rgb_config.logger 
 
-    logger.info("---------")
+    logger.info("=====================")
 
     logger.info(f"CIMR RGB Configuration")
 
-    logger.info("---------")
+    logger.info("=====================")
 
-    for key, value in modified_pars.items(): 
-        logger.info(f"Parameter: `{key}` received commandline value: `{value}`") 
+    if modified_pars: 
+        for key, value in modified_pars.items(): 
+            logger.info(f"Parameter: `{key}` received commandline value: `{value}`") 
+    else: 
+        logger.info("No command line arguments were provided.")
 
-    logger.info("---------")
+    logger.info("---------------------")
     
     logger.info(f"Input File:              {rgb_config.input_data_path}")   
     logger.info(f"Input Data Type:         {rgb_config.input_data_type}") 
@@ -246,7 +274,7 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
     logger.info(f"Grid Definition:         {rgb_config.grid_definition}") 
     logger.info(f"Projection Definition:   {rgb_config.projection_definition}")
 
-    logger.info("---------")
+    logger.info("---------------------")
 
 
     return rgb_config  
@@ -261,6 +289,19 @@ def main():
     #       Need to add the confug as part of installable files in the MANIFEST
     #       file, otherwise it won't work 
     # 
+
+    # Get the current process 
+    process = psutil.Process() 
+
+    # Record the start time and resource usage
+    start_time   = time.perf_counter()
+
+    cpu_time_start = process.cpu_times() 
+    cpu_usage_start = process.cpu_percent(interval=None) 
+
+    # Memory size in bytes / 1024**2 = memory size in MB 
+    memory_usage_start = process.memory_info().rss / 1024**2 
+
     # Setting the default value of the configuration parameter 
     rgb_config_path   = pb.Path("configs", 'rgb_config.xml').resolve()
     # If running from IDE, comment out above and use the line below
@@ -338,10 +379,46 @@ def main():
 
     data_dict_out     = timed_func(data_dict)
 
-    # Generate L1C product according to CDL 
-    ProductGenerator(rgb_config).generate_product(data_dict = data_dict_out)
+    # Generate L1R/C product according to CDL 
+    timed_func        = RGBLogging.rgb_decorate_and_execute(
+            decorate  = rgb_config.logpar_decorate, 
+            decorator = RGBLogging.track_perf, 
+            logger    = rgb_config.logger
+            )(ProductGenerator(rgb_config).generate_product)
+    #regridder         = ReGridder(rgb_config)
+    regridder         = timed_func(data_dict = data_dict_out)
 
-    exit() 
+    # Record the end time and resource usage
+    end_time     = time.perf_counter()
+
+    cpu_time_end  = process.cpu_times() 
+    cpu_usage_end = process.cpu_percent(interval=None) 
+
+    # Memory size in bytes / 1024**2 = memory size in MB 
+    memory_usage_end = process.memory_info().rss / 1024**2 
+
+    # Calculate metrics 
+    elapsed_time   = end_time - start_time
+
+    user_cpu_time = cpu_time_end.user - cpu_time_start.user 
+    system_cpu_time = cpu_time_end.system - cpu_time_start.system 
+    total_cpu_time  = user_cpu_time + system_cpu_time 
+
+    memory_usage_change = memory_usage_end - memory_usage_start 
+
+    # Log performance metrics 
+    rgb_config.logger.info(f"`{main.__name__}` -- Executed in: {elapsed_time:.2f}s") 
+    rgb_config.logger.info(f"`{main.__name__}` -- CPU User Time (Change): {user_cpu_time:.2f}s") 
+    rgb_config.logger.info(f"`{main.__name__}` -- CPU System Time: {system_cpu_time:.2f}s") 
+    rgb_config.logger.info(f"`{main.__name__}` -- CPU Total Time: {total_cpu_time:.2f}s") 
+    rgb_config.logger.info(f"`{main.__name__}` -- Process-Specific CPU Usage (Before): {cpu_usage_start:.2f}%") 
+    rgb_config.logger.info(f"`{main.__name__}` -- Process-Specific CPU Usage (After): {cpu_usage_end:.2f}%") 
+    rgb_config.logger.info(f"`{main.__name__}` -- Memory Usage Change: {memory_usage_change:.6f} MB") 
+
+    rgb_config.logger.info("=====================")
+
+
+
 
     # Intermediate results check
     # Put in the variables you want from the data_dict_out in data_dict.

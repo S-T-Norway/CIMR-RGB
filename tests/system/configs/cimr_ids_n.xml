@@ -37,6 +37,8 @@
   <OutputData>
     <save_to_disk>True</save_to_disk>
     <output_path>./output/cimr_rgb</output_path>
+    <timestamp></timestamp> 
+    <timestamp_fmt>%Y-%m-%d_%H-%M-%S</timestamp_fmt> 
   </OutputData>
   <LoggingParams>
     <logger_name>rgb-logger</logger_name>
