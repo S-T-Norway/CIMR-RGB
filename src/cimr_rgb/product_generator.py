@@ -928,7 +928,7 @@ class ProductGenerator:
                             var_type = self.get_netcdf_dtype(var_val.dtype)
                             var_fill = nc.default_fillvals[var_type] 
 
-                            self.logger.info(f"{group_field}, {band_name}, {var_name}, {var_type}, {var_fill}, {var_dim}")
+                            self.logger.debug(f"{group_field}, {band_name}, {var_name}, {var_type}, {var_fill}, {var_dim}")
 
                             # Determine the appropriate slice based on variable shape
                             slices = tuple(slice(None) for _ in var_shape)
@@ -1012,7 +1012,7 @@ class ProductGenerator:
                             var_type = self.get_netcdf_dtype(var_val.dtype)
                             var_fill = nc.default_fillvals[var_type] 
 
-                            self.logger.info(f"{group_field}, {band_name}, {var_name}, {var_type}, {var_fill}, {var_dim}")
+                            self.logger.debug(f"{group_field}, {band_name}, {var_name}, {var_type}, {var_fill}, {var_dim}")
 
                             # Determine the appropriate slice based on variable shape
                             slices = tuple(slice(None) for _ in var_shape)
@@ -1166,7 +1166,7 @@ class ProductGenerator:
 
         if len(var_shape) == 1:
             # 1D case
-            return ('n_feeds',)
+            return ('n_feeds_{band_name}_BAND',)
         elif len(var_shape) == 2:
             # 2D case
             return (f'n_samples_{band_name}_BAND', f'n_feeds_{band_name}_BAND')
