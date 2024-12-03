@@ -380,7 +380,7 @@ class ReGridder:
                 else:
                     scan_direction = ''
 
-                if variable in ['regridding_l1b_orphans']:
+                if variable in [f'regridding_l1b_orphans{scan_direction}']:
                     variable_dict_reshape[variable] = variable_dict[variable]
                     continue
 
