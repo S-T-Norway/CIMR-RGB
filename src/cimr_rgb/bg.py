@@ -3,10 +3,10 @@ from  numpy import (where, nan, take, full, all, sum, zeros, identity, dot, nans
 from numpy.linalg import inv
 from tqdm import tqdm
 
-# ---- Testing ----
-#import matplotlib
-#tkagg = matplotlib.use('TkAgg')
-#import matplotlib.pyplot as plt
+#---- Testing ----
+# import matplotlib
+# tkagg = matplotlib.use('TkAgg')
+# import matplotlib.pyplot as plt
 
 from .grid_generator import GridGenerator, GRIDS
 from .ap_processing  import AntennaPattern, GaussianAntennaPattern, make_integration_grid
@@ -114,7 +114,8 @@ class BGInterp:
                     lat_l1b = variable_dict['latitude'][sample] 
                 )
                 fraction_above_threshold = 1.- self.source_ap.fraction_below_threshold[int(variable_dict['feed_horn_number'][sample])]
-            sample_pattern /= (fraction_above_threshold*sum(sample_pattern))
+            # sample_pattern /= (sum(sample_pattern)/fraction_above_threshold)
+            sample_pattern /= sum(sample_pattern)
             source_ant_patterns.append(sample_pattern)
 
         # Get target patterns
@@ -158,7 +159,8 @@ class BGInterp:
                 lat_l1b=target_lat
             )
             fraction_above_threshold = (1-self.target_ap.fraction_below_threshold[int(target_dict['feed_horn_number'][target_inds])])
-        target_ant_pattern /= (fraction_above_threshold*sum(sample_pattern))
+        # target_ant_pattern /= (sum(target_ant_pattern)/fraction_above_threshold)
+        target_ant_pattern /= sum(target_ant_pattern)
 
         return source_ant_patterns, target_ant_pattern
 
