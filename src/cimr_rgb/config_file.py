@@ -447,6 +447,11 @@ class ConfigFile:
                 target_antenna_threshold = 'ReGridderParams/target_antenna_threshold'
             )
 
+            self.max_theta_antenna_patterns = self.validate_max_theta_antenna_patterns(
+                config_object=config_object,
+                max_theta_antenna_patterns='ReGridderParams/max_theta_antenna_patterns',
+            )
+
             self.polarisation_method = self.validate_polarisation_method(
                 config_object=config_object,
                 polarisation_method='ReGridderParams/polarisation_method'
@@ -1233,6 +1238,27 @@ class ConfigFile:
                 f"Invalid antenna threshold: {value}. Check Configuration File."
                 f" Antenna threshold must be a float or integer"
             )
+
+    @staticmethod
+    def validate_max_theta_antenna_patterns(config_object, max_theta_antenna_patterns):
+
+        value = config_object.find(max_theta_antenna_patterns).text
+
+        if value is None or value.strip() == "":
+            # We should have a default set of values for each Antenna Pattern
+            # For now, I will just choose 40.
+            return None
+
+        try:
+
+            return float(value)
+
+        except:
+            raise ValueError(
+                f"Invalid max theta for antenna patterns: {value}. Check Configuration File."
+                f"Max theta for antenna patterns must be a float or integer"
+            )
+
 
     @staticmethod
     def validate_polarisation_method(config_object, polarisation_method):

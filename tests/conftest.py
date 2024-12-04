@@ -50,6 +50,7 @@ def valid_config_file():
     SubElement(regridder_params, "polarisation_method").text = "scalar"
     SubElement(regridder_params, "source_antenna_threshold").text = "0.5"
     SubElement(regridder_params, "target_antenna_threshold").text = "0.5"
+    SubElement(regridder_params, "max_theta_antenna_patterns").text = "40."
     SubElement(regridder_params, "MRF_grid_definition").text = "EASE2_G3km"
     SubElement(regridder_params, "MRF_projection_definition").text = "G"
     SubElement(regridder_params, "source_gaussian_params").text = "100000 100000"

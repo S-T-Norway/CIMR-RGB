@@ -269,13 +269,13 @@ class AntennaPattern:
 
             elif self.antenna_method == 'gaussian_projected':
                 if self.antenna_threshold is None:
-                    max_theta_non_zero = np.deg2rad(40.)
+                    max_theta_non_zero = np.deg2rad(self.config.max_theta_antenna_patterns)
                 else:      
                     sigma_u = self.gaussian_params[0]
                     sigma_v = self.gaussian_params[1]
                     sigma_max = np.maximum(sigma_u, sigma_v)
                     r_max = np.sqrt(-2. * sigma_max**2 * np.log(self.antenna_threshold))
-                    max_theta_non_zero = np.minimum(np.deg2rad(40.), np.arcsin(r_max))
+                    max_theta_non_zero = np.minimum(np.deg2rad(self.config.max_theta_antenna_patterns), np.arcsin(r_max))
 
             R = (6378137. + 6356752.)/2. #m
             angle_tangent = np.arcsin(R / (R + satellite_altitude))
