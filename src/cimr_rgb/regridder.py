@@ -1,4 +1,6 @@
 import logging 
+import warnings 
+import functools 
 
 import numpy as np
 from numpy import meshgrid, isinf, where, full, nan, nanmin, zeros, unravel_index, all, sum, ones, unique, inf, ravel_multi_index, split, stack
@@ -33,12 +35,17 @@ class ReGridder:
             'CG': lambda band: MIIinterp(self.config, band, 'CG')
         }
 
-        if config.logger is not None: 
-            self.logger = config.logger 
+        # If config_object is None, then it won't have logger as attribute 
+        if config is not None: 
+            if config.logger is not None: 
+                self.logger = config.logger 
+            self.logpar_decorate = config.logpar_decorate  
         else:
             # No formatting will be performed 
             self.logger = logging.getLogger(__name__)
             self.logger.addHandler(logging.NullHandler()) 
+            self.logpar_decorate = False 
+
 
 
     def get_algorithm(self, algorithm_name, band=None):
@@ -47,28 +54,63 @@ class ReGridder:
 
         return algo(band)
 
+
     # Check if you need the full data dict once the function is complete
     def get_grid(self, data_dict=None):
         # Get target grid
+
         if self.config.grid_type == 'L1C':
-            target_x, target_y = GridGenerator(self.config,
-                                                    projection_definition=self.config.projection_definition,
-                                                    grid_definition=self.config.grid_definition).generate_grid_xy(
-                return_resolution=False
+
+            # target_x, target_y = GridGenerator(self.config,
+            #     projection_definition=self.config.projection_definition,
+            #     grid_definition=self.config.grid_definition).generate_grid_xy(
+            #     return_resolution=False
+            # )
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.logpar_decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+            )(
+                GridGenerator(
+                    config_object = self.config,
+                    projection_definition=self.config.projection_definition,
+                    grid_definition=self.config.grid_definition
+                ).generate_grid_xy
             )
+            target_x, target_y = tracked_func(return_resolution=False) 
+
             x_shape = len(target_x)
             y_shape = len(target_y)
+
             target_x, target_y = meshgrid(target_x, target_y)
+
             target_x = target_x.flatten()
             target_y = target_y.flatten()
 
-            target_lon, target_lat = GridGenerator(self.config,
-                                                   projection_definition=self.config.projection_definition,
-                                                   grid_definition=self.config.grid_definition
-                                                   ).xy_to_lonlat(
+            # target_lon, target_lat = GridGenerator(self.config,
+            #                                        projection_definition=self.config.projection_definition,
+            #                                        grid_definition=self.config.grid_definition
+            #                                        ).xy_to_lonlat(
+            #     x=target_x,
+            #     y=target_y
+            # )
+
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.logpar_decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+            )(
+                GridGenerator(
+                    config_object = self.config,
+                    projection_definition=self.config.projection_definition,
+                    grid_definition=self.config.grid_definition
+                ).xy_to_lonlat
+            )
+            target_lon, target_lat = tracked_func(
                 x=target_x,
                 y=target_y
-            )
+            ) 
+
 
             # Rehshape to original matrix
             target_lon = target_lon.reshape(y_shape, x_shape)
@@ -85,6 +127,7 @@ class ReGridder:
 
         return target_grid
 
+
     def get_neighbours(self, source_lon, source_lat, target_lon, target_lat, search_radius, neighbours):
 
         source_def = geometry.SwathDefinition(
@@ -95,13 +138,20 @@ class ReGridder:
         if self.config.grid_type == 'L1C':
             target_def = geometry.GridDefinition(
                 lons=target_lon,
-                lats=target_lat)
+                lats=target_lat
+            )
 
         elif self.config.grid_type == 'L1R':
             target_def = geometry.SwathDefinition(
                 lons=target_lon,
                 lats=target_lat
             )
+
+        #warnings.showwarning = RGBLogging.custom_warning_handler(logger = self.logger) 
+
+        # Capturing Warnings from kde_tree_get_neighbour_info() 
+        # (Use functools.partial to provide `logger` while deferring the other arguments) 
+        warnings.showwarning = functools.partial(RGBLogging.custom_warning_handler, self.logger)
 
         valid_input_index, valid_output_index, index_array, distance_array = kd_tree.get_neighbour_info(
             source_geo_def=source_def,
@@ -126,6 +176,7 @@ class ReGridder:
         # Remember that valid_output_index could be necessary for something in the future
         return reduced_distance, reduced_index, original_indices, valid_input_index
 
+
     # We need data dict or just pass specific variables?
     def get_l1c_samples(self, variable_dict, target_grid): # also need to change the name of this for l1r
 
@@ -143,7 +194,22 @@ class ReGridder:
                 source_lon = variable_dict[f"longitude_{scan_direction}"]
                 source_lat = variable_dict[f"latitude_{scan_direction}"]
 
-                reduced_distance, reduced_index, original_indices, valid_input_index = self.get_neighbours(
+                # reduced_distance, reduced_index, original_indices, valid_input_index = self.get_neighbours(
+                #     source_lon=source_lon,
+                #     source_lat=source_lat,
+                #     target_lon=target_lon,
+                #     target_lat=target_lat,
+                #     search_radius=search_radius,
+                #     neighbours=neighbours
+                # )
+
+                tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                    decorate  = self.logpar_decorate, 
+                    decorator = RGBLogging.track_perf, 
+                    logger    = self.logger 
+                    )(self.get_neighbours) 
+
+                reduced_distance, reduced_index, original_indices, valid_input_index = tracked_func(
                     source_lon=source_lon,
                     source_lat=source_lat,
                     target_lon=target_lon,
@@ -151,6 +217,7 @@ class ReGridder:
                     search_radius=search_radius,
                     neighbours=neighbours
                 )
+
                 samples_dict_temp = {}
                 samples_dict_temp['distances'] = reduced_distance
                 samples_dict_temp['indexes'] = reduced_index
@@ -165,7 +232,21 @@ class ReGridder:
             source_lon = variable_dict["longitude"]
             source_lat = variable_dict["latitude"]
 
-            reduced_distance, reduced_index, original_indices, valid_input_index = self.get_neighbours(
+            # reduced_distance, reduced_index, original_indices, valid_input_index = self.get_neighbours(
+            #     source_lon=source_lon,
+            #     source_lat=source_lat,
+            #     target_lon=target_lon,
+            #     target_lat=target_lat,
+            #     search_radius=search_radius,
+            #     neighbours=neighbours
+            # )
+
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.logpar_decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.get_neighbours) 
+            reduced_distance, reduced_index, original_indices, valid_input_index = tracked_func(
                 source_lon=source_lon,
                 source_lat=source_lat,
                 target_lon=target_lon,
@@ -182,9 +263,16 @@ class ReGridder:
 
         return samples_dict
 
+
     def sample_selection(self, variable_dict, target_grid):
 
-        samples_dict = self.get_l1c_samples(variable_dict, target_grid)
+        #samples_dict = self.get_l1c_samples(variable_dict, target_grid)
+        tracked_func  = RGBLogging.rgb_decorate_and_execute(
+            decorate  = self.logpar_decorate, 
+            decorator = RGBLogging.track_perf, 
+            logger    = self.logger 
+            )(self.get_l1c_samples)
+        samples_dict = tracked_func(variable_dict, target_grid)
 
         for variable in variable_dict:
             if 'fore' in variable:
@@ -204,30 +292,56 @@ class ReGridder:
 
         if self.config.reduced_grid_inds:
             if self.config.split_fore_aft:
-                samples_dict['fore'] = self.reduce_grid_inds(samples_dict['fore'])
-                samples_dict['aft'] = self.reduce_grid_inds(samples_dict['aft'])
+                #samples_dict['fore'] = self.reduce_grid_inds(samples_dict['fore'])
+
+                tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                    decorate  = self.logpar_decorate, 
+                    decorator = RGBLogging.track_perf, 
+                    logger    = self.logger 
+                    )(self.reduce_grid_inds)
+                samples_dict['fore'] = tracked_func(samples_dict['fore'])
+
+                #samples_dict['aft'] = self.reduce_grid_inds(samples_dict['aft'])
+                tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                    decorate  = self.logpar_decorate, 
+                    decorator = RGBLogging.track_perf, 
+                    logger    = self.logger 
+                    )(self.reduce_grid_inds)
+                samples_dict['aft'] = tracked_func(samples_dict['aft'])
             else:
-                samples_dict = self.reduce_grid_inds(samples_dict)
+                #samples_dict = self.reduce_grid_inds(samples_dict)
+                tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                    decorate  = self.logpar_decorate, 
+                    decorator = RGBLogging.track_perf, 
+                    logger    = self.logger 
+                    )(self.reduce_grid_inds)
+                samples_dict = tracked_func(samples_dict)
 
         return samples_dict, variable_dict
+
 
     def reduce_grid_inds(self, samples_dict):
 
         if self.config.grid_type == 'L1C':
             grid_shape = GRIDS[self.config.grid_definition]['n_rows'], GRIDS[self.config.grid_definition]['n_cols']
+
         elif self.config.grid_type == 'L1R':
             grid_shape = self.config.scan_geometry[self.config.target_band[0]]
 
         rows_out, cols_out = unravel_index(samples_dict['grid_1d_index'], grid_shape)
+
         row_min = self.config.reduced_grid_inds[0]
         row_max = self.config.reduced_grid_inds[1]
         col_min = self.config.reduced_grid_inds[2]
         col_max = self.config.reduced_grid_inds[3]
+
         indices = where((rows_out >= row_min) & (rows_out <= row_max) &
                         (cols_out >= col_min) & (cols_out <= col_max))[0]
+
         filtered_samples_dict = {key: value[indices] for key, value in samples_dict.items()}
 
         return filtered_samples_dict
+
 
     def create_output_grid_inds(self, grid_1d_index):
         # Can be unified
@@ -247,32 +361,78 @@ class ReGridder:
 
         return row, col
 
+
     def sample_selection_brute_force(self, variable_dict):
+
         samples_dict = {}
 
-        target_x, target_y = GridGenerator(self.config,
-                                           projection_definition=self.config.projection_definition,
-                                           grid_definition=self.config.grid_definition).generate_grid_xy(
-            return_resolution=False
+        # target_x, target_y = GridGenerator(self.config,
+        #                                    projection_definition=self.config.projection_definition,
+        #                                    grid_definition=self.config.grid_definition).generate_grid_xy(
+        #     return_resolution=False
+        # )
+        tracked_func  = RGBLogging.rgb_decorate_and_execute(
+            decorate  = self.logpar_decorate, 
+            decorator = RGBLogging.track_perf, 
+            logger    = self.logger 
+        )(
+            GridGenerator(
+                config_object = self.config,
+                projection_definition=self.config.projection_definition,
+                grid_definition=self.config.grid_definition
+            ).generate_grid_xy
         )
-        target_lon, target_lat = GridGenerator(self.config,
-                                               projection_definition=self.config.projection_definition,
-                                               grid_definition=self.config.grid_definition).xy_to_lonlat(
+        target_x, target_y = tracked_func(return_resolution=False) 
+
+        #target_lon, target_lat = GridGenerator(self.config,
+        #                                       projection_definition=self.config.projection_definition,
+        #                                       grid_definition=self.config.grid_definition).xy_to_lonlat(
+        #    x=target_x,
+        #    y=target_y
+        #)
+
+        tracked_func  = RGBLogging.rgb_decorate_and_execute(
+            decorate  = self.logpar_decorate, 
+            decorator = RGBLogging.track_perf, 
+            logger    = self.logger 
+        )(
+            GridGenerator(
+                config_object = self.config,
+                projection_definition=self.config.projection_definition,
+                grid_definition=self.config.grid_definition
+            ).xy_to_lonlat
+        )
+        target_lon, target_lat = tracked_func(
             x=target_x,
             y=target_y
-        )
+        ) 
 
         if self.config.split_fore_aft:
             for scan_direction in ['fore', 'aft']:
 
                 source_lon, source_lat = variable_dict[f'longitude_{scan_direction}'], variable_dict[f'latitude_{scan_direction}']
 
-                source_x, source_y = GridGenerator(self.config,
-                                                   projection_definition=self.config.projection_definition,
-                                                   grid_definition=self.config.grid_definition).lonlat_to_xy(
+                # source_x, source_y = GridGenerator(self.config,
+                #                                    projection_definition=self.config.projection_definition,
+                #                                    grid_definition=self.config.grid_definition).lonlat_to_xy(
+                #     lon = source_lon,
+                #     lat = source_lat
+                # )
+                tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                    decorate  = self.logpar_decorate, 
+                    decorator = RGBLogging.track_perf, 
+                    logger    = self.logger 
+                )(
+                    GridGenerator(
+                        config_object = self.config,
+                        projection_definition=self.config.projection_definition,
+                        grid_definition=self.config.grid_definition
+                    ).lonlat_to_xy
+                )
+                source_x, source_y = tracked_func(
                     lon = source_lon,
                     lat = source_lat
-                )
+                ) 
 
                 pixel_map = zeros(source_x.shape[0])
                 distances = zeros(source_x.shape[0])
@@ -311,12 +471,27 @@ class ReGridder:
         else:
             source_lon, source_lat = variable_dict[f'longitude'], variable_dict[
                 f'latitude']
-            source_x, source_y = GridGenerator(self.config,
-                                               projection_definition=self.config.projection_definition,
-                                               grid_definition=self.config.grid_definition).lonlat_to_xy(
-                lon=source_lon,
-                lat=source_lat
+            # source_x, source_y = GridGenerator(self.config,
+            #                                    projection_definition=self.config.projection_definition,
+            #                                    grid_definition=self.config.grid_definition).lonlat_to_xy(
+            #     lon=source_lon,
+            #     lat=source_lat
+            # )
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.logpar_decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+            )(
+                GridGenerator(
+                    config_object = self.config,
+                    projection_definition=self.config.projection_definition,
+                    grid_definition=self.config.grid_definition
+                ).lonlat_to_xy
             )
+            source_x, source_y = tracked_func(
+                lon = source_lon,
+                lat = source_lat
+            ) 
 
             pixel_map = zeros(source_x.shape[0])
             distances = zeros(source_x.shape[0])
@@ -357,6 +532,7 @@ class ReGridder:
             samples_dict = samples_dict_temp
 
         return samples_dict, variable_dict
+
 
     def reshape_output_l1r_dict(self, data_dict_out):
         data_dict_reshaped = {}
@@ -409,13 +585,31 @@ class ReGridder:
 
         # Get target grid
         if self.config.grid_type == 'L1C':
-            target_grid = self.get_grid()
+
+            #target_grid = self.get_grid()
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.logpar_decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.get_grid) 
+            target_grid = tracked_func()
+
             target_dict = None
+
         elif self.config.grid_type == 'L1R':
-            target_grid = self.get_grid(data_dict)
+
+            #target_grid = self.get_grid(data_dict)
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.logpar_decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.get_grid) 
+            target_grid = tracked_func(data_dict)
+
             target_dict = data_dict[self.config.target_band[0]]
 
         data_dict_out = {}
+
         for band in data_dict:
             if band not in self.config.source_band and self.config.grid_type == 'L1R':
                 continue
@@ -423,10 +617,25 @@ class ReGridder:
             self.logger.info(f"Regridding band: `{band}`")
 
             variable_dict = data_dict[band]
+
             if self.config.search_radius:
-                samples_dict, variable_dict = self.sample_selection(variable_dict, target_grid)
+
+                #samples_dict, variable_dict = self.sample_selection(variable_dict, target_grid)
+                tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                    decorate  = self.logpar_decorate, 
+                    decorator = RGBLogging.track_perf, 
+                    logger    = self.logger 
+                    )(self.sample_selection) 
+                samples_dict, variable_dict = tracked_func(variable_dict, target_grid)
+
             else:
-                samples_dict, variable_dict = self.sample_selection_brute_force(variable_dict)
+                #samples_dict, variable_dict = self.sample_selection_brute_force(variable_dict)
+                tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                    decorate  = self.logpar_decorate, 
+                    decorator = RGBLogging.track_perf, 
+                    logger    = self.logger 
+                    )(self.sample_selection_brute_force) 
+                samples_dict, variable_dict = tracked_func(variable_dict, target_grid)
 
             if self.config.split_fore_aft:
 
@@ -448,14 +657,20 @@ class ReGridder:
                     }
 
                     # Regrid Variables
-                    algorithm = self.get_algorithm(algorithm_name=self.config.regridding_algorithm,
-                                                   band=band)
+                    #algorithm = self.get_algorithm(algorithm_name=self.config.regridding_algorithm,
+                    #                               band=band)
+                    tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                        decorate  = self.logpar_decorate, 
+                        decorator = RGBLogging.track_perf, 
+                        logger    = self.logger 
+                        )(self.get_algorithm) 
+                    algorithm = tracked_func(algorithm_name=self.config.regridding_algorithm, band=band)
 
                     # Tracking performance of this method 
                     #variable_dict_out[scan_direction] = algorithm.interp_variable_dict(**args)
 
                     tracked_func  = RGBLogging.rgb_decorate_and_execute(
-                        decorate  = self.config.logpar_decorate, 
+                        decorate  = self.logpar_decorate, 
                         decorator = RGBLogging.track_perf, 
                         logger    = self.logger 
                         )(algorithm.interp_variable_dict)  
@@ -466,7 +681,7 @@ class ReGridder:
                     #cell_row, cell_col = self.create_output_grid_inds(grid_1d_index=samples_dict[scan_direction]['grid_1d_index'])
 
                     tracked_func  = RGBLogging.rgb_decorate_and_execute(
-                        decorate  = self.config.logpar_decorate, 
+                        decorate  = self.logpar_decorate, 
                         decorator = RGBLogging.track_perf, 
                         logger    = self.logger 
                         )(self.create_output_grid_inds) 
@@ -482,9 +697,13 @@ class ReGridder:
 
                     # Add regridding_n_samples
                     if 'regridding_n_samples' in self.config.variables_to_regrid:
+
                         if samples_dict[scan_direction]['distances'].ndim == 1:
+
                             variable_dict_out[scan_direction]["regridding_n_samples"] = ones(len(samples_dict[scan_direction]['distances']), dtype=int)
+
                         else:
+                            
                             variable_dict_out[scan_direction][f"regridding_n_samples_{scan_direction}"] = (
                                 sum(~isinf(samples_dict[scan_direction]['distances']), axis=1))
 
@@ -502,11 +721,17 @@ class ReGridder:
                             l1b_orphans[used_scans, used_samples] = 1
 
                         elif self.config.input_data_type == 'CIMR':
+
                             scan_geometry = self.config.scan_geometry[band]
+
                             num_feed_horns = self.config.num_horns[band]
+
                             l1b_orphans = zeros((scan_geometry[0], int(scan_geometry[1]/num_feed_horns), num_feed_horns))
+
                             feed_horn_number = variable_dict[f'feed_horn_number_{scan_direction}']
+
                             used_feed_horn_number = feed_horn_number[unique_indexes].astype(int)
+
                             for feed_horn in range(num_feed_horns):
                                 feed_horn_inds = where(used_feed_horn_number == feed_horn)[0]
                                 feed_horn_scans = used_scans[feed_horn_inds]
@@ -533,20 +758,44 @@ class ReGridder:
                 }
 
                 # Regrid Variables
-                algorithm = self.get_algorithm(algorithm_name=self.config.regridding_algorithm,
-                                               band=band)
-                variable_dict_out = algorithm.interp_variable_dict(**args)
+                #algorithm = self.get_algorithm(algorithm_name=self.config.regridding_algorithm,
+                #                               band=band)
+                tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                    decorate  = self.logpar_decorate, 
+                    decorator = RGBLogging.track_perf, 
+                    logger    = self.logger 
+                    )(self.get_algorithm) 
+                algorithm = tracked_func(algorithm_name=self.config.regridding_algorithm, band=band)
+
+                #variable_dict_out = algorithm.interp_variable_dict(**args)
+                tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                    decorate  = self.logpar_decorate, 
+                    decorator = RGBLogging.track_perf, 
+                    logger    = self.logger 
+                    )(algorithm.interp_variable_dict)  
+
+                variable_dict_out = tracked_func(**args) 
 
                 # Add cell_row and cell_col indexes
-                cell_row, cell_col = self.create_output_grid_inds(samples_dict['grid_1d_index'])
+                #cell_row, cell_col = self.create_output_grid_inds(samples_dict['grid_1d_index'])
+                tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                    decorate  = self.logpar_decorate, 
+                    decorator = RGBLogging.track_perf, 
+                    logger    = self.logger 
+                    )(self.create_output_grid_inds) 
+                cell_row, cell_col = tracked_func(samples_dict['grid_1d_index'])
+
                 variable_dict_out['cell_row'] = cell_row
                 variable_dict_out['cell_col'] = cell_col
 
                 # Add regridding_n_samples
                 if 'regridding_n_samples' in self.config.variables_to_regrid:
+
                     if samples_dict['distances'].ndim == 1:
+
                         variable_dict_out["regridding_n_samples"] = ones(len(samples_dict['distances']), dtype=int)
                     else:
+
                         variable_dict_out["regridding_n_samples"] = sum(~isinf(samples_dict['distances']), axis=1)
 
                 # Add regridding_l1b_orphans
@@ -563,12 +812,17 @@ class ReGridder:
                         l1b_orphans[used_scans, used_samples] = 1
 
                     elif self.config.input_data_type == 'CIMR':
+
                         scan_geometry = self.config.scan_geometry[band]
                         num_feed_horns = self.config.num_horns[band]
+
                         l1b_orphans = zeros(
                             (scan_geometry[0], int(scan_geometry[1] / num_feed_horns), num_feed_horns))
+
                         feed_horn_number = variable_dict['feed_horn_number']
+
                         used_feed_horn_number = feed_horn_number[unique_indexes].astype(int)
+
                         for feed_horn in range(num_feed_horns):
                             feed_horn_inds = where(used_feed_horn_number == feed_horn)[0]
                             feed_horn_scans = used_scans[feed_horn_inds]
@@ -583,7 +837,13 @@ class ReGridder:
 
         # Reshape CIMR data
         if self.config.grid_type == 'L1R':
-            data_dict_out = self.reshape_output_l1r_dict(data_dict_out)
+
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.logpar_decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.reshape_output_l1r_dict) 
+            data_dict_out = tracked_func(data_dict_out)
 
         return data_dict_out
 

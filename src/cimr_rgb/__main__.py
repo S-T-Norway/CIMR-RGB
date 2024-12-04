@@ -316,7 +316,6 @@ def main():
     rgb_config        = get_rgb_configuration(parser = parser)#, config_file = rgb_config_path)
 
 
-    # TODO: The `logger` variable does not seem to be working properly here 
     # Ingest and Extract L1B Data
     timed_obj         = RGBLogging.rgb_decorate_and_execute(
             decorate  = rgb_config.logpar_decorate, 

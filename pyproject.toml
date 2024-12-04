@@ -51,7 +51,15 @@ package-dir = {"" = "src"}
 include-package-data = true
 
 [tool.setuptools.package-data]
-cimr_rgb = ["configs/cimr_rgb_logger_config.json"]
+cimr_rgb = [
+  "configs/cimr_rgb_logger_config.json", 
+  "dpr/Grids/NSIDC_PS/NSIDC0771_CellArea_PS_N12.5km_v1.0.nc", 
+  "dpr/Grids/NSIDC_PS/NSIDC0771_CellArea_PS_S12.5km_v1.0.nc",  
+  "dpr/Grids/NSIDC_PS/NSIDC0771_CellArea_PS_N25km_v1.0.nc", 
+  "dpr/Grids/NSIDC_PS/NSIDC0771_CellArea_PS_S25km_v1.0.nc",  
+  "dpr/Grids/NSIDC_PS/NSIDC0771_CellArea_PS_N6.25km_v1.0.nc",  
+  "dpr/Grids/NSIDC_PS/NSIDC0771_CellArea_PS_S6.25km_v1.0.nc" 
+]
 
 
 [project.scripts]
