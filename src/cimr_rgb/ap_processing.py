@@ -1,4 +1,5 @@
 import os
+from sys import excepthook
 
 import numpy as np
 from numpy import (abs, deg2rad, full, sqrt, logical_or, logical_and, conj, real, imag,
@@ -104,7 +105,7 @@ class AntennaPattern:
             ap_dict = {}
             fraction_below_threshold = {}
             ap_dict[0], fraction_below_threshold[0] = self.extract_gain_dict(
-                file_path = self.config.antenna_pattern_path,
+                file_path = self.config.antenna_patterns_path,
                 antenna_threshold=self.antenna_threshold
             )
 
@@ -115,7 +116,7 @@ class AntennaPattern:
             fraction_below_threshold = {}
             for feedhorn in range(num_horns):
                 path = os.path.join(
-                    self.config.antenna_pattern_path, self.band)
+                    self.config.antenna_patterns_path, self.band)
                 horn = self.band + str(feedhorn)
 
                 horn_files = [ff for ff in os.listdir(path) if horn in ff]

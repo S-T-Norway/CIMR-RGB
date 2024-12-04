@@ -148,8 +148,8 @@ class rSIRInterp:
                 int_dom_lats=int_dom_lats,
                 lon_l1b=target_lon,
                 lat_l1b=target_lat,
-                sigmax=target_cell_size[0],
-                sigmay=target_cell_size[1],
+                sigmax=target_cell_size[0]/10,
+                sigmay=target_cell_size[1]/10,
                 alpha=0.
             )
         elif self.config.target_antenna_method == 'gaussian':
@@ -253,6 +253,10 @@ class rSIRInterp:
             # Get Antenna Patterns
             samples = indexes[target_cell, :]
             input_samples = samples[samples != fill_value]
+            # RSIR doesnt work for one sample, we should consider just making it nearest neighbour
+            if len(input_samples) <1:
+                T_out.append(nan)
+                continue
             source_ant_patterns, target_ant_pattern = self.get_antenna_patterns(
                 band=band,
                 variable_dict=variable_dict,

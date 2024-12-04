@@ -486,6 +486,7 @@ class GridGenerator:
 
         return x, y
 
+
     def lonlat_to_xy_ups(self,
                          lon: np.ndarray | float,
                          lat: np.ndarray | float,
@@ -787,7 +788,7 @@ class GridGenerator:
     def xy_to_lonlat_merc(self,
                           x: np.ndarray | float,
                           y: np.ndarray | float
-                          ) -> (np.ndarray | float, np.ndarray | float):
+                          ) -> tuple[np.ndarray | float, np.ndarray | float]: 
         """
         (Global) Mercator projection using pyproj library:
         https://proj.org/en/9.5/operations/projections/merc.html
@@ -807,7 +808,7 @@ class GridGenerator:
     def xy_to_lonlat(self,
                      x: np.ndarray | float,
                      y: np.ndarray | float
-                     ) -> (np.ndarray | float, np.ndarray | float):
+                     ) -> tuple[np.ndarray | float, np.ndarray | float]: 
         """
         Converts x and y coordinates to longitude and latitude coordinates for a given projection.
         Parameters
