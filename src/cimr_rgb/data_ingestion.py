@@ -88,11 +88,17 @@ class DataIngestion:
         """
         self.config = config_object
 
-        if config_object.logger is not None: 
-            self.logger = config_object.logger 
+        # If config_object is None, then it won't have logger as attribute 
+        if self.config is not None: 
+            if self.config.logger is not None: 
+                self.logger = self.config.logger 
+            self.logpar_decorate = self.config.logpar_decorate  
         else:
+            # No formatting will be performed 
             self.logger = logging.getLogger(__name__)
             self.logger.addHandler(logging.NullHandler()) 
+            self.logpar_decorate = False 
+
 
 
     def remove_out_of_bounds(self, data_dict):
@@ -128,12 +134,25 @@ class DataIngestion:
 
 
 
-        source_x, source_y = GridGenerator(self.config,
-                                           projection_definition=self.config.projection_definition,
-                                           grid_definition=self.config.grid_definition).lonlat_to_xy(
+        # source_x, source_y = GridGenerator(self.config,
+        #                                    projection_definition=self.config.projection_definition,
+        #                                    grid_definition=self.config.grid_definition).lonlat_to_xy(
+        #     lon = data_dict['longitude'],
+        #     lat = data_dict['latitude']
+        # )
+        timed_obj         = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.logpar_decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(GridGenerator) 
+
+        source_x, source_y = timed_obj(self.config,
+            projection_definition=self.config.projection_definition,
+            grid_definition=self.config.grid_definition).lonlat_to_xy(
             lon = data_dict['longitude'],
             lat = data_dict['latitude']
         )
+
 
         out_of_bounds_xy = where((source_y < y_bound_min) | (source_y > y_bound_max))
 
@@ -193,10 +212,25 @@ class DataIngestion:
             if self.config.input_data_type == "AMSR2":
 
                 # Extract Metadata
-                coreg_a   = self.amsr2_coreg_extraction(data.attrs['CoRegistrationParameterA1'][0])
-                coreg_b   = self.amsr2_coreg_extraction(data.attrs['CoRegistrationParameterA2'][0])
+                # coreg_a   = self.amsr2_coreg_extraction(data.attrs['CoRegistrationParameterA1'][0])
+                # coreg_b   = self.amsr2_coreg_extraction(data.attrs['CoRegistrationParameterA2'][0])
+                timed_obj         = RGBLogging.rgb_decorate_and_execute(
+                        decorate  = self.logpar_decorate, 
+                        decorator = RGBLogging.track_perf, 
+                        logger    = self.logger 
+                        )(self.amsr2_coreg_extraction) 
+                coreg_a = timed_obj(data.attrs['CoRegistrationParameterA1'][0])
+
+                timed_obj         = RGBLogging.rgb_decorate_and_execute(
+                        decorate  = self.logpar_decorate, 
+                        decorator = RGBLogging.track_perf, 
+                        logger    = self.logger 
+                        )(self.amsr2_coreg_extraction) 
+                coreg_b = timed_obj(data.attrs['CoRegistrationParameterA2'][0])
+
                 overlap   = int(data.attrs['OverlapScans'][0])
                 num_scans = int(data.attrs['NumberOfScans'][0])
+
                 self.config.num_target_scans = num_scans
 
                 if ['89a', '89b'] in self.config.target_band:
@@ -368,12 +402,25 @@ class DataIngestion:
                         variable_dict[variable] = tile(variable_dict[variable], (num_samples, 1)).T
 
                 if self.config.quality_control == True:
-                    variable_dict = self.apply_smap_qc(variable_dict)
+                    #variable_dict = self.apply_smap_qc(variable_dict)
+                    timed_obj         = RGBLogging.rgb_decorate_and_execute(
+                            decorate  = self.logpar_decorate, 
+                            decorator = RGBLogging.track_perf, 
+                            logger    = self.logger 
+                            )(self.apply_smap_qc) 
+                    variable_dict = timed_obj(variable_dict)
+
 
                 # Remove out of bounds
                 # 
                 # [Note]: This method calls in the `generate_grid` method under the hood 
-                variable_dict = self.remove_out_of_bounds(variable_dict)
+                #variable_dict = self.remove_out_of_bounds(variable_dict)
+                timed_obj         = RGBLogging.rgb_decorate_and_execute(
+                        decorate  = self.logpar_decorate, 
+                        decorator = RGBLogging.track_perf, 
+                        logger    = self.logger 
+                        )(self.remove_out_of_bounds) 
+                variable_dict = timed_obj(variable_dict)
 
                 # Split Fore/Aft and Flatten
                 if self.config.split_fore_aft:
@@ -510,7 +557,7 @@ class DataIngestion:
                     else:
                         if not hasattr(self.config, 'max_altitude'):
                             #print(band)
-                            self.logger.info(band)
+                            self.logger.info(f"`{band}` Band: Calculating max altitude for `ap_radius`")
 
                             altitude = sqrt(variable_dict['x_position'] ** 2 + variable_dict['y_position'] ** 2 + variable_dict[
                                 'z_position'] ** 2) - 6371000
@@ -521,16 +568,33 @@ class DataIngestion:
                 num_scans, num_samples = variable_dict['longitude'].shape[:2] # Changed from processing scan angle because longitude will ALWAYS be there
 
                 # Combine Feed horns and Flatten
-                variable_dict = self.combine_cimr_feeds(variable_dict, num_feed_horns)
+
+                #variable_dict = self.combine_cimr_feeds(variable_dict, num_feed_horns)
+                timed_obj         = RGBLogging.rgb_decorate_and_execute(
+                        decorate  = self.logpar_decorate, 
+                        decorator = RGBLogging.track_perf, 
+                        logger    = self.logger 
+                        )(self.combine_cimr_feeds) 
+                variable_dict = timed_obj(variable_dict, num_feed_horns)
+
                 variable_dict['scan_number'] = float32(repeat(arange(num_scans)[:, newaxis], num_samples * num_feed_horns,axis=1).flatten('C'))
+
                 single_row = tile(arange(num_samples), num_feed_horns)
+
                 variable_dict['sample_number'] = float32(tile(single_row, (num_scans, 1)).flatten('C'))
 
 
 
                 # Remove out of bounds here
                 if self.config.grid_type != 'L1R':
-                    variable_dict = self.remove_out_of_bounds(variable_dict)
+
+                    #variable_dict = self.remove_out_of_bounds(variable_dict)
+                    timed_obj         = RGBLogging.rgb_decorate_and_execute(
+                            decorate  = self.logpar_decorate, 
+                            decorator = RGBLogging.track_perf, 
+                            logger    = self.logger 
+                            )(self.remove_out_of_bounds) 
+                    variable_dict = timed_obj(variable_dict)
 
                 # Split Fore/Aft
                 if self.config.grid_type == 'L1R':
@@ -827,7 +891,13 @@ class DataIngestion:
             Dictionary containing the data extracted from the HDF5 file.
         """
 
-        data_dict, coreg_a, coreg_b, lats_89a, lons_89a, lats_89b, lons_89b = self.read_hdf5()
+        #data_dict, coreg_a, coreg_b, lats_89a, lons_89a, lats_89b, lons_89b = self.read_hdf5()
+        timed_obj         = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.logpar_decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.read_hdf5) 
+        data_dict, coreg_a, coreg_b, lats_89a, lons_89a, lats_89b, lons_89b = timed_obj()
 
         for band in data_dict:
             if band == '89a':
@@ -839,7 +909,19 @@ class DataIngestion:
             else:
                 # Extract BTs of Target Band using conversion algorithm from 89a channel.
                 coreg_index = self.config.key_mappings[band][0]
-                lats, lons = self.amsr2_latlon_conversion(
+
+                # lats, lons = self.amsr2_latlon_conversion(
+                #     coreg_a=coreg_a[coreg_index],
+                #     coreg_b=coreg_b[coreg_index],
+                #     lons_hi=lons_89a,
+                #     lats_hi=lats_89a
+                # )
+                timed_obj         = RGBLogging.rgb_decorate_and_execute(
+                        decorate  = self.logpar_decorate, 
+                        decorator = RGBLogging.track_perf, 
+                        logger    = self.logger 
+                        )(self.amsr2_latlon_conversion) 
+                lats, lons = timed_obj(
                     coreg_a=coreg_a[coreg_index],
                     coreg_b=coreg_b[coreg_index],
                     lons_hi=lons_89a,
@@ -858,7 +940,13 @@ class DataIngestion:
         # Remove out of bounds inds
         if self.config.grid_type != 'L1R':
             for band in data_dict:
-                data_dict[band] = self.remove_out_of_bounds(data_dict[band])
+                #data_dict[band] = self.remove_out_of_bounds(data_dict[band])
+                timed_obj         = RGBLogging.rgb_decorate_and_execute(
+                        decorate  = self.logpar_decorate, 
+                        decorator = RGBLogging.track_perf, 
+                        logger    = self.logger 
+                        )(self.remove_out_of_bounds) 
+                data_dict[band] = timed_obj(data_dict[band])
 
         # Flatten data
         for band in data_dict:
@@ -886,7 +974,7 @@ class DataIngestion:
 
         # Retrieving Data 
         tracked_func  = RGBLogging.rgb_decorate_and_execute(
-            decorate  = self.config.logpar_decorate, 
+            decorate  = self.logpar_decorate, 
             decorator = RGBLogging.track_perf, 
             logger    = self.logger 
             )(self.read_hdf5) 
@@ -897,7 +985,7 @@ class DataIngestion:
 
         # Cleaning Data
         tracked_func  = RGBLogging.rgb_decorate_and_execute(
-            decorate  = self.config.logpar_decorate, 
+            decorate  = self.logpar_decorate, 
             decorator = RGBLogging.track_perf, 
             logger    = self.logger 
             )(self.clean_data) 
@@ -916,8 +1004,19 @@ class DataIngestion:
         :return:
         """
         # Open netcdf file
+        # 
+        # [Note]: This method is defined as @property so 
+        #         it cannot be tracked easily using track_perf method  
         data_dict = self.read_netcdf
-        data_dict = self.clean_data(data_dict)
+
+        #data_dict = self.clean_data(data_dict)
+        tracked_func  = RGBLogging.rgb_decorate_and_execute(
+            decorate  = self.logpar_decorate, 
+            decorator = RGBLogging.track_perf, 
+            logger    = self.logger 
+            )(self.clean_data) 
+        data_dict = tracked_func(data_dict) 
+        #data_dict = self.clean_data(data_dict)
 
         # Apply QC as and when
         return data_dict
