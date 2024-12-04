@@ -192,17 +192,21 @@ class ConfigFile:
                 input_data_type=self.input_data_type
             )
 
-        self.grid_definition = self.validate_grid_definition(
-            config_object    = config_object,
-            #grid_type        = self.grid_type,
-            grid_definition  = 'GridParams/grid_definition'
-        )
+        if self.grid_type == "L1C":
+            self.grid_definition = self.validate_grid_definition(
+                config_object    = config_object,
+                #grid_type        = self.grid_type,
+                grid_definition  = 'GridParams/grid_definition'
+            )
 
-        self.projection_definition = self.validate_projection_definition(
-            config_object    = config_object,
-            grid_definition  = self.grid_definition,
-            projection_definition  = 'GridParams/projection_definition'
-        )
+            self.projection_definition = self.validate_projection_definition(
+                config_object    = config_object,
+                grid_definition  = self.grid_definition,
+                projection_definition  = 'GridParams/projection_definition'
+            )
+        else:
+            self.grid_definition = None
+            self.projection_definition = None
 
         self.regridding_algorithm  = self.validate_regridding_algorithm(
             config_object          = config_object,
@@ -850,7 +854,7 @@ class ConfigFile:
         """
         if input_data_type == "AMSR2":
             valid_input = ['6', '7', '10', '18', '23', '36', '89a', '89b']
-            if config_object.find(source_band).text in valid_input:
+            if all(item in valid_input for item in config_object.find(source_band).text.split()):
                 return config_object.find(source_band).text.split()
             raise ValueError(
                 f"Invalid Source Band, check configuration file. "
