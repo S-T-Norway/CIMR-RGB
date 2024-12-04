@@ -831,7 +831,7 @@ class GridGenerator:
 
             elif "STEREO" in self.grid_definition:
                 import netCDF4 as nc
-                target_dir = os.path.join(os.path.dirname(os.getcwd()), "dpr/Grids/NSIDC_PS")
+                target_dir = os.path.join(os.path.dirname(os.getcwd()), "../dpr/Grids/NSIDC_PS")
                 # Open netcdf file
                 for file in os.listdir(target_dir):
                     if f"{self.projection_definition}{str(int(resolution/1000))}" in file:
