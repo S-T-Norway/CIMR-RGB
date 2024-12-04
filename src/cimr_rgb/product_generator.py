@@ -1084,7 +1084,49 @@ class ProductGenerator:
                             var_data[slices] = var_val
                             # Loop through the dictionary and set attributes for the variable
                             for attr_name, attr_value in group_vals[regrid_var].items():
-                                var_data.setncattr(attr_name, attr_value)
+                                if attr_name != "_FillValue" and attr_name != "comment":
+                                    var_data.setncattr(attr_name, attr_value)
+                                elif attr_name == "comment":
+                                    pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_\[fore\|aft\]"
+
+                                    if self.config.split_fore_aft:
+                                        substitution = (
+                                            f"{band_name}_BAND_fore"
+                                            if "_fore" in var_name
+                                            else f"{band_name}_BAND_aft"
+                                        )
+                                    else:
+                                        substitution = f"{band_name}_BAND"
+                                    # print(substitution)
+
+                                    # pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_" #\[fore\|aft\]"
+                                    # substitution = f"{band_name}_BAND_"
+                                    attr_value = re.sub(
+                                        pattern, substitution, attr_value
+                                    )
+                                    # var_data.setncattr(attr_name, attr_value)
+
+                                    # Checking whther there is any patter left of the following format
+                                    pattern = r"\[L\|C\|X\|KU\|KA\]_BAND"
+                                    substitution = f"{band_name}_BAND"
+                                    attr_value = re.sub(
+                                        pattern, substitution, attr_value
+                                    )
+
+                                    pattern = r"\[fore\|aft\]"
+                                    if self.config.split_fore_aft:
+                                        substitution = (
+                                            "fore" if "_fore" in var_name else "aft"
+                                        )
+                                    else:
+                                        # Just leave it the way it is
+                                        substitution = "[fore|aft]"
+                                    attr_value = re.sub(
+                                        pattern, substitution, attr_value
+                                    )
+
+                                    # Setting comment attribute
+                                    var_data.setncattr(attr_name, attr_value)
                             # print(var_name)
                             # print(var_val.shape)
                             # exit()
