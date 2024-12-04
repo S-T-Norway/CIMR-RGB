@@ -192,17 +192,21 @@ class ConfigFile:
                 input_data_type=self.input_data_type
             )
 
-        self.grid_definition = self.validate_grid_definition(
-            config_object    = config_object,
-            #grid_type        = self.grid_type,
-            grid_definition  = 'GridParams/grid_definition'
-        )
+        if self.grid_type == "L1C":
+            self.grid_definition = self.validate_grid_definition(
+                config_object    = config_object,
+                #grid_type        = self.grid_type,
+                grid_definition  = 'GridParams/grid_definition'
+            )
 
-        self.projection_definition = self.validate_projection_definition(
-            config_object    = config_object,
-            grid_definition  = self.grid_definition,
-            projection_definition  = 'GridParams/projection_definition'
-        )
+            self.projection_definition = self.validate_projection_definition(
+                config_object    = config_object,
+                grid_definition  = self.grid_definition,
+                projection_definition  = 'GridParams/projection_definition'
+            )
+        else:
+            self.grid_definition = None
+            self.projection_definition = None
 
         self.regridding_algorithm  = self.validate_regridding_algorithm(
             config_object          = config_object,
@@ -445,6 +449,11 @@ class ConfigFile:
             self.target_antenna_threshold = self.validate_target_antenna_threshold(
                 config_object=config_object,
                 target_antenna_threshold = 'ReGridderParams/target_antenna_threshold'
+            )
+
+            self.max_theta_antenna_patterns = self.validate_max_theta_antenna_patterns(
+                config_object=config_object,
+                max_theta_antenna_patterns='ReGridderParams/max_theta_antenna_patterns',
             )
 
             self.polarisation_method = self.validate_polarisation_method(
@@ -845,7 +854,7 @@ class ConfigFile:
         """
         if input_data_type == "AMSR2":
             valid_input = ['6', '7', '10', '18', '23', '36', '89a', '89b']
-            if config_object.find(source_band).text in valid_input:
+            if all(item in valid_input for item in config_object.find(source_band).text.split()):
                 return config_object.find(source_band).text.split()
             raise ValueError(
                 f"Invalid Source Band, check configuration file. "
@@ -1233,6 +1242,27 @@ class ConfigFile:
                 f"Invalid antenna threshold: {value}. Check Configuration File."
                 f" Antenna threshold must be a float or integer"
             )
+
+    @staticmethod
+    def validate_max_theta_antenna_patterns(config_object, max_theta_antenna_patterns):
+
+        value = config_object.find(max_theta_antenna_patterns).text
+
+        if value is None or value.strip() == "":
+            # We should have a default set of values for each Antenna Pattern
+            # For now, I will just choose 40.
+            return None
+
+        try:
+
+            return float(value)
+
+        except:
+            raise ValueError(
+                f"Invalid max theta for antenna patterns: {value}. Check Configuration File."
+                f"Max theta for antenna patterns must be a float or integer"
+            )
+
 
     @staticmethod
     def validate_polarisation_method(config_object, polarisation_method):

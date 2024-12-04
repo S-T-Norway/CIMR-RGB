@@ -136,7 +136,9 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
         'ReGridderParams/source_antenna_threshold': 
             ['sat', 'source-antenna-threshold', str, "Value for ReGridderParams/source_antenna_threshold parameter."], 
         'ReGridderParams/target_antenna_threshold': 
-            ['tat', 'target-antenna-threshold', str, "Value for ReGridderParams/target_antenna_threshold parameter."], 
+            ['tat', 'target-antenna-threshold', str, "Value for ReGridderParams/target_antenna_threshold parameter."],
+        'ReGridderParams/max_theta_antenna_patterns': 
+            ['mtap', 'max-theta-antenna-patterns', str, "Value for ReGridderParams/max_theta_antenna_patterns."], 
         'ReGridderParams/MRF_grid_definition': 
             ['mat', 'mrf-grid-definition', str, "Value for ReGridderParams/MRF_grid_definition parameter."], 
         'ReGridderParams/MRF_projection_definition': 
