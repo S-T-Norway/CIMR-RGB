@@ -1,8 +1,8 @@
-from numpy import concatenate, logical_and, zeros, zeros_like, linalg, meshgrid, atleast_1d, minimum, maximum, dot, arange
+from numpy import concatenate, logical_and, zeros, zeros_like, linalg, meshgrid, atleast_1d, minimum, maximum, dot, arange, sum
 import numpy as np
 import matplotlib.pyplot as plt
 from .grid_generator import GridGenerator
-from .ap_processing import AntennaPattern, make_integration_grid
+from .ap_processing import AntennaPattern, GaussianAntennaPattern, make_integration_grid
 from tqdm import tqdm
 
 
@@ -29,7 +29,7 @@ def landweber(A, Y, lambda_param=1e-4, alpha=None, n_iter=1000, rtol=1e-5):
     if alpha is None:
         alpha = 1./np.linalg.norm(np.dot(A.T,A))
 
-    for i in range(n_iter):
+    for i in tqdm(range(n_iter)):
         residual = Y - A @ X
         regularization_term = lambda_param * X
         X_new = X + alpha * (At @ residual - regularization_term)
@@ -68,7 +68,7 @@ def conjugate_gradient_ne(A, Y, lambda_param=1e-4, n_iter=1000, rtol=1e-5):
     p = r.copy()                     # Initial search direction
     rs_old = np.dot(r, r)
 
-    for i in range(n_iter):
+    for i in tqdm(range(n_iter)):
         Ap = AtA @ p
         alpha = rs_old / np.dot(p, Ap)
         X_new = X + alpha * p
@@ -84,58 +84,46 @@ def conjugate_gradient_ne(A, Y, lambda_param=1e-4, n_iter=1000, rtol=1e-5):
         rs_old = rs_new
         X = X_new
 
-    print("Reached maximum iterations without full convergence.")
+    print(f"Reached maximum iterations without full convergence, relative error: {rel_error}")
     return X
 
 
 class MIIinterp:
 
-    #this can be called ONLY for L1c
-
     def __init__(self, config, band, inversion_method):
+
+        assert config.grid_type == 'L1C', "Matrix inversion interpolation methods are L1c, please change grid_type to L1c"
+
         self.config = config
         self.band   = band
         self.inversion_method = inversion_method
+        
+        if self.config.source_antenna_method == 'gaussian':
+            self.source_ap = GaussianAntennaPattern(config=self.config, 
+                                                    antenna_threshold=self.config.source_antenna_threshold)
 
-    def interp_variable_dict(self, **kwargs):
-
-        samples_dict   = kwargs['samples_dict']
-        variable_dict  = kwargs['variable_dict']
-        target_dict    = None
-        target_grid    = kwargs['target_grid']
-        scan_direction = kwargs['scan_direction']
-        band           = kwargs['band']
-
-
-        ### keep only variable for the scan direction
-        if scan_direction is not None:
-            variable_dict = {key: value for key, value in variable_dict.items() if key.endswith(scan_direction)}
-        if scan_direction:
-            scan_direction = f"_{scan_direction}"
         else:
-            scan_direction = ""
-        if f"attitude{scan_direction}" not in variable_dict:
-            variable_dict[f'attitude{scan_direction}'] = full(variable_dict[f"longitude{scan_direction}"].shape, None)
-        variable_dict={key.removesuffix(f'{scan_direction}'): value for key, value in variable_dict.items()}
-        ###
+            self.source_ap = AntennaPattern(config=self.config,
+                                            band=self.band,
+                                            antenna_method=self.config.source_antenna_method,
+                                            polarisation_method=self.config.polarisation_method,
+                                            antenna_threshold=self.config.source_antenna_threshold,
+                                            gaussian_params=self.config.source_gaussian_params)
+
+
+    def apply_inversion(self, variable_dict, samples_dict, target_grid):
 
         output_grid = GridGenerator(self.config, self.config.projection_definition, self.config.grid_definition)
 
         #define output variable dictionary
         variable_dict_out = {}
-        for variable in self.config.variables_to_regrid:
+        for variable in variable_dict:
             variable_dict_out[variable] = np.zeros((len(target_grid[0]), len(target_grid[1])))
 
-        #define sample pattern
-        source_ap = AntennaPattern(config=self.config,
-                                   band=band,
-                                   antenna_method = self.config.source_antenna_method,
-                                   polarisation_method = self.config.polarisation_method,
-                                   antenna_threshold=self.config.source_antenna_threshold,
-                                   gaussian_params=self.config.source_gaussian_params)
-
-        #get max radius of patterns among the feedhorns
-        Rpattern = max(source_ap.max_ap_radius.values())
+        if self.config.source_antenna_method == 'gaussian':
+            Rpattern = self.source_ap.estimate_max_ap_radius(self.config.source_gaussian_params[0], self.config.source_gaussian_params[1])
+        else:
+            Rpattern = max(self.source_ap.max_ap_radius.values())
 
         #longitude and latitude of reduced grid
         target_lon = target_grid[0].flatten('C')[samples_dict['grid_1d_index']]
@@ -227,23 +215,39 @@ class MIIinterp:
 
                 for isample in tqdm(range(Nsamples)):
 
-                    projected_pattern=source_ap.antenna_pattern_to_earth(
-                        int_dom_lons=int_dom_lons,
-                        int_dom_lats=int_dom_lats,
-                        x_pos=variable_dict['x_position'][mask][isample], 
-                        y_pos=variable_dict['y_position'][mask][isample],
-                        z_pos=variable_dict['z_position'][mask][isample],
-                        x_vel=variable_dict['x_velocity'][mask][isample],
-                        y_vel=variable_dict['y_velocity'][mask][isample],
-                        z_vel=variable_dict['z_velocity'][mask][isample],
-                        processing_scan_angle=variable_dict['processing_scan_angle'][mask][isample],
-                        feed_horn_number=variable_dict['feed_horn_number'][mask][isample],
-                        attitude=variable_dict['attitude'][mask][isample],
-                        lon_l1b = variable_dict['longitude'][mask][isample],
-                        lat_l1b = variable_dict['latitude'][mask][isample]
-                        )
+                    if self.config.source_antenna_method == 'gaussian':
+                        projected_pattern = self.source_ap.antenna_pattern_to_earth(
+                            int_dom_lons=int_dom_lons,
+                            int_dom_lats=int_dom_lats,  
+                            lon_nadir=variable_dict['sub_satellite_lon'][mask][isample],
+                            lat_nadir=variable_dict['sub_satellite_lat'][mask][isample],
+                            lon_l1b=variable_dict['longitude'][mask][isample],
+                            lat_l1b=variable_dict['latitude'][mask][isample],
+                            sigmax=self.config.source_gaussian_params[0],
+                            sigmay=self.config.source_gaussian_params[1]
+                        )        
+                        fraction_above_threshold = 1. 
+                    else:        
+                        projected_pattern=self.source_ap.antenna_pattern_to_earth(
+                            int_dom_lons=int_dom_lons,
+                            int_dom_lats=int_dom_lats,
+                            x_pos=variable_dict['x_position'][mask][isample], 
+                            y_pos=variable_dict['y_position'][mask][isample],
+                            z_pos=variable_dict['z_position'][mask][isample],
+                            x_vel=variable_dict['x_velocity'][mask][isample],
+                            y_vel=variable_dict['y_velocity'][mask][isample],
+                            z_vel=variable_dict['z_velocity'][mask][isample],
+                            processing_scan_angle=variable_dict['processing_scan_angle'][mask][isample],
+                            feed_horn_number=variable_dict['feed_horn_number'][mask][isample],
+                            attitude=variable_dict['attitude'][mask][isample],
+                            lon_l1b = variable_dict['longitude'][mask][isample],
+                            lat_l1b = variable_dict['latitude'][mask][isample]
+                            )
 
-                    projected_pattern /= np.sum(projected_pattern)   #implement ap threshold here
+                        fraction_above_threshold = 1.- self.source_ap.fraction_below_threshold[int(variable_dict['feed_horn_number'][mask][isample])]
+
+                    projected_pattern /= (fraction_above_threshold*sum(projected_pattern))
+
                     A[irow] = projected_pattern.flatten()
 
                     irow += 1
@@ -273,8 +277,34 @@ class MIIinterp:
 
                     variable_dict_out[variable][imin+i1:imin+i2, jmin+j1:jmin+j2] = X1.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
 
-        plt.figure()
-        plt.imshow(variable_dict_out[variable][imin:imax, jmin:jmax])
-        plt.show()
+        return variable_dict_out
+
+
+    def interp_variable_dict(self, **kwargs):
+
+        samples_dict   = kwargs['samples_dict']
+        variable_dict  = kwargs['variable_dict']
+        target_grid    = kwargs['target_grid']
+        scan_direction = kwargs['scan_direction']
+
+        ### keep only variable for the scan direction
+        if scan_direction is not None:
+            variable_dict = {key: value for key, value in variable_dict.items() if key.endswith(scan_direction)}
+        if scan_direction:
+            scan_direction = f"_{scan_direction}"
+        else:
+            scan_direction = ""
+        if f"attitude{scan_direction}" not in variable_dict:
+            variable_dict[f'attitude{scan_direction}'] = full(variable_dict[f"longitude{scan_direction}"].shape, None)
+        variable_dict={key.removesuffix(f'{scan_direction}'): value for key, value in variable_dict.items()}
+        ###
+
+        variable_dict_out = self.apply_inversion(variable_dict, samples_dict, target_grid)
+
+
+        # print(variable_dict_out['bt_h'].shape)
+        # plt.figure()
+        # plt.imshow(variable_dict_out['bt_h'])
+        # plt.show()
 
         return variable_dict_out
