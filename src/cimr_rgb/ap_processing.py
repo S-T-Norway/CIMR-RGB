@@ -116,7 +116,7 @@ class AntennaPattern:
             fraction_below_threshold = {}
             for feedhorn in range(num_horns):
                 path = os.path.join(
-                    self.config.antenna_pattern_path, self.band)
+                    self.config.antenna_patterns_path, self.band)
                 horn = self.band + str(feedhorn)
 
                 horn_files = [ff for ff in os.listdir(path) if horn in ff]
