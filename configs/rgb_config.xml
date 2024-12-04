@@ -36,11 +36,15 @@
       <bg_smoothing>1</bg_smoothing>
     </ReGridderParams>
     <OutputData>
+      <version>1.0.0</version>
       <save_to_disk>True</save_to_disk>
       <output_path>insert path to output directory</output_path>
+      <timestamp />
+      <timestamp_fmt>%Y-%m-%d_%H-%M-%S</timestamp_fmt>
     </OutputData>
     <LoggingParams>
-      <config_path>./src/cimr_rgb/logger_config.json</config_path>
+      <logger_name>rgb-logger</logger_name>
+      <config_path></config_path>
 	    <decorate>True</decorate>
     </LoggingParams> 
 </config>
