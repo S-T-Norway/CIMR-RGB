@@ -1,15 +1,16 @@
-from logging import config
+import logging
+import logging.config as logconfig
 import re
-
-# import pickle
 import pathlib as pb
 import datetime
+import itertools as it
 
 import numpy as np
 import netCDF4 as nc
+import pyproj
 
 
-from cimr_rgb.grid_generator import GRIDS
+from cimr_rgb.grid_generator import GRIDS, PROJECTIONS
 
 # TODO: Ad rows and cols variables <= all variables are
 # in 1D flattened array and these rows and cols will allow
@@ -41,8 +42,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "0,2147483647",  # depends on the variable type
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'], # Int
                 "comment": "Grid row Index for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
             },
@@ -52,8 +53,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "0,2147483647",  # depends on the variable type
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Earth-Gridded TOA h-polarised"
                 + " [L|C|X|KU|KA]_BAND_[fore|aft] BTS"
@@ -67,8 +68,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "0,2147483647",  # depends on the variable type
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Earth-Gridded TOA v-polarised"
                 + " [L|C|X|KU|KA]_BAND_[fore|aft] BTS"
@@ -80,8 +81,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "TBD",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Earth-Gridded TOA [L|C|X|KU|KA]_BAND_[fore|aft] BTS "
                 + "interpolated on a TBD-km grid, third stokes parameter "
@@ -93,8 +94,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "TBD",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Earth-Gridded TOA [L|C|X|KU|KA]_BAND_[fore|aft] BTS "
                 + "interpolated on a TBD-km grid, fourth stokes parameter "
@@ -106,8 +107,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "TBD",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] faraday "
                 + "rotation angle corresponding to the measured BT value. "
@@ -122,8 +123,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "TBD",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] geometric "
                 + "rotation angle corresponding to the measured BT value. "
@@ -138,8 +139,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "TBD",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Radiometric resolution of each measured BT.",
             },
@@ -149,8 +150,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "TBD",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Radiometric resolution of each measured BT.",
             },
@@ -160,8 +161,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "TBD",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Radiometric resolution of each measured BT.",
             },
@@ -171,8 +172,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "TBD",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Radiometric resolution of each measured BT.",
             },
@@ -182,8 +183,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "TBD",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Total standard uncertainty for each measured BT.",
             },
@@ -193,8 +194,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "TBD",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Instrument Calibration or Observation mode, "
                 + "for all samples. L1c values will consider the majority "
@@ -206,8 +207,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "TBD",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Land/Sea content of the measured pixel, "
                 + "200 for full sea content, 0 for full land content.",
@@ -218,8 +219,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "TBD",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Number of L1b [h|v|t3|t4] polarised "
                 + "[L|C|X|KU|KA]_BAND_[fore|aft] brightness temperature "
@@ -232,8 +233,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "TBD",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "The optimal value of a parameter for the "
                 + "[Backus-Gilbert|rSIR|LW]_[fore|aft] that controls the "
@@ -251,8 +252,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "TBD",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Whether each [L|C|X|KU|KA]_BAND L1b measurement sample was "
                 + "unused (1) or used (0) in [Backus-Gilbert|rSIR|LW] regridding "
@@ -271,8 +272,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "0,N/A",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "UTC acquisition times expressed in seconds "
                 + "(seconds since 2000-01-01 00:00:00 UTC). The value of "
@@ -286,8 +287,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "0,359.99",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] "
                 + "Earth observation azimuth angles of the acquisitions, "
@@ -303,8 +304,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "-90, 90",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Latitude of the centre of a TBD-km PROJ grid cell.",
                 # L1C: self.config.grid_definition
@@ -316,8 +317,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "-180, 179.99",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Longitude of the centre of a TBD-km PROJ grid cell.",
             },
@@ -327,8 +328,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "0,359.99",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] "
                 + "Earth Observation zenith angles of the acquisitions. "
@@ -344,8 +345,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "0,359.99",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "The processing scan angle of the L1b "
                 + "[L|C|X|KU|KA]_BAND_[fore|aft] Earth view samples. The "
@@ -365,8 +366,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "0,359.99",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] "
                 + "solar azimuth angle of acquisitions.The value of "
@@ -380,8 +381,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "0,359.99",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Level 1b [L|C|X|KU|KA]_BAND_[fore|aft] "
                 + "solar zenith angle of acquisitions.The value of "
@@ -397,8 +398,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "0,65535",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": "0",#nc.default_fillvals['f8'],
                 # "comment": "A TBD-bit binary string of 1’s and 0’s "
                 # + "indicating a variety of TBD information related to the "
@@ -425,8 +426,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "0,65535",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256,256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256,256",
                 # "_FillValue": "0"
                 "comment": "A 16-bit binary string of 1’s and 0’s indicating the quality "
                 + "of the L1b [L|C|X|KU|KA]_BAND Earth samples used to derive the "
@@ -452,8 +453,8 @@ CDL = {
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "0,65535",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256,256",
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256,256",
                 # "_FillValue": "0"
                 "comment": "A 16-bit binary string of 1’s and 0’s indicating the quality "
                 + "of the L1b [L|C|X|KU|KA]_BAND Earth samples used to derive the "
@@ -550,7 +551,17 @@ CDL = {
 class ProductGenerator:
     def __init__(self, config):
         self.config = config
-        self.logger = config.logger
+
+        # If config_object is None, then it won't have logger as attribute
+        if self.config is not None:
+            if self.config.logger is not None:
+                self.logger = self.config.logger
+            self.logpar_decorate = self.config.logpar_decorate
+        else:
+            # No formatting will be performed
+            self.logger = logging.getLogger(__name__)
+            self.logger.addHandler(logging.NullHandler())
+            self.logpar_decorate = False
 
     # TODO: We face the following problem: the global dimensions should
     #       coincide with local ones for the variable names. Therefore,
@@ -562,7 +573,33 @@ class ProductGenerator:
     #       with local ones.
 
     # Getting netCDF dataset
-    def generate_metadata(self):
+    def generate_global_metadata(self, data_dict: dict) -> dict:
+        """
+        geospatial_lat_min and geospatial_lat_max:
+
+            These attributes define the minimum and maximum latitude values (in degrees) that the data covers.
+            They indicate the vertical spatial extent of the dataset in terms of geographic coordinates.
+
+        geospatial_lon_min and geospatial_lon_max:
+
+            These attributes define the minimum and maximum longitude values (in degrees) that the data covers.
+            They indicate the horizontal spatial extent of the dataset in terms of geographic coordinates.
+
+        geospatial_bounds:
+
+            This attribute specifies the spatial bounds of the dataset as a polygon, typically formatted as POLYGON((lon1 lat1, lon2 lat2, ..., lonN latN, lon1 lat1)).
+            It provides the exact spatial geometry for the region covered by the data.
+
+        geospatial_bounds_crs:
+
+            Defines the coordinate reference system (CRS) used for the geospatial_bounds attribute.
+            For example, it could be EPSG:4326, which corresponds to the WGS84 geographic coordinate system.
+
+        geospatial_bounds_vertical_crs:
+
+            Specifies the vertical coordinate reference system, if the dataset includes altitude or depth information.
+            Common examples include EGM96 (Earth Gravitational Model 1996) or other vertical datums.
+        """
         # // global_attributes:
         # :conventions = “CF-1.6”;
         # :id = “TBD”;
@@ -617,10 +654,10 @@ class ProductGenerator:
         # :antenna_pattern_file = “TBD”;
         # :antenna_pattern_source = “TBD”;
 
-        # TODO: - Add product_version parameter file into config.xml
-        #      - Make so the keys with antenna patterns will not be present if
+        # TODO:- Make so the keys with antenna patterns will not be present if
         #      they are not used or the discrption should be changed into like
-        #      it was simulate dby RGB software
+        #      it was simulated by RGB software
+        #
         # Define global attributes
         GLOBAL_ATTRIBUTES = {
             "conventions": "CF-1.6",
@@ -633,7 +670,7 @@ class ProductGenerator:
             # "acknowledgement": "TBD",
             "license": "None",
             # "standard_name_vocabulary": "TBD",
-            "date_created": f"{self.config.timestamp}",
+            "date_created": f"{self.config.timestamp} CET",
             "creator_name": f"{self.config.creator_name}",  # "Maksym Brilenkov",
             "creator_email": f"{self.config.creator_email}",  # "brilenkov@strcorp.no",
             "creator_url": f"{self.config.creator_url}",  # "https://www.stcorp.no/",
@@ -645,95 +682,214 @@ class ProductGenerator:
             # "publisher_name": "TBD",
             # "publisher_email": "TBD",
             # "publisher_url": "TBD",
-            # TODO: Start
-            "geospatial_bounds": "TBD",
-            "geospatial_bounds_crs": "TBD",
-            "geospatial_bounds_vertical_crs": "TBD",
-            "geospatial_lat_min": "TBD",
-            "geospatial_lat_max": "TBD",
-            "geospatial_lon_min": "TBD",
-            "geospatial_lon_max": "TBD",
-            "geospatial_lat_units": "degrees north",
-            "geospatial_lat_resolution": "TBD",
-            "geospatial_lon_units": "degrees north",
-            "geospatial_lon_resolution": "TBD",
-            # TODO: End
             # "time_coverage_start": "TBD",
             # "time_coverage_end": "TBD",
             # "time_coverage_duration": "TBD",
             # "time_coverage_resolution": "TBD",
             # "date_modified": "TBD",
             # "date_issued": "TBD",
-            # "date_metadata_modified": "TBD",
+            "date_metadata_modified": f"{self.config.timestamp} CET",
             "product_version": f"{self.config.product_version}",
             "platform": f"{self.config.input_data_type}",
             "instrument": f"{self.config.input_data_type}",
             # "metadata_link": "TBD",
-            "keywords": "passive microwave radiometry",
+            "keywords": "satellites, passive microwave radiometry",
             # "keywords_vocabulary": "TBD",
             # "references": "TBD",
             "input_level1b_filename": f"{pb.Path(self.config.input_data_path).resolve().name}",  # "TBD",
             "level_01_atbd": "Level 0, 1 Algorithms Theoretical Baseline Document Description and Performance analysis, Thales Alenia Space, 20/06/2022",
             "mission_requirement_document": "Copernicus Imaging Microwave Radiometer (CIMR) Mission Requirements Document, version 5, ESA-EOPSM-CIMR-MRD-3236, 11/02/2023",
-            "antenna_pattern_source": "Antenna patterns provided by Thales Alenia Space in September 2022. V-pol and H-pol complex amplitudes are assumed to be identical.",
-            # TODO: This field needs to contain valid antenna pattern file name
-            # or be None if we ded not use them such as in case of IDS and
-            # other parameters
-            "antenna_pattern_files": "TBD",
         }
 
-        # self.get_antenna_patterns_list()
+        # -------------------------------------------------
+        # Antenna Patterns's Attributes
+        if self.config.regridding_algorithm not in ["IDS", "NN", "DIB"]:
+            if self.config.input_data_type == "CIMR":
+                beamfiles = self.get_cimr_antenna_patterns_list()
+                GLOBAL_ATTRIBUTES["antenna_pattern_files"] = f"{beamfiles}"
+                GLOBAL_ATTRIBUTES["antenna_pattern_source"] = (
+                    "Antenna patterns were generated using CIMR-GRASP software. These "
+                    + "were derived from the original antenna patterns provided by Thales "
+                    + "Alenia Space in September 2022, where V-pol and H-pol complex "
+                    + "amplitudes were assumed to be identical."
+                )
+            elif self.config.input_data_type == "AMSR2":
+                GLOBAL_ATTRIBUTES["antenna_pattern_files"] = "None"
+                GLOBAL_ATTRIBUTES["antenna_pattern_source"] = (
+                    "Antenns patterns were generated using a set of internal simulation routines of CIMR RGB."
+                )
+            elif self.config.input_data_type == "SMAP":
+                GLOBAL_ATTRIBUTES["antenna_pattern_files"] = (
+                    "RadiometerAntPattern_170830_v011.h5"
+                )
+                GLOBAL_ATTRIBUTES["antenna_pattern_source"] = (
+                    # "Antenns patterns were generated using a set of internal simulation routines of CIMR RGB."
+                    "SMAP collaboration."
+                )
+            else:
+                raise ValueError(
+                    "Invalid input_data_type was provided. Can be one of the following: [CIMR, AMSR2, SMAP]."
+                )
+        else:
+            GLOBAL_ATTRIBUTES["antenna_pattern_files"] = (
+                f"Not used for {self.config.regridding_algorithm} algorithm."
+            )
+            GLOBAL_ATTRIBUTES["antenna_pattern_source"] = "None"
+
+        # -------------------------------------------------
+        # Geospatial Bounds: Getting CRS and other useful variables
+        # Example: Compute for a specific grid
+        # grid_name = self.config.grid_definition  # "EASE2_G1km"
+        # grid = GRIDS[grid_name]
+        # print(grid)
+        # projection_string = PROJECTIONS[
+        #    grid_name.split("_")[0]
+        # ]  # Extract appropriate PROJECTION
+
+        geospatial_attrs = self.compute_geospatial_attributes(
+            grid=GRIDS[self.config.grid_definition],
+            projection_string=PROJECTIONS[self.config.projection_definition],
+        )
+
+        # Print the derived attributes
+        for key, value in geospatial_attrs.items():
+            self.logger.info(f"{key}: {value}")
+        # print(data_dict["L"].keys())
+        # TODO: The min and max values are not calculated correctly and should
+        #       (probably) be hardcoded into GRIDS
+        GLOBAL_ATTRIBUTES["geospatial_bounds"] = geospatial_attrs["geospatial_bounds"]
+        GLOBAL_ATTRIBUTES["geospatial_bounds_crs"] = geospatial_attrs[
+            "geospatial_bounds_crs"
+        ]
+        # lat_min, lat_max = self.get_minmax_vals(array=data_dict["L"]["latitude_fore"])
+        GLOBAL_ATTRIBUTES["geospatial_lat_min"] = geospatial_attrs[
+            "geospatial_lat_min"
+        ]  # lat_min
+        GLOBAL_ATTRIBUTES["geospatial_lat_max"] = geospatial_attrs[
+            "geospatial_lat_max"
+        ]  # lat_max
+        # lon_min, lon_max = self.get_minmax_vals(array=data_dict["L"]["longitude_fore"])
+        GLOBAL_ATTRIBUTES["geospatial_lon_min"] = geospatial_attrs[
+            "geospatial_lon_min"
+        ]  # lon_min
+        GLOBAL_ATTRIBUTES["geospatial_lon_max"] = geospatial_attrs[
+            "geospatial_lon_max"
+        ]  # lon_max
+        GLOBAL_ATTRIBUTES["geospatial_lat_units"] = "degrees"
+        GLOBAL_ATTRIBUTES["geospatial_lat_resolution"] = geospatial_attrs[
+            "geospatial_lat_resolution"
+        ]
+        GLOBAL_ATTRIBUTES["geospatial_lon_units"] = "degrees"
+        GLOBAL_ATTRIBUTES["geospatial_lon_resolution"] = geospatial_attrs[
+            "geospatial_lon_resolution"
+        ]
         # exit()
 
         return GLOBAL_ATTRIBUTES
 
-    # def load_antenna_patterns(self):
-    #     # JOSEPH: We might also totally remove this IF-ELSE, if the user
-    #     # is forced to specify the targetBand config parameter also for SMAP
-    #     if self.config.input_data_type == "SMAP":
-    #         ap_dict = {}
-    #         fraction_below_threshold = {}
-    #         ap_dict[0], fraction_below_threshold[0] = self.extract_gain_dict(
-    #             file_path=self.config.antenna_patterns_path,
-    #             antenna_threshold=self.antenna_threshold,
-    #         )
+    def get_minmax_vals(self, array):
+        min_value = np.nanmin(array)  # Ignores NaN
+        max_value = np.nanmax(array)  # Ignores NaN
+        print(min_value)
+        print(max_value)
 
-    #     elif self.config.input_data_type == "CIMR":
-    #         num_horns = self.config.num_horns[self.band]
-    #         horn_dict = {}
-    #         ap_dict = {}
-    #         fraction_below_threshold = {}
-    #         for feedhorn in range(num_horns):
-    #             path = os.path.join(self.config.antenna_patterns_path, self.band)
-    #             horn = self.band + str(feedhorn)
+        return min_value, max_value
 
-    #             horn_files = [ff for ff in os.listdir(path) if horn in ff]
+    # This is for L1C only
+    def compute_geospatial_attributes(self, grid, projection_string):
+        """
+        Compute geospatial attributes for a given grid and its projection.
 
-    #             assert len(set(horn_files)) == 1, (
-    #                 "There are zero or more than one antenna pattern files for feedhorn "
-    #                 + horn
-    #             )
+        Args:
+            grid (dict): Dictionary containing grid parameters like 'x_min', 'y_max', 'res', 'n_cols', 'n_rows'.
+            projection_string (str): PROJ string for the grid's projection.
 
-    #             ap_dict[int(feedhorn)], fraction_below_threshold[int(feedhorn)] = (
-    #                 self.extract_gain_dict(
-    #                     file_path=os.path.join(path, horn_files[0]),
-    #                     antenna_threshold=self.antenna_threshold,
-    #                 )
-    #             )
+        Returns:
+            dict: Dictionary containing derived geospatial attributes.
+        """
+        # Extract grid properties
+        x_min, y_max = grid["x_min"], grid["y_max"]
+        res, n_cols, n_rows = grid["res"], grid["n_cols"], grid["n_rows"]
 
-    #     return ap_dict, fraction_below_threshold
+        # Calculate bounding box in projected coordinates
+        x_max = x_min + (n_cols * res)
+        y_min = y_max - (n_rows * res)
+
+        print(f"x_min = {x_min}, x_max = {x_max}")
+        print(f"y_min = {y_min}, y_max = {y_max}")
+
+        # transform to geographic coordinates
+        projection = pyproj.Proj(projection_string)
+        lon_min, lat_max = projection(x_min, y_max, inverse=True)
+        lon_max, lat_min = projection(x_max, y_min, inverse=True)
+
+        print(f"lat_min = {lat_min}, lat_max = {lat_max}")
+        print(f"lon_min = {lon_min}, lon_max = {lon_max}")
+
+        # lon_min, lat_min = projection(x_min, y_min, inverse=True)
+        # lon_max, lat_max = projection(x_max, y_max, inverse=True)
+
+        # print(f"lat_min = {lat_min}, lat_max = {lat_max}")
+        # print(f"lon_min = {lon_min}, lon_max = {lon_max}")
+
+        # # Set up the transformer
+        # transformer = pyproj.Transformer.from_proj(
+        #     proj_from=projection_string, proj_to="epsg:4326", always_xy=True
+        # )
+
+        # # Transform grid corners
+        # lon_min, lat_min = transformer.transform(x_min, y_min)
+        # lon_max, lat_max = transformer.transform(x_max, y_max)
+
+        # print(f"lat_min = {lat_min}, lat_max = {lat_max}")
+        # print(f"lon_min = {lon_min}, lon_max = {lon_max}")
+
+        print(projection_string)
+
+        # exit()
+
+        # Transform a point and its neighbor one resolution unit apart
+        lon1, lat1 = projection(  # transformer.transform(
+            x_min, y_max
+        )  # Top left corner of the grid/bounding box
+        lon2, lat2 = projection(  # transformer.transform(
+            x_min + res, y_max - res
+        )
+
+        # Calculate lat/lon resolution
+        lat_res = abs(lat_max - lat_min) / res  # abs(lat2 - lat1)
+        lon_res = abs(lon_max - lon_min) / res  # abs(lon2 - lon1)
+
+        print(lon_res, lat_res)
+        # exit()
+
+        # Define geospatial bounds as a polygon (counter-clockwise order)
+        geospatial_bounds = f"POLYGON(({lon_min} {lat_min}, {lon_max} {lat_min}, {lon_max} {lat_max}, {lon_min} {lat_max}, {lon_min} {lat_min}))"
+
+        # Return geospatial attributes
+        return {
+            "geospatial_lat_min": lat_min,
+            "geospatial_lat_max": lat_max,
+            "geospatial_lon_min": lon_min,
+            "geospatial_lon_max": lon_max,
+            "geospatial_bounds": geospatial_bounds,
+            "geospatial_bounds_crs": f"EPSG:{grid['epsg']}",  # "EPSG:4326",
+            "geospatial_lat_resolution": lat_res,
+            "geospatial_lon_resolution": lon_res,
+        }
 
     # TODO: Method to get a list of antenna patterns used in processing
     #       to populate metadata inthe nc file
-    def get_antenna_patterns_list(self):
-        if self.config.input_data_type == "SMAP":
-            ...
-        elif self.config.input_data_type == "CIMR":
-            for band in self.config.target_band:
-                print(band)
-            # num_horns = self.config.num_horns[self.band]
+    def get_cimr_antenna_patterns_list(self):
+        beamfiles_paths = []
 
-        ...
+        for band in self.config.target_band:
+            ap_path = pb.Path(self.config.antenna_patterns_path).joinpath(band)
+            beamfiles_paths.append([pattern.name for pattern in ap_path.glob("*")])
+
+        beamfiles_paths = ", ".join(list(it.chain.from_iterable(beamfiles_paths)))
+
+        return beamfiles_paths
 
     def generate_product(self, data_dict: dict):
         # (Old dict that contains) Params from CDL. It can be used
@@ -832,7 +988,7 @@ class ProductGenerator:
         # print(f"L band cell_row_aft:  {data_dict['L']['cell_row_aft']}")
         # print(f"X band cell_row_aft:  {data_dict['X']['cell_row_aft']}")
         # exit()
-        GLOBAL_ATTRIBUTES = self.generate_metadata()
+        GLOBAL_ATTRIBUTES = self.generate_global_metadata(data_dict=data_dict)
 
         with nc.Dataset(outfile, "w", format="NETCDF4") as dataset:
             # Set each global attribute in the netCDF file
