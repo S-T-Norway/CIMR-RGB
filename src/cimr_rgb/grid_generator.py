@@ -11,11 +11,14 @@ process.
 
 
 import os
+import pathlib as pb 
 import logging 
+import importlib.resources as pkg_resources 
 
 import numpy as np
 import pyproj
 
+from cimr_rgb.rgb_logging import RGBLogging  
 
 
 MAP_EQUATORIAL_RADIUS = 6378137.0
@@ -131,7 +134,17 @@ class GridGenerator:
         """
 
         self.config = config_object
-        # self.logger = config_object.logger
+
+        # If config_object is None, then it won't have logger as attribute 
+        if config_object is not None: 
+            if config_object.logger is not None: 
+                self.logger = config_object.logger 
+            self.decorate = config_object.logpar_decorate  
+        else:
+            # No formatting will be performed 
+            self.logger = logging.getLogger(__name__)
+            self.logger.addHandler(logging.NullHandler()) 
+            self.decorate = False 
 
 
         self.projection_definition = projection_definition
@@ -148,7 +161,8 @@ class GridGenerator:
 
 
     def generate_grid_xy_ease2(self, return_resolution: bool = False
-                               ) -> (np.ndarray | float, np.ndarray | float):
+                               ) -> tuple[np.ndarray | float, np.ndarray | float] | \
+                                    tuple[np.ndarray | float, np.ndarray | float, np.ndarray | float]:
         """
         Generates the grid in x and y coordinates from a given grid definition.
         Grid definitions can be found in the GRIDS dictionary at the start of the module.
@@ -192,7 +206,8 @@ class GridGenerator:
 
 
     def generate_grid_xy_stereo(self, return_resolution: bool = False
-                               ) -> (np.ndarray | float, np.ndarray | float):
+                               ) -> tuple[np.ndarray | float, np.ndarray | float] | \
+                                    tuple[np.ndarray | float, np.ndarray | float, np.ndarray | float]:
         """
         Generates the grid in x and y coordinates from a given grid definition.
         Grid definitions can be found in the GRIDS dictionary at the start of the module.
@@ -236,7 +251,8 @@ class GridGenerator:
 
 
     def generate_grid_xy_mercator(self, return_resolution: bool = False
-                               ) -> (np.ndarray | float, np.ndarray | float):
+                               ) -> tuple[np.ndarray | float, np.ndarray | float] | \
+                                    tuple[np.ndarray | float, np.ndarray | float, np.ndarray | float]:
 
         mercator_proj = pyproj.Proj(PROJECTIONS[self.projection_definition])
 
@@ -269,7 +285,8 @@ class GridGenerator:
 
 
     def generate_grid_xy(self, return_resolution: bool = False
-                         ) -> (np.ndarray | float, np.ndarray | float):
+                               ) -> tuple[np.ndarray | float, np.ndarray | float] | \
+                                    tuple[np.ndarray | float, np.ndarray | float, np.ndarray | float]:
         """
         Generates the grid in x and y coordinates from a given grid definition.
         Grid definitions can be found in the GRIDS dictionary at the start of the module.
@@ -291,14 +308,32 @@ class GridGenerator:
         """
 
         if "EASE2" in self.grid_definition:
-            result = self.generate_grid_xy_ease2(return_resolution=return_resolution)
+            #result = self.generate_grid_xy_ease2(return_resolution=return_resolution)
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.generate_grid_xy_ease2)
+            result = tracked_func(return_resolution=return_resolution)
 
         elif "STEREO" in self.grid_definition:
-            result = self.generate_grid_xy_stereo(return_resolution=return_resolution)
+            #result = self.generate_grid_xy_stereo(return_resolution=return_resolution)
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.generate_grid_xy_stereo)
+            result = tracked_func(return_resolution=return_resolution)
 
         elif "MERC" in self.grid_definition:
             return_resolution=False
-            result = self.generate_grid_xy_mercator(return_resolution=return_resolution)
+            #result = self.generate_grid_xy_mercator(return_resolution=return_resolution)
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.generate_grid_xy_mercator)
+            result = tracked_func(return_resolution=return_resolution)
 
         else:
             raise NotImplementedError(f"Grid {self.grid_definition} is not implemented.")
@@ -324,7 +359,14 @@ class GridGenerator:
             Array of latitudes.
         """
 
-        xs, ys = self.generate_grid_xy(return_resolution=False)
+        #xs, ys = self.generate_grid_xy(return_resolution=False)
+        tracked_func  = RGBLogging.rgb_decorate_and_execute(
+            decorate  = self.decorate, 
+            decorator = RGBLogging.track_perf, 
+            logger    = self.logger 
+            )(self.generate_grid_xy)
+        xs, ys = tracked_func(return_resolution=False)
+
         grid_x, grid_y = np.meshgrid(xs, ys)
 
         lons, lats = pyproj.Proj(self.projection)(grid_x, grid_y, inverse=True)
@@ -332,8 +374,8 @@ class GridGenerator:
         return lons, lats
 
 
-    def lonlat_to_xy_laea(self, lon: np.ndarray | float, lat: np.ndarray | float,
-                          pole: str = 'N') -> (np.ndarray | float, np.ndarray | float):
+    def lonlat_to_xy_laea(self, lon: np.ndarray | float, lat: np.ndarray | float, pole: str = 'N'
+                               ) -> tuple[np.ndarray | float, np.ndarray | float]: 
         """
         Lambert's Azimuthal Equal Area (North and South)
         """
@@ -374,7 +416,7 @@ class GridGenerator:
     def lonlat_to_xy_cea(self,
                          lon: np.ndarray | float,
                          lat: np.ndarray | float
-                         ) -> (np.ndarray | float, np.ndarray | float):
+                         ) -> tuple[np.ndarray | float, np.ndarray | float]: 
         """
         Cylindrical Equal Area (Global)
         """
@@ -420,7 +462,7 @@ class GridGenerator:
                             lon: np.ndarray | float,
                             lat: np.ndarray | float,
                             pole: str = 'N'
-                            ) -> (np.ndarray | float, np.ndarray | float):
+                            ) -> tuple[np.ndarray | float, np.ndarray | float]: 
         """
         Polar Stereographic projection using pyproj library:
         https://proj.org/en/9.5/operations/projections/stere.html
@@ -444,11 +486,12 @@ class GridGenerator:
 
         return x, y
 
+
     def lonlat_to_xy_ups(self,
                          lon: np.ndarray | float,
                          lat: np.ndarray | float,
                          pole: str = 'N'
-                         ) -> (np.ndarray | float, np.ndarray | float):
+                         ) -> tuple[np.ndarray | float, np.ndarray | float]: 
         """
         Universal Polar Stereographic projection using pyproj library:
         https://proj.org/en/9.5/operations/projections/ups.html
@@ -474,10 +517,11 @@ class GridGenerator:
 
         return x, y
 
+
     def lonlat_to_xy_merc(self,
                           lon: np.ndarray | float,
                           lat: np.ndarray | float
-                          ) -> (np.ndarray | float, np.ndarray | float):
+                         ) -> tuple[np.ndarray | float, np.ndarray | float]: 
         """
         (Global) Mercator projection using pyproj library:
         https://proj.org/en/9.5/operations/projections/merc.html
@@ -493,10 +537,11 @@ class GridGenerator:
 
         return x, y
 
+
     def lonlat_to_xy(self,
                      lon: np.ndarray | float,
                      lat: np.ndarray | float
-                     ) -> (np.ndarray | float, np.ndarray | float):
+                     ) -> tuple[np.ndarray | float, np.ndarray | float]: 
         """
         Generic method. Converts longitude and latitude coordinates to x and y
         coordinates for a given projection.
@@ -518,46 +563,95 @@ class GridGenerator:
 
         if self.projection_definition == 'G':
 
-            x, y = self.lonlat_to_xy_cea(lon=lon, lat=lat)
+            #x, y = self.lonlat_to_xy_cea(lon=lon, lat=lat)
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.lonlat_to_xy_cea)
+            x, y = tracked_func(lon=lon, lat=lat)
 
         elif self.projection_definition == 'N':
 
-            x, y = self.lonlat_to_xy_laea(lon=lon, lat=lat, pole='N')
+            #x, y = self.lonlat_to_xy_laea(lon=lon, lat=lat, pole='N')
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.lonlat_to_xy_laea)
+            x, y = tracked_func(lon = lon, lat = lat, pole = 'N')
 
         elif self.projection_definition == 'S':
 
-            x, y = self.lonlat_to_xy_laea(lon=lon, lat=lat, pole='S')
+            #x, y = self.lonlat_to_xy_laea(lon=lon, lat=lat, pole='S')
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.lonlat_to_xy_laea)
+            x, y = tracked_func(lon = lon, lat = lat, pole = 'S')
 
         elif self.projection_definition == 'PS_N':
 
-            x, y = self.lonlat_to_xy_stereo(lon=lon, lat=lat, pole='N')
+            #x, y = self.lonlat_to_xy_stereo(lon=lon, lat=lat, pole='N')
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.lonlat_to_xy_stereo)
+            x, y = tracked_func(lon=lon, lat=lat, pole = 'N')
 
         elif self.projection_definition == 'PS_S':
 
-            x, y = self.lonlat_to_xy_stereo(lon=lon, lat=lat, pole='S')
+            #x, y = self.lonlat_to_xy_stereo(lon=lon, lat=lat, pole='S')
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.lonlat_to_xy_stereo)
+            x, y = tracked_func(lon=lon, lat=lat, pole = 'S')
 
         elif self.projection_definition == 'UPS_N':
 
-            x, y = self.lonlat_to_xy_ups(lon=lon, lat=lat, pole='N')
+            #x, y = self.lonlat_to_xy_ups(lon=lon, lat=lat, pole='N')
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.lonlat_to_xy_ups)
+            x, y = tracked_func(lon=lon, lat=lat, pole = 'N')
 
         elif self.projection_definition == 'UPS_S':
 
-            x, y = self.lonlat_to_xy_ups(lon=lon, lat=lat, pole='S')
+            #x, y = self.lonlat_to_xy_ups(lon=lon, lat=lat, pole='S')
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.lonlat_to_xy_ups)
+            x, y = tracked_func(lon=lon, lat=lat, pole = 'S')
 
         elif self.projection_definition == 'MERC_G':
 
-            x, y = self.lonlat_to_xy_merc(lon=lon, lat=lat)
+            #x, y = self.lonlat_to_xy_merc(lon=lon, lat=lat)
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.lonlat_to_xy_merc)
+            x, y = tracked_func(lon=lon, lat=lat)
 
         else:
             raise NotImplementedError(f"Invalid projection code.")
 
         return x, y
 
+
     def xy_to_lonlat_laea(self,
                           x: np.ndarray | float,
                           y: np.ndarray | float,
                           pole: str
-                          ) -> (np.ndarray | float, np.ndarray | float):
+                         ) -> tuple[np.ndarray | float, np.ndarray | float]: 
         """
         Inverse of Lambert's Azimuthal Equal Area (North and South) projection
         """
@@ -591,10 +685,11 @@ class GridGenerator:
 
         return lon, lat
 
+
     def xy_to_lonlat_cea(self,
                          x: np.ndarray | float,
                          y: np.ndarray | float
-                         ) -> (np.ndarray | float, np.ndarray | float):
+                         ) -> tuple[np.ndarray | float, np.ndarray | float]: 
         """
         Inverse of Cylindrical Equal Area (Global) projection.
         """
@@ -636,7 +731,7 @@ class GridGenerator:
                             x: np.ndarray | float,
                             y: np.ndarray | float,
                             pole: str = 'N'
-                            ) -> (np.ndarray | float, np.ndarray | float):
+                            ) -> tuple[np.ndarray | float, np.ndarray | float]: 
         """
         Polar Stereographic projection using pyproj library:
         https://proj.org/en/9.5/operations/projections/stere.html
@@ -658,11 +753,12 @@ class GridGenerator:
 
         return lon, lat
 
+
     def xy_to_lonlat_ups(self,
                          x: np.ndarray | float,
                          y: np.ndarray | float,
                          pole: str = 'N'
-                         ) -> (np.ndarray | float, np.ndarray | float):
+                         ) -> tuple[np.ndarray | float, np.ndarray | float]: 
         """
         Universal Polar Stereographic projection using pyproj library:
         https://proj.org/en/9.5/operations/projections/ups.html
@@ -688,10 +784,11 @@ class GridGenerator:
 
         return lon, lat
 
+
     def xy_to_lonlat_merc(self,
                           x: np.ndarray | float,
                           y: np.ndarray | float
-                          ) -> (np.ndarray | float, np.ndarray | float):
+                          ) -> tuple[np.ndarray | float, np.ndarray | float]: 
         """
         (Global) Mercator projection using pyproj library:
         https://proj.org/en/9.5/operations/projections/merc.html
@@ -707,10 +804,11 @@ class GridGenerator:
 
         return lon, lat
 
+
     def xy_to_lonlat(self,
                      x: np.ndarray | float,
                      y: np.ndarray | float
-                     ) -> (np.ndarray | float, np.ndarray | float):
+                     ) -> tuple[np.ndarray | float, np.ndarray | float]: 
         """
         Converts x and y coordinates to longitude and latitude coordinates for a given projection.
         Parameters
@@ -730,43 +828,92 @@ class GridGenerator:
 
         if self.projection_definition == 'G':
 
-            lon, lat = self.xy_to_lonlat_cea(x=x, y=y)
+            #lon, lat = self.xy_to_lonlat_cea(x=x, y=y)
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.xy_to_lonlat_cea)
+            lon, lat = tracked_func(x=x, y=y)
 
         elif self.projection_definition == 'N':
 
-            lon, lat = self.xy_to_lonlat_laea(x=x, y=y, pole='N')
+            #lon, lat = self.xy_to_lonlat_laea(x=x, y=y, pole='N')
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.xy_to_lonlat_laea)
+            lon, lat = tracked_func(x=x, y=y, pole = 'N')
 
         elif self.projection_definition == 'S':
 
-            lon, lat = self.xy_to_lonlat_laea(x=x, y=y, pole='S')
+            #lon, lat = self.xy_to_lonlat_laea(x=x, y=y, pole='S')
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.xy_to_lonlat_laea)
+            lon, lat = tracked_func(x = x, y = y, pole = 'S')
 
         elif self.projection_definition == 'PS_N':
 
-            lon, lat = self.xy_to_lonlat_stereo(x=x, y=y, pole='N')
+            #lon, lat = self.xy_to_lonlat_stereo(x=x, y=y, pole='N')
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.xy_to_lonlat_stereo)
+            lon, lat = tracked_func(x = x, y = y, pole = 'N')
 
         elif self.projection_definition == 'PS_S':
 
-            lon, lat = self.xy_to_lonlat_stereo(x=x, y=y, pole='S')
+            #lon, lat = self.xy_to_lonlat_stereo(x=x, y=y, pole='S')
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.xy_to_lonlat_stereo)
+            lon, lat = tracked_func(x = x, y = y, pole = 'S')
 
         elif self.projection_definition == 'UPS_N':
 
-            lon, lat = self.xy_to_lonlat_ups(x=x, y=y, pole='N')
+            #lon, lat = self.xy_to_lonlat_ups(x=x, y=y, pole='N')
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.xy_to_lonlat_ups)
+            lon, lat = tracked_func(x = x, y = y, pole = 'N')
 
         elif self.projection_definition == 'UPS_S':
 
-            lon, lat = self.xy_to_lonlat_ups(x=x, y=y, pole='S')
+            #lon, lat = self.xy_to_lonlat_ups(x=x, y=y, pole='S')
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.xy_to_lonlat_ups)
+            lon, lat = tracked_func(x = x, y = y, pole = 'S')
 
         elif self.projection_definition == 'MERC_G':
 
-            lon, lat = self.xy_to_lonlat_merc(x=x, y=y)
+            #lon, lat = self.xy_to_lonlat_merc(x=x, y=y)
+            tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                decorate  = self.decorate, 
+                decorator = RGBLogging.track_perf, 
+                logger    = self.logger 
+                )(self.xy_to_lonlat_merc)
+            lon, lat = tracked_func(x = x, y = y)
 
         else:
-
             raise NotImplementedError(f"Invalid projection code.")
 
         return lon, lat
 
         # def xy_to_lonlat(self, x, y):
+
+
 
     def xy_to_rowcol(self, x, y):
         """
@@ -787,7 +934,9 @@ class GridGenerator:
         col: (float or numpy.ndarray of float)
             Column index/indices
         """
+
         _, _, res = self.generate_grid_xy(return_resolution=True)
+
         n_cols = self.n_cols
         n_rows = self.n_rows
         r0 = (n_cols - 1) / 2
@@ -800,49 +949,77 @@ class GridGenerator:
 
         return row, col
 
+
     def rowcol_to_xy(self, row, col):
+
         _, _, res = self.generate_grid_xy(return_resolution=True)
+        
         n_cols = self.n_cols
         n_rows = self.n_rows
         r0 = (n_cols - 1) / 2
         s0 = (n_rows - 1) / 2
         x  = res*(col-r0)
         y  = res*(s0-row)
+
         return x, y
 
+
     def rowcol_to_lonlat(self, row, col):
+
         _, _, res = self.generate_grid_xy(return_resolution=True)
+
         n_cols = self.n_cols
         n_rows = self.n_rows
         r0 = (n_cols - 1) / 2
         s0 = (n_rows - 1) / 2
         x  = res*(col-r0)
         y  = res*(s0-row)
+
         return self.xy_to_lonlat(x, y)
 
 
 
     def get_grid_area(self):
+
         if self.grid_area is None:
+
             resolution = self.resolution
+
             if "EASE2" in self.grid_definition:
                 grid_area = resolution**2
                 grid_area = np.ones((self.n_rows, self.n_cols)) * grid_area
 
             elif "STEREO" in self.grid_definition:
+
                 import netCDF4 as nc
-                target_dir = os.path.join(os.path.dirname(os.getcwd()), "dpr/Grids/NSIDC_PS")
-                # Open netcdf file
-                for file in os.listdir(target_dir):
-                    if f"{self.projection_definition}{str(int(resolution/1000))}" in file:
-                        # open file with netcdf
-                        dataset = nc.Dataset(os.path.join(target_dir, file))
-                        grid_area = np.array(dataset.variables['cell_area'][:])
-                        dataset.close()
+
+                #target_dir = os.path.join(os.path.dirname(os.getcwd()), "dpr/Grids/NSIDC_PS")
+
+                # Access the target directory within the package
+                target_dir = pkg_resources.files('cimr_rgb.dpr.Grids.NSIDC_PS')  # Adjust the package path if necessary
+
+                # Iterate through files in the target directory
+                for file in target_dir.iterdir():
+                    if f"{self.projection_definition}{str(int(resolution/1000))}" in file.name:
+                        # Open the NetCDF file
+                        with nc.Dataset(file) as dataset:
+                            grid_area = np.array(dataset.variables['cell_area'][:])
                         break
+
+                # Open netcdf file
+                #for file in os.listdir(target_dir):
+                #    if f"{self.projection_definition}{str(int(resolution/1000))}" in file:
+                #        # open file with netcdf
+                #        dataset = nc.Dataset(os.path.join(target_dir, file))
+                #        grid_area = np.array(dataset.variables['cell_area'][:])
+                #        dataset.close()
+                #        break
+
             elif "MERC" in self.grid_definition:
                 # Todo: calculation of actual mercator grid area
                 grid_area = resolution**2
                 grid_area = np.ones((self.n_rows, self.n_cols)) * grid_area
+
             self.grid_area = grid_area
+
         return self.grid_area

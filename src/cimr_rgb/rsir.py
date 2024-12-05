@@ -1,3 +1,6 @@
+import logging 
+
+
 from numpy import column_stack
 from numpy import zeros_like, concatenate, array, exp, sin, meshgrid,nanmean, cos, ravel_multi_index, ogrid, unravel_index, where, nan, take, full, all, sum, zeros, identity, dot, nansum, nan_to_num, sqrt
 from tqdm import tqdm
@@ -10,9 +13,9 @@ from scipy.spatial import KDTree
 # import matplotlib.pyplot as plt
 # plt.ion()
 
-from .ap_processing  import AntennaPattern, GaussianAntennaPattern, make_integration_grid
-from .grid_generator import GridGenerator, GRIDS
-from .ids import IDSInterp
+from cimr_rgb.ap_processing  import AntennaPattern, GaussianAntennaPattern, make_integration_grid
+from cimr_rgb.grid_generator import GridGenerator, GRIDS
+from cimr_rgb.ids import IDSInterp
 
 
 
@@ -20,6 +23,18 @@ class rSIRInterp:
     def __init__(self, config, band):
         self.config = config
         self.band = band
+
+        # If config_object is None, then it won't have logger as attribute 
+        if self.config is not None: 
+            if self.config.logger is not None: 
+                self.logger = self.config.logger 
+            self.logpar_decorate = self.config.logpar_decorate  
+        else:
+            # No formatting will be performed 
+            self.logger = logging.getLogger(__name__)
+            self.logger.addHandler(logging.NullHandler()) 
+            self.logpar_decorate = False 
+
 
         if self.config.source_antenna_method == 'gaussian':
             self.source_ap = GaussianAntennaPattern(config=self.config,
@@ -52,6 +67,7 @@ class rSIRInterp:
                                                     antenna_threshold=0.001)  # check if this value makes sense for L1c
 
         self.ids_weights = None
+
 
     def get_antenna_patterns(self, band, variable_dict, target_dict, target_lon, target_lat, source_inds, target_inds, target_cell_size):
 
@@ -132,8 +148,8 @@ class rSIRInterp:
                 int_dom_lats=int_dom_lats,
                 lon_l1b=target_lon,
                 lat_l1b=target_lat,
-                sigmax=target_cell_size[0],
-                sigmay=target_cell_size[1],
+                sigmax=target_cell_size[0]/10,
+                sigmay=target_cell_size[1]/10,
                 alpha=0.
             )
         elif self.config.target_antenna_method == 'gaussian':
@@ -237,6 +253,10 @@ class rSIRInterp:
             # Get Antenna Patterns
             samples = indexes[target_cell, :]
             input_samples = samples[samples != fill_value]
+            # RSIR doesnt work for one sample, we should consider just making it nearest neighbour
+            if len(input_samples) <1:
+                T_out.append(nan)
+                continue
             source_ant_patterns, target_ant_pattern = self.get_antenna_patterns(
                 band=band,
                 variable_dict=variable_dict,

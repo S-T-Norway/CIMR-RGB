@@ -128,8 +128,18 @@ class ConfigFile:
             self.logger_name     = config_object.find("LoggingParams/logger_name").text 
             self.logger          = rgb_logging.get_logger(self.logger_name) 
 
+
+        # TODO: Put this into its own validation method 
         # Whether to use RGB decorator  
-        self.logpar_decorate = bool(config_object.find("LoggingParams/decorate").text) 
+        self.logpar_decorate = (config_object.find("LoggingParams/decorate").text).lower() 
+        if self.logpar_decorate == "true": 
+            self.logpar_decorate = True
+        elif self.logpar_decorate == "false": 
+            self.logpar_decorate = False
+        else: 
+            raise ValueError(
+                f"Invalid value for `decorate` encountered. \nThe `decorate` parameter can either be `True` or `False`."
+            )
 
         rgb_logging.setup_global_exception_handler(logger = self.logger) 
         # -----------
@@ -437,6 +447,11 @@ class ConfigFile:
                 target_antenna_threshold = 'ReGridderParams/target_antenna_threshold'
             )
 
+            self.max_theta_antenna_patterns = self.validate_max_theta_antenna_patterns(
+                config_object=config_object,
+                max_theta_antenna_patterns='ReGridderParams/max_theta_antenna_patterns',
+            )
+
             self.polarisation_method = self.validate_polarisation_method(
                 config_object=config_object,
                 polarisation_method='ReGridderParams/polarisation_method'
@@ -679,12 +694,15 @@ class ConfigFile:
             Validated input data path
         """
 
-        input_data_path = pb.Path(config_object.find(input_data_path).text).resolve() 
+        input_data_path = config_object.find(input_data_path).text 
+        input_data_path = grasp_io.resolve_config_path(path_string = input_data_path)
+        #print(input_data_path)
 
         if input_data_path.exists(): 
             return input_data_path  
         else: 
             raise FileNotFoundError(f"File\n {input_data_path}\n not found. Check file location.")
+
 
     @staticmethod
     def validate_input_antenna_patterns_path(config_object, antenna_patterns_path, input_data_type):
@@ -703,7 +721,8 @@ class ConfigFile:
             Validated input data path
         """
 
-        antenna_patterns_path = pb.Path(config_object.find(antenna_patterns_path).text).resolve()
+        antenna_patterns_path = pb.Path(config_object.find(antenna_patterns_path).text)#.resolve()
+        antenna_patterns_path = grasp_io.resolve_config_path(path_string = antenna_patterns_path)
 
         if antenna_patterns_path.exists():
             if input_data_type == 'SMAP':
@@ -1219,6 +1238,27 @@ class ConfigFile:
                 f"Invalid antenna threshold: {value}. Check Configuration File."
                 f" Antenna threshold must be a float or integer"
             )
+
+    @staticmethod
+    def validate_max_theta_antenna_patterns(config_object, max_theta_antenna_patterns):
+
+        value = config_object.find(max_theta_antenna_patterns).text
+
+        if value is None or value.strip() == "":
+            # We should have a default set of values for each Antenna Pattern
+            # For now, I will just choose 40.
+            return None
+
+        try:
+
+            return float(value)
+
+        except:
+            raise ValueError(
+                f"Invalid max theta for antenna patterns: {value}. Check Configuration File."
+                f"Max theta for antenna patterns must be a float or integer"
+            )
+
 
     @staticmethod
     def validate_polarisation_method(config_object, polarisation_method):

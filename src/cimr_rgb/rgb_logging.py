@@ -213,26 +213,26 @@ class RGBLogging:
         Decorates a function to log its performance metrics, including execution time, CPU usage, and memory usage.
 
         Parameters:
-        ----------
+        -----------
         func : Callable
             The target function to be decorated.
         logger : logging.Logger
             The logger instance to use for logging performance metrics.
 
         Returns:
-        ----------
+        --------
         Callable:
             The decorated function.
 
         Logged Metrics:
-        ----------
+        ---------------
         - Start of execution.
         - Execution time in seconds.
         - CPU user and system time.
         - Memory usage change during execution.
 
         Example:
-        ----------
+        --------
         >>> logger = logging.getLogger("PerfLogger")
         >>> @RGBLogging.track_perf(func=my_function, logger=logger)
         >>> def my_function():
@@ -350,6 +350,55 @@ class RGBLogging:
 
         sys.excepthook = handle_exception
 
+
+    # Step 2: Define a custom function to redirect warnings
+    @staticmethod
+    def custom_warning_handler(logger, message, category, filename, lineno, file=None, line=None):
+
+        """
+        Custom handler to redirect warnings to a logger.
+
+        This method replaces the default behavior of the `warnings` module, 
+        enabling warnings to be captured and redirected to a logging system. 
+        It allows for better integration of warnings into application logs.
+
+        Parameters:
+        ----------
+        logger : logging.Logger
+            The logger instance where the warning messages will be logged.
+        message : str
+            The warning message to be logged.
+        category : Warning
+            The category of the warning (e.g., UserWarning, DeprecationWarning).
+        filename : str
+            The name of the file where the warning was triggered.
+        lineno : int
+            The line number in the file where the warning was triggered.
+        file : file-like object, optional
+            The file object where the warning message was written (default is None).
+        line : str, optional
+            The line of code where the warning occurred (default is None).
+
+        Behavior:
+        ----------
+        - Formats the warning message to include its category, content, source file, and line number.
+        - Logs the formatted message using the provided logger.
+
+        Example:
+        ----------
+        >>> import logging
+        >>> from functools import partial
+        >>> import warnings
+        >>>
+        >>> logger = logging.getLogger("custom_logger")
+        >>> logging.basicConfig(level=logging.WARNING)
+        >>> warnings.showwarning = partial(RGBLogging.custom_warning_handler, logger)
+        >>> warnings.warn("This is a test warning", UserWarning)
+        """
+
+        log_message = f"{category.__name__}: {message} (File: {filename}, Line: {lineno})"
+
+        logger.warning(log_message)
 
 
     # TODO: This function should simplify the call for decorator, but is really not needed. 

@@ -1,4 +1,5 @@
 import os
+from sys import excepthook
 
 import numpy as np
 from numpy import (abs, deg2rad, full, sqrt, logical_or, logical_and, conj, real, imag,
@@ -10,8 +11,8 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import RegularGridInterpolator
 from pyproj import CRS, Transformer
 
-from .grid_generator import GridGenerator, GRIDS
-from .utils          import normalize, generic_transformation_matrix
+from cimr_rgb.grid_generator import GridGenerator, GRIDS
+from cimr_rgb.utils          import normalize, generic_transformation_matrix
 
 
 class AntennaPattern:
@@ -104,7 +105,7 @@ class AntennaPattern:
             ap_dict = {}
             fraction_below_threshold = {}
             ap_dict[0], fraction_below_threshold[0] = self.extract_gain_dict(
-                file_path = self.config.antenna_pattern_path,
+                file_path = self.config.antenna_patterns_path,
                 antenna_threshold=self.antenna_threshold
             )
 
@@ -115,7 +116,7 @@ class AntennaPattern:
             fraction_below_threshold = {}
             for feedhorn in range(num_horns):
                 path = os.path.join(
-                    self.config.antenna_pattern_path, self.band)
+                    self.config.antenna_patterns_path, self.band)
                 horn = self.band + str(feedhorn)
 
                 horn_files = [ff for ff in os.listdir(path) if horn in ff]
@@ -268,13 +269,13 @@ class AntennaPattern:
 
             elif self.antenna_method == 'gaussian_projected':
                 if self.antenna_threshold is None:
-                    max_theta_non_zero = np.deg2rad(40.)
+                    max_theta_non_zero = np.deg2rad(self.config.max_theta_antenna_patterns)
                 else:      
                     sigma_u = self.gaussian_params[0]
                     sigma_v = self.gaussian_params[1]
                     sigma_max = np.maximum(sigma_u, sigma_v)
                     r_max = np.sqrt(-2. * sigma_max**2 * np.log(self.antenna_threshold))
-                    max_theta_non_zero = np.minimum(np.deg2rad(40.), np.arcsin(r_max))
+                    max_theta_non_zero = np.minimum(np.deg2rad(self.config.max_theta_antenna_patterns), np.arcsin(r_max))
 
             R = (6378137. + 6356752.)/2. #m
             angle_tangent = np.arcsin(R / (R + satellite_altitude))
@@ -536,9 +537,11 @@ def make_integration_grid(int_projection_definition, int_grid_definition, longit
     lonsx = np.array(longitude) - np.rad2deg(Rpattern/Rcircle)
     londx = np.array(longitude) + np.rad2deg(Rpattern/Rcircle)
 
-    integration_grid = GridGenerator(None,
-                               projection_definition=int_projection_definition,
-                               grid_definition=int_grid_definition)
+    integration_grid = GridGenerator(
+        config_object = None,
+        projection_definition=int_projection_definition,
+        grid_definition=int_grid_definition
+    )
 
     mask = latup>90
     latup[mask] = 180. - latup[mask]
