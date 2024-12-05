@@ -43,6 +43,19 @@ def landweber(A, Y, lambda_param=1e-4, alpha=None, n_iter=1000, rtol=1e-5):
     return X
 
 
+def landweber_nedt(A, varY, lambda_param, alpha, n_iter):
+
+    varX = np.zeros((A.shape[1], A.shape[1]))
+    At  = A.T
+    AtA = At @ A 
+    I  = np.identity(varX.shape)
+
+    for i in tqdm(range(n_iter)):
+        B = I - alpha*(AtA + lambda_param*I)
+        varX = alpha**2 * At @ (varY @ A) + B @ (varX @ B.T)
+
+    return np.diagonal(varX)
+
 
 def conjugate_gradient_ne(A, Y, lambda_param=1e-4, n_iter=1000, rtol=1e-5):
 
@@ -64,6 +77,36 @@ def conjugate_gradient_ne(A, Y, lambda_param=1e-4, n_iter=1000, rtol=1e-5):
     AtY = A.T @ Y
 
     X = np.ones(AtA.shape[1])*1e-20  # Initial guess
+    r = AtY - AtA @ X                # Residual
+    p = r.copy()                     # Initial search direction
+    rs_old = np.dot(r, r)
+
+    for i in tqdm(range(n_iter)):
+        Ap = AtA @ p
+        alpha = rs_old / np.dot(p, Ap)
+        X_new = X + alpha * p
+        r -= alpha * Ap
+        rs_new = np.dot(r, r)
+
+        rel_error = np.linalg.norm(X_new - X) / np.linalg.norm(X)
+        if rel_error < rtol:
+            print(f"Converged in {i+1} iterations with relative error: {rel_error}")
+            return X_new
+
+        p = r + (rs_new / rs_old) * p
+        rs_old = rs_new
+        X = X_new
+
+    print(f"Reached maximum iterations without full convergence, relative error: {rel_error}")
+    return X
+
+
+def conjugate_gradient_ne_nedt(A, varY, n_iter):
+
+    AtA = A.T @ A + lambda_param * np.eye(A.shape[1])
+    AtY = A.T @ Y
+
+    varX = np.zeros(AtA.shape[1])    # Initial guess
     r = AtY - AtA @ X                # Residual
     p = r.copy()                     # Initial search direction
     rs_old = np.dot(r, r)
@@ -252,19 +295,22 @@ class MIIinterp:
 
                     irow += 1
 
-                for variable in self.config.variables_to_regrid:
+                var_to_regrid = [var for var in self.config.variables_to_regrid if 'nedt' not in var]
+
+                for variable in var_to_regrid:
+
 
                     Y = variable_dict[variable][mask]
 
                     if self.inversion_method == 'CG':
-                        X1 = conjugate_gradient_ne(A, Y, 
+                        X1, n_iter = conjugate_gradient_ne(A, Y, 
                                                    lambda_param = self.config.regularization_parameter, 
                                                    n_iter       = self.config.max_number_iteration,
                                                    rtol         = self.config.relative_tolerance
                         )
 
                     elif self.inversion_method == 'LW':
-                        X1 = landweber(A, Y,
+                        X1, n_iter = landweber(A, Y,
                                        lambda_param = self.config.regularization_parameter, 
                                        n_iter       = self.config.max_number_iteration,
                                        rtol         = self.config.relative_tolerance
@@ -276,6 +322,16 @@ class MIIinterp:
                     jdn = int_dom_lons.shape[0] - n_cell_dn
 
                     variable_dict_out[variable][imin+i1:imin+i2, jmin+j1:jmin+j2] = X1.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
+
+                    if 'bt' in variable and 'nedt'+variable[-2:] in self.config.variables_to_regrid:
+                        nedt_var = 'nedt'+variable[:-2]
+                        if self.inversion_method == 'CG':
+                            Xnedt = conjugate_gradient_ne_nedt(A, variable_dict[nedt_var][mask], n_iter)
+                        elif self.inversion_method == 'LW':
+                            Xnedt = conjugate_gradient_ne_nedt(A, variable_dict[nedt_var][mask], n_iter)
+                        variable_dict_out[nedt_var][imin+i1:imin+i2, jmin+j1:jmin+j2] = Xnedt.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
+                      
+        # here reshape all variablse in variable_dict_out              
 
         return variable_dict_out
 
