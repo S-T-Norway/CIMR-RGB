@@ -23,47 +23,50 @@ from cimr_rgb.grid_generator import GRIDS
 CDL = {
     "LOCAL_ATTRIBUTES": {
         "Measurement": {
+            # TODO: Change these number to int32 (now it is int64)
             "cell_col": {
                 "units": "Grid y-coordinate",
-                "long_name": "Grid column Index for the chosen output grid",
+                "long_name": "Grid column index for the chosen output grid",
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
-                "valid_range": "TBD",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256, 256",
+                "valid_range": "0,2147483647",  # depends on the variable type
+                # "_Storage": "chunked",
+                # "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
-                "comment": "Grid column Index for the chosen output grid",
+                "comment": "Grid row index for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
             },
             "cell_row": {
                 "units": "Grid x-coordinate",
                 "long_name": "Grid row Index for the chosen output grid",
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
-                "valid_range": "TBD",
+                "valid_range": "0,2147483647",  # depends on the variable type
                 "_Storage": "chunked",
                 "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'], # Int
-                "comment": "Grid row Index for the chosen output grid",
+                "comment": "Grid row Index for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
             },
             "bt_h": {
                 "units": "K",
                 "long_name": "H-polarised TOA Brightness Temperatures",
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
-                "valid_range": "TBD",
+                "valid_range": "0,2147483647",  # depends on the variable type
                 "_Storage": "chunked",
                 "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Earth-Gridded TOA h-polarised"
                 + " [L|C|X|KU|KA]_BAND_[fore|aft] BTS"
                 + " interpolated on a TBD-km grid",
+                # L1C: self.config.grid_definition
+                # L1R: self.config.target_band[0] <= add this instead of TBD-km
             },
             "bt_v": {
                 "units": "K",
                 "long_name": "V-polarised TOA Brightness Temperatures",
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
-                "valid_range": "TBD",
+                "valid_range": "0,2147483647",  # depends on the variable type
                 "_Storage": "chunked",
                 "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
@@ -304,6 +307,8 @@ CDL = {
                 "_ChunkSizes": "256, 256",
                 # "_FillValue": nc.default_fillvals['f8'],
                 "comment": "Latitude of the centre of a TBD-km PROJ grid cell.",
+                # L1C: self.config.grid_definition
+                # L1R: self.config.target_band[0] <= add this instead of TBD-km  Boresight location of the self.config.target_band[0] footprint
             },
             "longitude": {
                 "units": "deg",
@@ -395,15 +400,35 @@ CDL = {
                 "_Storage": "chunked",
                 "_ChunkSizes": "256, 256",
                 # "_FillValue": "0",#nc.default_fillvals['f8'],
-                "comment": "A TBD-bit binary string of 1’s and 0’s "
-                + "indicating a variety of TBD information related to the "
+                # "comment": "A TBD-bit binary string of 1’s and 0’s "
+                # + "indicating a variety of TBD information related to the "
+                "comment": "A binary string of 1’s and 0’s "
+                + "providing information related to the "
                 + "processing of L1c/r data.",
+                # TODO: TBD-bit should either be 8 bit or 16 bits
             }
         },
         "Quality_information": {
             "calibration_flag": {
                 "units": "K",
-                "long_name": "A TBD-bit binary string of 1’s and 0’s indicating the quality "
+                # "long_name": "A TBD-bit binary string of 1’s and 0’s indicating the quality "
+                # + "of the L1b [L|C|X|KU|KA]_BAND Earth samples used to derive the "
+                # + "L1c data. A ‘0’ indicates that the L1c samples met a certain "
+                # + "quality criterion and a ‘1’ that it did not. Bit position ‘0’ "
+                # + "refers to the least significant bit. The calibration flag "
+                # + "summarises the calibration quality for each channel and scan. "
+                # + "The data quality flag summarises the BT data quality for each "
+                # + "channel and scan.",
+                "long_name": "A 16-bit binary string of 1’s and 0’s indicating the quality "
+                + "of the L1b [L|C|X|KU|KA]_BAND Earth samples used to derive the "
+                + "L1c data.",
+                "grid_mapping": "crs",
+                "coverage_content_type": "Grid",
+                "valid_range": "0,65535",
+                "_Storage": "chunked",
+                "_ChunkSizes": "256,256",
+                # "_FillValue": "0"
+                "comment": "A 16-bit binary string of 1’s and 0’s indicating the quality "
                 + "of the L1b [L|C|X|KU|KA]_BAND Earth samples used to derive the "
                 + "L1c data. A ‘0’ indicates that the L1c samples met a certain "
                 + "quality criterion and a ‘1’ that it did not. Bit position ‘0’ "
@@ -411,16 +436,26 @@ CDL = {
                 + "summarises the calibration quality for each channel and scan. "
                 + "The data quality flag summarises the BT data quality for each "
                 + "channel and scan.",
-                "grid_mapping": "crs",
-                "coverage_content_type": "Grid",
-                "valid_range": "0,65535",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256,256",
-                # "_FillValue": "0"
+                # TODO: put 16 or remove it.
             },
             "data_quality_flag": {
                 "units": "K",
-                "long_name": "A TBD-bit binary string of 1’s and 0’s indicating the quality "
+                # "long_name": "A TBD-bit binary string of 1’s and 0’s indicating the quality "
+                # + "of the L1b [L|C|X|KU|KA]_BAND Earth samples used to derive the "
+                # + "L1c data. A ‘0’ indicates that the L1c samples met a certain "
+                # + "quality criterion and a ‘1’ that it did not. Bit position ‘0’ "
+                # + "refers to the least significant bit. The calibration flag "
+                # + "summarises the calibration quality for each channel and scan. "
+                # + "The data quality flag summarises the BT data quality for each "
+                # + "channel and scan.",
+                "long_name": "",
+                "grid_mapping": "crs",
+                "coverage_content_type": "Grid",
+                "valid_range": "0,65535",
+                "_Storage": "chunked",
+                "_ChunkSizes": "256,256",
+                # "_FillValue": "0"
+                "comment": "A 16-bit binary string of 1’s and 0’s indicating the quality "
                 + "of the L1b [L|C|X|KU|KA]_BAND Earth samples used to derive the "
                 + "L1c data. A ‘0’ indicates that the L1c samples met a certain "
                 + "quality criterion and a ‘1’ that it did not. Bit position ‘0’ "
@@ -428,12 +463,6 @@ CDL = {
                 + "summarises the calibration quality for each channel and scan. "
                 + "The data quality flag summarises the BT data quality for each "
                 + "channel and scan.",
-                "grid_mapping": "crs",
-                "coverage_content_type": "Grid",
-                "valid_range": "0,65535",
-                "_Storage": "chunked",
-                "_ChunkSizes": "256,256",
-                # "_FillValue": "0"
             },
         },
     },
@@ -605,10 +634,10 @@ class ProductGenerator:
             "license": "None",
             # "standard_name_vocabulary": "TBD",
             "date_created": f"{self.config.timestamp}",
-            "creator_name": "Maksym Brilenkov",
-            "creator_email": "brilenkov@strcorp.no",
-            "creator_url": "https://www.stcorp.no/",
-            "institution": "Science and Technology",
+            "creator_name": f"{self.config.creator_name}",  # "Maksym Brilenkov",
+            "creator_email": f"{self.config.creator_email}",  # "brilenkov@strcorp.no",
+            "creator_url": f"{self.config.creator_url}",  # "https://www.stcorp.no/",
+            "creator_institution": f"{self.config.creator_institution}",  # "Science and Technology",
             "project": "CIMR Re-Gridding toolBox (RGB)",
             # "program": "TBD",
             # "contributor_name": "TBD",
@@ -616,6 +645,7 @@ class ProductGenerator:
             # "publisher_name": "TBD",
             # "publisher_email": "TBD",
             # "publisher_url": "TBD",
+            # TODO: Start
             "geospatial_bounds": "TBD",
             "geospatial_bounds_crs": "TBD",
             "geospatial_bounds_vertical_crs": "TBD",
@@ -623,14 +653,15 @@ class ProductGenerator:
             "geospatial_lat_max": "TBD",
             "geospatial_lon_min": "TBD",
             "geospatial_lon_max": "TBD",
-            # "time_coverage_start": "TBD",
-            # "time_coverage_end": "TBD",
-            # "time_coverage_duration": "TBD",
-            # "time_coverage_resolution": "TBD",
             "geospatial_lat_units": "degrees north",
             "geospatial_lat_resolution": "TBD",
             "geospatial_lon_units": "degrees north",
             "geospatial_lon_resolution": "TBD",
+            # TODO: End
+            # "time_coverage_start": "TBD",
+            # "time_coverage_end": "TBD",
+            # "time_coverage_duration": "TBD",
+            # "time_coverage_resolution": "TBD",
             # "date_modified": "TBD",
             # "date_issued": "TBD",
             # "date_metadata_modified": "TBD",
@@ -644,8 +675,11 @@ class ProductGenerator:
             "input_level1b_filename": f"{pb.Path(self.config.input_data_path).resolve().name}",  # "TBD",
             "level_01_atbd": "Level 0, 1 Algorithms Theoretical Baseline Document Description and Performance analysis, Thales Alenia Space, 20/06/2022",
             "mission_requirement_document": "Copernicus Imaging Microwave Radiometer (CIMR) Mission Requirements Document, version 5, ESA-EOPSM-CIMR-MRD-3236, 11/02/2023",
-            "antenna_pattern_files": "TBD",
             "antenna_pattern_source": "Antenna patterns provided by Thales Alenia Space in September 2022. V-pol and H-pol complex amplitudes are assumed to be identical.",
+            # TODO: This field needs to contain valid antenna pattern file name
+            # or be None if we ded not use them such as in case of IDS and
+            # other parameters
+            "antenna_pattern_files": "TBD",
         }
 
         # self.get_antenna_patterns_list()

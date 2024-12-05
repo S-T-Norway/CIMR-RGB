@@ -2,6 +2,7 @@
 This script reads the configuration file and validates the chosen parameters.
 """
 
+import re
 import sys
 import pathlib as pb
 import logging
@@ -141,8 +142,24 @@ class ConfigFile:
 
         rgb_logging.setup_global_exception_handler(logger=self.logger)
         # -----------
+        # OutputData metadata
+        self.product_version = self.validate_output_data_metadata(
+            config_object.find("OutputData/version")
+        )
+        self.creator_email = self.validate_email(
+            config=config_object, email="OutputData/creator_email"
+        )
+        self.creator_url = self.validate_output_data_metadata(
+            config_object.find("OutputData/creator_url")
+        )
+        self.creator_institution = self.validate_output_data_metadata(
+            config_object.find("OutputData/creator_institution")
+        )
+        self.creator_name = self.validate_output_data_metadata(
+            config_object.find("OutputData/creator_name")
+        )
 
-        self.product_version = config_object.find("OutputData/version").text
+        # -----------
 
         self.input_data_type = self.validate_input_data_type(
             config_object=config_object, input_data_type="InputData/type"
@@ -507,6 +524,48 @@ class ConfigFile:
         except ParseError as e:
             raise ValueError(f"Error parsing the configuration file: {e}") from e
         return root, tree
+
+    @staticmethod
+    def validate_email(
+        config,
+        email: str = "OutputData/creator_email",
+        logger: typing.Optional[logging.Logger] = None,
+    ):
+        """
+        Validates if the provided string is a valid email address.
+
+        Args:
+            email (str): The email address to validate.
+
+        Raises:
+            ValueError: If the email is not in a valid format.
+        """
+
+        email = config.find(email).text
+
+        # Regular expression for validating an email
+        email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+
+        # Validate email format
+        if not re.match(email_regex, email):
+            error_message = (
+                "Email should have the following format: username@domain.com"
+            )
+            if logger:
+                logger.error(f"Invalid email provided: {email} - {error_message}")
+            else:
+                print(f"Invalid email provided: {email} - {error_message}")
+            raise ValueError(error_message)
+        else:
+            return email
+
+    @staticmethod
+    def validate_output_data_metadata(parameter):
+        if parameter.text.strip() == "" or parameter is None:
+            parameter = ""
+        else:
+            parameter = parameter.text.strip()
+        return parameter
 
     @staticmethod
     def validate_output_directory_path(
