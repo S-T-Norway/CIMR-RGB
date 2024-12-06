@@ -874,10 +874,7 @@ class ConfigFile:
                     f"Valid source bands are: {valid_input}."
                 )
 
-
-
     @staticmethod
-    #def validate_grid_definition(config_object, grid_type, grid_definition):
     def validate_grid_definition(config_object, grid_definition):
         """
         Validates the grid definition and returns the value if valid
@@ -1113,7 +1110,9 @@ class ConfigFile:
                            'acq_time_utc', 'azimuth']
 
             default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
-                            'processing_scan_angle', 'longitude', 'latitude']
+                         'processing_scan_angle', 'longitude', 'latitude', 'faraday_rot_angle', 'nedt_h',
+                           'nedt_v', 'nedt_3', 'nedt_4', 'regridding_n_samples', 'regridding_l1b_orphans',
+                           'acq_time_utc', 'azimuth']
 
         elif input_data_type == 'AMSR2':
 
