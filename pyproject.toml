@@ -28,7 +28,8 @@ dependencies = [
   "tqdm >= 4.66.4", 
   "psutil >= 5.9.8", 
   "cartopy >= 0.23.0",
-  "shapely"
+  "shapely", 
+  "matplotlib" 
 ]
 
 
