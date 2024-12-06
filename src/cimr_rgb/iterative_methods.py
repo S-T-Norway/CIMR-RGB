@@ -29,32 +29,44 @@ def landweber(A, Y, lambda_param=1e-4, alpha=None, n_iter=1000, rtol=1e-5):
     if alpha is None:
         alpha = 1./np.linalg.norm(np.dot(A.T,A))
 
+    count = 0
     for i in tqdm(range(n_iter)):
+        count += 1
         residual = Y - A @ X
         regularization_term = lambda_param * X
         X_new = X + alpha * (At @ residual - regularization_term)
         rel_error = np.linalg.norm(X_new - X) / np.linalg.norm(X)
         if rel_error < rtol:
             print(f"Converged in {i+1} iterations with relative error: {rel_error}")
-            return X_new
+            return X_new, count
         X = X_new
 
-    print("Reached maximum iterations without full convergence.")
-    return X
+    print(f"Reached maximum iterations without full convergence with error {rel_error}")
+    return X, count
 
 
 def landweber_nedt(A, varY, lambda_param, alpha, n_iter):
 
-    varX = np.zeros((A.shape[1], A.shape[1]))
+    if alpha is None:
+        alpha = 1./np.linalg.norm(np.dot(A.T,A))
+
     At  = A.T
     AtA = At @ A 
-    I  = np.identity(varX.shape)
+    xlen = A.shape[1]
+    B = np.identity(xlen) - alpha*(AtA + lambda_param*np.identity(xlen))
 
-    for i in tqdm(range(n_iter)):
-        B = I - alpha*(AtA + lambda_param*I)
-        varX = alpha**2 * At @ (varY @ A) + B @ (varX @ B.T)
+    if len(varY.shape)==1:
+        varX = np.zeros(xlen)
+        for i in tqdm(range(n_iter)):
+            varX = np.sum(A * (varY[:, None] * A), axis=0) + np.sum(B * (varX[:, None] * B), axis=0)
 
-    return np.diagonal(varX)
+    else:
+        varX = np.zeros((xlen,xlen))
+        for i in tqdm(range(n_iter)):
+            varX = alpha**2 * At @ (varY @ A) + B @ (varX @ B.T)
+        varX = np.diagonal(varX)
+    
+    return varX
 
 
 def conjugate_gradient_ne(A, Y, lambda_param=1e-4, n_iter=1000, rtol=1e-5):
@@ -81,7 +93,9 @@ def conjugate_gradient_ne(A, Y, lambda_param=1e-4, n_iter=1000, rtol=1e-5):
     p = r.copy()                     # Initial search direction
     rs_old = np.dot(r, r)
 
+    count = 0
     for i in tqdm(range(n_iter)):
+        count += 1
         Ap = AtA @ p
         alpha = rs_old / np.dot(p, Ap)
         X_new = X + alpha * p
@@ -91,44 +105,21 @@ def conjugate_gradient_ne(A, Y, lambda_param=1e-4, n_iter=1000, rtol=1e-5):
         rel_error = np.linalg.norm(X_new - X) / np.linalg.norm(X)
         if rel_error < rtol:
             print(f"Converged in {i+1} iterations with relative error: {rel_error}")
-            return X_new
+            return X_new, count
 
         p = r + (rs_new / rs_old) * p
         rs_old = rs_new
         X = X_new
 
     print(f"Reached maximum iterations without full convergence, relative error: {rel_error}")
-    return X
+    return X, count
 
 
 def conjugate_gradient_ne_nedt(A, varY, n_iter):
 
-    AtA = A.T @ A + lambda_param * np.eye(A.shape[1])
-    AtY = A.T @ Y
+    #to be implemented
 
-    varX = np.zeros(AtA.shape[1])    # Initial guess
-    r = AtY - AtA @ X                # Residual
-    p = r.copy()                     # Initial search direction
-    rs_old = np.dot(r, r)
-
-    for i in tqdm(range(n_iter)):
-        Ap = AtA @ p
-        alpha = rs_old / np.dot(p, Ap)
-        X_new = X + alpha * p
-        r -= alpha * Ap
-        rs_new = np.dot(r, r)
-
-        rel_error = np.linalg.norm(X_new - X) / np.linalg.norm(X)
-        if rel_error < rtol:
-            print(f"Converged in {i+1} iterations with relative error: {rel_error}")
-            return X_new
-
-        p = r + (rs_new / rs_old) * p
-        rs_old = rs_new
-        X = X_new
-
-    print(f"Reached maximum iterations without full convergence, relative error: {rel_error}")
-    return X
+    return None
 
 
 class MIIinterp:
@@ -295,10 +286,14 @@ class MIIinterp:
 
                     irow += 1
 
-                var_to_regrid = [var for var in self.config.variables_to_regrid if 'nedt' not in var]
+                var_to_regrid = []
+                for var in self.config.variables_to_regrid:
+                    if 'nedt' in var and 'bt'+var[-2:] not in self.config.variables_to_regrid:
+                        var_to_regrid.append('bt'+var[-2:])
+                    if 'nedt' not in var:
+                        var_to_regrid.append(var)
 
                 for variable in var_to_regrid:
-
 
                     Y = variable_dict[variable][mask]
 
@@ -321,17 +316,24 @@ class MIIinterp:
                     jup = n_cell_up
                     jdn = int_dom_lons.shape[0] - n_cell_dn
 
-                    variable_dict_out[variable][imin+i1:imin+i2, jmin+j1:jmin+j2] = X1.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
+                    if variable in self.config.variables_to_regrid:
+                        variable_dict_out[variable][imin+i1:imin+i2, jmin+j1:jmin+j2] = X1.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
 
-                    if 'bt' in variable and 'nedt'+variable[-2:] in self.config.variables_to_regrid:
-                        nedt_var = 'nedt'+variable[:-2]
+                    nedt_var = 'nedt'+variable[-2:]
+                    if 'bt' in variable and nedt_var in self.config.variables_to_regrid:
                         if self.inversion_method == 'CG':
                             Xnedt = conjugate_gradient_ne_nedt(A, variable_dict[nedt_var][mask], n_iter)
                         elif self.inversion_method == 'LW':
-                            Xnedt = conjugate_gradient_ne_nedt(A, variable_dict[nedt_var][mask], n_iter)
+                            Xnedt = landweber_nedt(A, variable_dict[nedt_var][mask],
+                                                                   alpha = None,
+                                                                   lambda_param = self.config.regularization_parameter, 
+                                                                   n_iter       = n_iter
+                            )
                         variable_dict_out[nedt_var][imin+i1:imin+i2, jmin+j1:jmin+j2] = Xnedt.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
                       
-        # here reshape all variablse in variable_dict_out              
+        # JOSEPH: check that the variables are reshaped correctly. right now  variable_dict_out[var] is a 2D array with the shape of the output grid
+        for variable in variable_dict_out:
+            variable_dict_out[variable] = variable_dict_out[variable].flatten()
 
         return variable_dict_out
 
@@ -353,14 +355,7 @@ class MIIinterp:
         if f"attitude{scan_direction}" not in variable_dict:
             variable_dict[f'attitude{scan_direction}'] = full(variable_dict[f"longitude{scan_direction}"].shape, None)
         variable_dict={key.removesuffix(f'{scan_direction}'): value for key, value in variable_dict.items()}
-        ###
 
         variable_dict_out = self.apply_inversion(variable_dict, samples_dict, target_grid)
-
-
-        # print(variable_dict_out['bt_h'].shape)
-        # plt.figure()
-        # plt.imshow(variable_dict_out['bt_h'])
-        # plt.show()
 
         return variable_dict_out
