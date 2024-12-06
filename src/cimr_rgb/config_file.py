@@ -947,7 +947,6 @@ class ConfigFile:
                 )
 
     @staticmethod
-    # def validate_grid_definition(config_object, grid_type, grid_definition):
     def validate_grid_definition(config_object, grid_definition):
         """
         Validates the grid definition and returns the value if valid
@@ -1191,70 +1190,26 @@ class ConfigFile:
     ):
         value = config_object.find(variables_to_regrid).text
 
-        if input_data_type == "SMAP":
-            valid_input = [
-                "bt_h",
-                "bt_v",
-                "bt_3",
-                "bt_4",
-                "processing_scan_angle",
-                "longitude",
-                "latitude",
-                "faraday_rot_angle",
-                "nedt_h",
-                "nedt_v",
-                "nedt_3",
-                "nedt_4",
-                "regridding_n_samples",
-                "regridding_l1b_orphans",
-                "acq_time_utc",
-                "azimuth",
-            ]
+        if input_data_type == 'SMAP':
+            valid_input = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
+                         'processing_scan_angle', 'longitude', 'latitude', 'faraday_rot_angle', 'nedt_h',
+                           'nedt_v', 'nedt_3', 'nedt_4', 'regridding_n_samples', 'regridding_l1b_orphans',
+                           'acq_time_utc', 'azimuth']
 
-            default_vars = [
-                "bt_h",
-                "bt_v",
-                "bt_3",
-                "bt_4",
-                "processing_scan_angle",
-                "longitude",
-                "latitude",
-            ]
+            default_vars = ['bt_h', 'bt_v', 'bt_3', 'bt_4',
+                         'processing_scan_angle', 'longitude', 'latitude', 'faraday_rot_angle', 'nedt_h',
+                           'nedt_v', 'nedt_3', 'nedt_4', 'regridding_n_samples', 'regridding_l1b_orphans',
+                           'acq_time_utc', 'azimuth']
 
-        elif input_data_type == "AMSR2":
-            valid_input = [
-                "bt_h",
-                "bt_v",
-                "longitude",
-                "latitude",
-                "regridding_n_samples",
-                "x_position",
-                "y_position",
-                "z_position",
-                "x_velocity",
-                "y_velocity",
-                "z_velocity",
-                "azimuth",
-                "solar_azimuth",
-                "acq_time_utc",
-            ]
+        elif input_data_type == 'AMSR2':
 
-            default_vars = [
-                "bt_h",
-                "bt_v",
-                "longitude",
-                "latitude",
-                "regridding_n_samples",
-                "x_position",
-                "y_position",
-                "z_position",
-                "x_velocity",
-                "y_velocity",
-                "z_velocity",
-                "azimuth",
-                "solar_azimuth",
-                "acq_time_utc",
-            ]
+            valid_input = ['bt_h', 'bt_v', 'longitude', 'latitude', 'regridding_n_samples',
+                           'x_position', 'y_position', 'z_position', 'x_velocity',
+                           'y_velocity', 'z_velocity', 'azimuth', 'solar_azimuth', 'acq_time_utc']
+
+            default_vars = ['bt_h', 'bt_v', 'longitude', 'latitude', 'regridding_n_samples',
+                           'x_position', 'y_position', 'z_position', 'x_velocity',
+                           'y_velocity', 'z_velocity', 'azimuth', 'solar_azimuth', 'acq_time_utc']
 
         elif input_data_type == "CIMR":
             valid_input = [

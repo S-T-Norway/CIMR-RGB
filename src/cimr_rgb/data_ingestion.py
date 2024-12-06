@@ -632,9 +632,6 @@ class DataIngestion:
 
         return data_dict
 
-
-    #@staticmethod
-    #def apply_smap_qc(variable_dict):
     def apply_smap_qc(self, variable_dict):
         """
         Applies the quality control values to the SMAP data for each polarisation.
@@ -661,7 +658,6 @@ class DataIngestion:
             variable_dict[variable][quality_filter == 1] = nan
 
         return variable_dict
-
 
     def clean_data(self, data_dict):
         """
@@ -868,7 +864,6 @@ class DataIngestion:
                     # Need to preserve the 3rd dimension (matrix) for attitude data
                     data_out = repeat(data, num_feed_horns, axis=1)
                     variable_dict[variable] = asarray(data_out.reshape(data_out.shape[0]*data_out.shape[1], 1, data_out.shape[2]))
-                    test =0
 
             elif len(data.shape) == 2:
                     data_out = zeros((data.shape[0], data.shape[1] * num_feed_horns))
@@ -879,6 +874,71 @@ class DataIngestion:
         variable_dict['feed_horn_number'] = float32(feed_horn_number.flatten('C'))
 
         return variable_dict
+
+    def prepare_l1r_for_l1c(self, l1r_data_dict, return_samples=False, return_orphans=False):
+
+        data_dict_out = {}
+        regridding_n_samples = {}
+        regridding_l1b_orphans = {}
+        num_feed_horns = self.config.num_horns[self.config.target_band[0]]
+        for band in l1r_data_dict:
+
+            variable_dict_out = {}
+            variable_dict = l1r_data_dict[band]
+
+            if self.config.split_fore_aft:
+                regridding_n_samples = {}
+                regridding_l1b_orphans = {}
+
+                for scan_direction in ['fore', 'aft']:
+                    # Only extract variables with the scan_direction in the name
+                    variable_dict_scan_direction = {key: value for key, value in variable_dict.items() if scan_direction in key}
+                    # Now remove the suffix so you can pass it to data_ingestion
+                    variable_dict_scan_direction = {key.replace(f"_{scan_direction}", ""): value for key, value in variable_dict_scan_direction.items()}
+                    if return_samples:
+                        try:
+                            regridding_n_samples[scan_direction] = variable_dict_scan_direction[f'regridding_n_samples_{scan_direction}']
+                        except:
+                            print(f"Error: regridding_n_samples not found in {band} data.")
+                    if return_orphans:
+                        try:
+                            regridding_l1b_orphans[scan_direction] = variable_dict_scan_direction[f'regridding_l1b_orphans_{scan_direction}']
+                        except:
+                            print(f"Error: regridding_l1b_orphans not found in {band} data.")
+
+                    variable_dict_scan_direction.pop(f'regridding_n_sample', None)
+                    variable_dict_scan_direction.pop(f'regridding_l1b_orphans', None)
+                    num_scans, num_samples = variable_dict_scan_direction['longitude'].shape[:2]
+
+                    variable_dict_scan_direction = self.combine_cimr_feeds(variable_dict_scan_direction,
+                            num_feed_horns)
+
+                    # Create reconstruction variables
+                    variable_dict_scan_direction['scan_number'] = float32(
+                        repeat(arange(num_scans)[:, newaxis], num_samples * num_feed_horns, axis=1).flatten('C'))
+                    single_row = tile(arange(num_samples), num_feed_horns)
+
+                    variable_dict_scan_direction['sample_number'] = float32(tile(single_row, (num_scans, 1)).flatten('C'))
+
+                    variable_dict_scan_direction = self.remove_out_of_bounds(variable_dict_scan_direction)
+
+                    # Re add the suffix to the variable names
+                    variable_dict_scan_direction = {f"{key}_{scan_direction}": value for key, value in variable_dict_scan_direction.items()}
+
+                    variable_dict_out.update({key: value for key, value in variable_dict_scan_direction.items()})
+
+            data_dict_out[band] = variable_dict_out
+
+        data_dict_out = self.clean_data(data_dict_out)
+        if return_samples:
+            data_dict_out = (data_dict_out, regridding_n_samples)
+        if return_orphans:
+            data_dict_out = (data_dict_out, regridding_l1b_orphans)
+        if return_orphans and return_samples:
+            data_dict_out = (data_dict_out, regridding_n_samples, regridding_l1b_orphans)
+        else:
+            data_dict_out = data_dict_out
+        return data_dict_out
 
     def ingest_amsr2(self):
         """
@@ -958,7 +1018,6 @@ class DataIngestion:
 
         return data_dict
 
-
     def ingest_smap(self):
         """
         Ingests AMSR2 data from the user specified path
@@ -997,7 +1056,6 @@ class DataIngestion:
 
         return data_dict
 
-
     def ingest_cimr(self):
         """
 
@@ -1020,7 +1078,6 @@ class DataIngestion:
 
         # Apply QC as and when
         return data_dict
-
 
     def ingest_data(self):
         """
