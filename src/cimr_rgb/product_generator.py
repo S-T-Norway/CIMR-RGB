@@ -8,6 +8,7 @@ import itertools as it
 import numpy as np
 import netCDF4 as nc
 import pyproj
+from shapely.geometry import Polygon
 
 
 from cimr_rgb.grid_generator import GRIDS, PROJECTIONS
@@ -746,43 +747,51 @@ class ProductGenerator:
         #    grid_name.split("_")[0]
         # ]  # Extract appropriate PROJECTION
 
-        geospatial_attrs = self.compute_geospatial_attributes(
-            grid=GRIDS[self.config.grid_definition],
-            projection_string=PROJECTIONS[self.config.projection_definition],
-        )
+        # TODO: Uncomment this to have POLYGONs configured
+        # geospatial_attrs = self.compute_geospatial_attributes(
+        #     longitude=data_dict["L"]["longitude_fore"],
+        #     latitude=data_dict["L"]["latitude_fore"],
+        #     cell_row=data_dict["L"]["cell_row_fore"],
+        #     cell_col=data_dict["L"]["cell_col_fore"],
+        #     res=GRIDS[self.config.grid_definition]["res"],
+        #     epsg_num=GRIDS[self.config.grid_definition]["epsg"],
+        #     # grid, projection_string
+        #     # grid=GRIDS[self.config.grid_definition],
+        #     # projection_string=PROJECTIONS[self.config.projection_definition],
+        # )
 
-        # Print the derived attributes
-        for key, value in geospatial_attrs.items():
-            self.logger.info(f"{key}: {value}")
-        # print(data_dict["L"].keys())
-        # TODO: The min and max values are not calculated correctly and should
-        #       (probably) be hardcoded into GRIDS
-        GLOBAL_ATTRIBUTES["geospatial_bounds"] = geospatial_attrs["geospatial_bounds"]
-        GLOBAL_ATTRIBUTES["geospatial_bounds_crs"] = geospatial_attrs[
-            "geospatial_bounds_crs"
-        ]
-        # lat_min, lat_max = self.get_minmax_vals(array=data_dict["L"]["latitude_fore"])
-        GLOBAL_ATTRIBUTES["geospatial_lat_min"] = geospatial_attrs[
-            "geospatial_lat_min"
-        ]  # lat_min
-        GLOBAL_ATTRIBUTES["geospatial_lat_max"] = geospatial_attrs[
-            "geospatial_lat_max"
-        ]  # lat_max
-        # lon_min, lon_max = self.get_minmax_vals(array=data_dict["L"]["longitude_fore"])
-        GLOBAL_ATTRIBUTES["geospatial_lon_min"] = geospatial_attrs[
-            "geospatial_lon_min"
-        ]  # lon_min
-        GLOBAL_ATTRIBUTES["geospatial_lon_max"] = geospatial_attrs[
-            "geospatial_lon_max"
-        ]  # lon_max
-        GLOBAL_ATTRIBUTES["geospatial_lat_units"] = "degrees"
-        GLOBAL_ATTRIBUTES["geospatial_lat_resolution"] = geospatial_attrs[
-            "geospatial_lat_resolution"
-        ]
-        GLOBAL_ATTRIBUTES["geospatial_lon_units"] = "degrees"
-        GLOBAL_ATTRIBUTES["geospatial_lon_resolution"] = geospatial_attrs[
-            "geospatial_lon_resolution"
-        ]
+        # # Print the derived attributes
+        # for key, value in geospatial_attrs.items():
+        #     self.logger.debug(f"{key}: {value}")
+        # # print(data_dict["L"].keys())
+        # # TODO: The min and max values are not calculated correctly and should
+        # #       (probably) be hardcoded into GRIDS
+        # GLOBAL_ATTRIBUTES["geospatial_bounds"] = geospatial_attrs["geospatial_bounds"]
+        # GLOBAL_ATTRIBUTES["geospatial_bounds_crs"] = geospatial_attrs[
+        #     "geospatial_bounds_crs"
+        # ]
+        # # lat_min, lat_max = self.get_minmax_vals(array=data_dict["L"]["latitude_fore"])
+        # GLOBAL_ATTRIBUTES["geospatial_lat_min"] = geospatial_attrs[
+        #     "geospatial_lat_min"
+        # ]  # lat_min
+        # GLOBAL_ATTRIBUTES["geospatial_lat_max"] = geospatial_attrs[
+        #     "geospatial_lat_max"
+        # ]  # lat_max
+        # # lon_min, lon_max = self.get_minmax_vals(array=data_dict["L"]["longitude_fore"])
+        # GLOBAL_ATTRIBUTES["geospatial_lon_min"] = geospatial_attrs[
+        #     "geospatial_lon_min"
+        # ]  # lon_min
+        # GLOBAL_ATTRIBUTES["geospatial_lon_max"] = geospatial_attrs[
+        #     "geospatial_lon_max"
+        # ]  # lon_max
+        # GLOBAL_ATTRIBUTES["geospatial_lat_units"] = "degrees"
+        # GLOBAL_ATTRIBUTES["geospatial_lat_resolution"] = geospatial_attrs[
+        #     "geospatial_lat_resolution"
+        # ]
+        # GLOBAL_ATTRIBUTES["geospatial_lon_units"] = "degrees"
+        # GLOBAL_ATTRIBUTES["geospatial_lon_resolution"] = geospatial_attrs[
+        #     "geospatial_lon_resolution"
+        # ]
         # exit()
 
         return GLOBAL_ATTRIBUTES
@@ -795,8 +804,61 @@ class ProductGenerator:
 
         return min_value, max_value
 
+    def add_bounding_box(self, input_array, mask_value=np.nan):
+        """
+        Add a bounding box around a 2D array with the edges set to 1
+        and the rest set to a masked value or kept unchanged.
+
+        Args:
+            array (numpy.ndarray): Input 2D array.
+            mask_value (float): Value to mask the interior of the array.
+
+        Returns:
+            numpy.ndarray: Array with the bounding box added.
+        """
+
+        # Mask the NaN values
+        masked_data = np.ma.masked_where(np.isnan(input_array), input_array)
+
+        # Create an output masked array filled with NaNs (or a masked array)
+        output = np.ma.masked_all_like(masked_data)
+
+        # Loop through each row
+        for i, row in enumerate(masked_data):
+            # Find indices of non-masked elements
+            non_masked_indices = np.where(~row.mask)[0]
+            if non_masked_indices.size > 0:  # Check if there are non-masked values
+                first_idx = non_masked_indices[0]
+                last_idx = non_masked_indices[-1]
+                # Store the first and last non-masked elements in the output array
+                output[i, first_idx] = masked_data[i, first_idx]
+                output[i, last_idx] = masked_data[i, last_idx]
+
+        return output  # masked_array #bounding_box #array_with_bbox
+
+    def construct_2D_array(self, input_array, cell_row, cell_col):
+        grid_shape = (
+            GRIDS[self.config.grid_definition]["n_rows"],
+            GRIDS[self.config.grid_definition]["n_cols"],
+        )
+        # create nan array with shape of grid_shape
+        output_array = np.full(grid_shape, fill_value=np.nan)
+
+        for i in range(len(cell_row)):
+            output_array[int(cell_row[i]), int(cell_col[i])] = input_array[i]
+
+        return output_array
+
     # This is for L1C only
-    def compute_geospatial_attributes(self, grid, projection_string):
+    def compute_geospatial_attributes(
+        self,
+        longitude,
+        latitude,
+        cell_row,
+        cell_col,
+        res,
+        epsg_num,  # grid, projection_string
+    ):
         """
         Compute geospatial attributes for a given grid and its projection.
 
@@ -807,24 +869,63 @@ class ProductGenerator:
         Returns:
             dict: Dictionary containing derived geospatial attributes.
         """
+        # res, n_cols, n_rows = grid["res"], grid["n_cols"], grid["n_rows"]
+
+        # Retrieving max/min values for lons and lats
+        lon_min, lon_max = self.get_minmax_vals(array=longitude)
+        lat_min, lat_max = self.get_minmax_vals(array=latitude)
+
+        # Constructing 2D arrays
+        lon_grid = self.construct_2D_array(
+            input_array=longitude, cell_row=cell_row, cell_col=cell_col
+        )
+        lat_grid = self.construct_2D_array(
+            input_array=latitude, cell_row=cell_row, cell_col=cell_col
+        )
+
+        # Retrieving bounding boxes
+        lons_masked = self.add_bounding_box(input_array=lon_grid)
+        lats_masked = self.add_bounding_box(input_array=lat_grid)
+
+        # Retrieving only non-masked values
+        valid_lons = lons_masked.compressed()  # Extract non-masked longitudes
+        valid_lats = lats_masked.compressed()  # Extract non-masked latitudes
+
+        # Combine lons and lats into coordinate pairs
+        coordinates = list(zip(valid_lons, valid_lats))
+        # Ensure the polygon is closed by adding the first point to the end
+        if coordinates[0] != coordinates[-1]:
+            coordinates.append(coordinates[0])
+
+        # Create a Shapely Polygon
+        polygon = Polygon(coordinates)
+
+        # Print the POLYGON WKT (Well-Known Text) representation
+        # print("POLYGON:", polygon)
+        print("POLYGON WKT:", polygon.wkt)
+        # exit()
+
+        # Define geospatial bounds as a polygon
+        geospatial_bounds = polygon.wkt  # f"POLYGON(({lon_min} {lat_min}, {lon_max} {lat_min}, {lon_max} {lat_max}, {lon_min} {lat_max}, {lon_min} {lat_min}))"
+
         # Extract grid properties
-        x_min, y_max = grid["x_min"], grid["y_max"]
-        res, n_cols, n_rows = grid["res"], grid["n_cols"], grid["n_rows"]
+        # x_min, y_max = grid["x_min"], grid["y_max"]
+        # res, n_cols, n_rows = grid["res"], grid["n_cols"], grid["n_rows"]
 
         # Calculate bounding box in projected coordinates
-        x_max = x_min + (n_cols * res)
-        y_min = y_max - (n_rows * res)
+        # x_max = x_min + (n_cols * res)
+        # y_min = y_max - (n_rows * res)
 
-        print(f"x_min = {x_min}, x_max = {x_max}")
-        print(f"y_min = {y_min}, y_max = {y_max}")
+        # print(f"x_min = {x_min}, x_max = {x_max}")
+        # print(f"y_min = {y_min}, y_max = {y_max}")
 
         # transform to geographic coordinates
-        projection = pyproj.Proj(projection_string)
-        lon_min, lat_max = projection(x_min, y_max, inverse=True)
-        lon_max, lat_min = projection(x_max, y_min, inverse=True)
+        # projection = pyproj.Proj(projection_string)
+        # lon_min, lat_max = projection(x_min, y_max, inverse=True)
+        # lon_max, lat_min = projection(x_max, y_min, inverse=True)
 
-        print(f"lat_min = {lat_min}, lat_max = {lat_max}")
-        print(f"lon_min = {lon_min}, lon_max = {lon_max}")
+        # print(f"lat_min = {lat_min}, lat_max = {lat_max}")
+        # print(f"lon_min = {lon_min}, lon_max = {lon_max}")
 
         # lon_min, lat_min = projection(x_min, y_min, inverse=True)
         # lon_max, lat_max = projection(x_max, y_max, inverse=True)
@@ -844,17 +945,17 @@ class ProductGenerator:
         # print(f"lat_min = {lat_min}, lat_max = {lat_max}")
         # print(f"lon_min = {lon_min}, lon_max = {lon_max}")
 
-        print(projection_string)
+        # print(projection_string)
 
         # exit()
 
         # Transform a point and its neighbor one resolution unit apart
-        lon1, lat1 = projection(  # transformer.transform(
-            x_min, y_max
-        )  # Top left corner of the grid/bounding box
-        lon2, lat2 = projection(  # transformer.transform(
-            x_min + res, y_max - res
-        )
+        # lon1, lat1 = projection(  # transformer.transform(
+        #     x_min, y_max
+        # )  # Top left corner of the grid/bounding box
+        # lon2, lat2 = projection(  # transformer.transform(
+        #     x_min + res, y_max - res
+        # )
 
         # Calculate lat/lon resolution
         lat_res = abs(lat_max - lat_min) / res  # abs(lat2 - lat1)
@@ -863,9 +964,6 @@ class ProductGenerator:
         print(lon_res, lat_res)
         # exit()
 
-        # Define geospatial bounds as a polygon (counter-clockwise order)
-        geospatial_bounds = f"POLYGON(({lon_min} {lat_min}, {lon_max} {lat_min}, {lon_max} {lat_max}, {lon_min} {lat_max}, {lon_min} {lat_min}))"
-
         # Return geospatial attributes
         return {
             "geospatial_lat_min": lat_min,
@@ -873,7 +971,7 @@ class ProductGenerator:
             "geospatial_lon_min": lon_min,
             "geospatial_lon_max": lon_max,
             "geospatial_bounds": geospatial_bounds,
-            "geospatial_bounds_crs": f"EPSG:{grid['epsg']}",  # "EPSG:4326",
+            "geospatial_bounds_crs": f"EPSG:{epsg_num}",  # {grid['epsg']}",  # "EPSG:4326",
             "geospatial_lat_resolution": lat_res,
             "geospatial_lon_resolution": lon_res,
         }

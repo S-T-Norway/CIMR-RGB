@@ -1,0 +1,14 @@
+/home/eva-v3/.local/cimr_rgb/dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5
+[rgb-logger - CRITICAL]: Uncaught exception
+Traceback (most recent call last):
+  File "/home/eva-v3/.conda/envs/py310-cimr/bin/cimr-rgb", line 8, in <module>
+    sys.exit(main())
+  File "/home/eva-v3/Desktop/ubuntu-22.04/cimr/src/cimr_rgb/__main__.py", line 318, in main
+    rgb_config        = get_rgb_configuration(parser = parser)#, config_file = rgb_config_path)
+  File "/home/eva-v3/Desktop/ubuntu-22.04/cimr/src/cimr_rgb/__main__.py", line 250, in get_rgb_configuration
+    rgb_config = ConfigFile(file_to_write)
+  File "/home/eva-v3/Desktop/ubuntu-22.04/cimr/src/cimr_rgb/config_file.py", line 413, in __init__
+    self.variables_to_regrid = self.validate_variables_to_regrid(
+  File "/home/eva-v3/Desktop/ubuntu-22.04/cimr/src/cimr_rgb/config_file.py", line 1303, in validate_variables_to_regrid
+    raise ValueError(
+ValueError: Invalid variable_to_regrid. Check Configuration File. Valid variables_to_regrid: ['bt_h', 'bt_v', 'bt_3', 'bt_4', 'processing_scan_angle', 'longitude', 'latitude', 'faraday_rot_angle', 'nedt_h', 'nedt_v', 'nedt_3', 'nedt_4', 'regridding_n_samples', 'regridding_l1b_orphans', 'acq_time_utc', 'azimuth']
