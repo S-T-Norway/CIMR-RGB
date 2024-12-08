@@ -153,6 +153,9 @@ class BGInterp:
             ap_radii=pattern_radii,
         )
 
+        if 0 in int_dom_lons.shape or 0 in int_dom_lats.shape:
+            return None, None
+
         # Project source patterns to grid
         source_ant_patterns = []
         for sample in source_inds:
@@ -296,6 +299,12 @@ class BGInterp:
                 target_inds=samples_dict["grid_1d_index"][target_cell],
                 target_cell_size=target_cell_size,
             )
+
+            if source_ant_patterns is None or target_ant_pattern is None:
+                # Log this in future to fix it
+                print(f"target_cell: {target_cell} integration grid couldn't be constructed")
+                weights[target_cell, : len(input_samples)] = nan
+                continue
 
             # BG algorithm
             num_input_samples = len(input_samples)

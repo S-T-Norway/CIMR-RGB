@@ -35,15 +35,22 @@
       <rsir_iteration>15</rsir_iteration>
       <bg_smoothing>0</bg_smoothing>
     </ReGridderParams>
-    <OutputData>
-      <save_to_disk>True</save_to_disk>
-      <output_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/T_14</output_path>
-      <timestamp />
-      <timestamp_fmt>%Y-%m-%d_%H-%M-%S</timestamp_fmt>
+  <OutputData>
+    <save_to_disk>True</save_to_disk>
+    <output_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/T_14</output_path>
+    <version>1.0.0</version>
+    <creator_name>insert your name</creator_name>
+    <!-- email is not an optional parameter, format
+    is:  name@domain.com -->
+    <creator_email>test@email.com</creator_email>
+    <creator_url>insert your url</creator_url>
+    <creator_institution>insert your institution</creator_institution>
+    <timestamp />
+    <timestamp_fmt>%Y-%m-%d_%H-%M-%S</timestamp_fmt>
   </OutputData>
   <LoggingParams>
     <logger_name>rgb-logger</logger_name>
-    <config_path />
+    <config_path></config_path>
     <decorate>True</decorate>
   </LoggingParams>
 </config>
