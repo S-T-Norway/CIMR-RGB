@@ -268,6 +268,13 @@ class rSIRInterp:
                 target_cell_size=target_cell_size
             )
 
+            if source_ant_patterns is None or target_ant_pattern is None:
+                # Log this in future to fix it
+                print(f"target_cell: {target_cell} integration grid couldn't be constructed")
+                t_out =  nan
+                T_out.append(t_out)
+                continue
+
             t_out = self.rsir_algorithm(
                 source_ant_patterns=source_ant_patterns,
                 target_ant_pattern=target_ant_pattern,
