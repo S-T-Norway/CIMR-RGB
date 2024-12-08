@@ -2,8 +2,10 @@
 <config>
   <InputData>
     <type>CIMR</type>
-    <path>./dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
-    <antenna_patterns_path>./dpr/antenna_patterns</antenna_patterns_path>
+    <path>
+      $HOME/.local/cimr_rgb/dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc
+    </path>
+    <antenna_patterns_path>$HOME/.local/cimr_rgb/dpr/antenna_patterns</antenna_patterns_path>
     <split_fore_aft>True</split_fore_aft>
     <source_band>C</source_band>
     <target_band>L X</target_band>
@@ -14,8 +16,8 @@
     <grid_type>L1C</grid_type>
     <grid_definition>EASE2_N9km</grid_definition> 
     <projection_definition>N</projection_definition>
-    <reduced_grid_inds></reduced_grid_inds> # 800 900 3200 3260 south 1450 1460 1780 1800 north 650 660 1250 1260
-  </GridParams>
+    <reduced_grid_inds></reduced_grid_inds>
+    # 800 900 3200 3260 south 1450 1460 1780 1800 north 650 660 1250 1260 </GridParams>
   <ReGridderParams>
     <regridding_algorithm>IDS</regridding_algorithm>
     <search_radius>18</search_radius>
@@ -26,6 +28,7 @@
     <polarisation_method>scalar</polarisation_method>
     <source_antenna_threshold>0.5</source_antenna_threshold>
     <target_antenna_threshold>0.5</target_antenna_threshold>
+    <max_theta_antenna_patterns>40.</max_theta_antenna_patterns>
     <MRF_grid_definition>EASE2_G3km</MRF_grid_definition>
     <MRF_projection_definition>G</MRF_projection_definition>
     <source_gaussian_params>100000 100000</source_gaussian_params>
@@ -36,13 +39,20 @@
   </ReGridderParams>
   <OutputData>
     <save_to_disk>True</save_to_disk>
-    <output_path>./output/cimr_rgb</output_path>
-    <timestamp></timestamp> 
-    <timestamp_fmt>%Y-%m-%d_%H-%M-%S</timestamp_fmt> 
+    <output_path>
+      ./output
+    </output_path>
+    <version>1.0.0</version>
+    <creator_name>Maksym Brilenkov</creator_name>
+    <creator_email>brilenkov@stcorp.no</creator_email> <!-- email is not an optional parameter -->
+    <creator_url>https://www.stcorp.no/</creator_url>
+    <creator_institution>Science and Technology AS</creator_institution>
+    <timestamp></timestamp>
+    <timestamp_fmt>%Y-%m-%d_%H-%M-%S</timestamp_fmt>
   </OutputData>
   <LoggingParams>
     <logger_name>rgb-logger</logger_name>
     <config_path></config_path>
-	  <decorate>True</decorate>
-  </LoggingParams> 
+    <decorate>True</decorate>
+  </LoggingParams>
 </config>

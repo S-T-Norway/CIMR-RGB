@@ -578,7 +578,7 @@ class ReGridder:
 
             data_dict_reshaped[band] = variable_dict_reshape
 
-            return data_dict_reshaped
+        return data_dict_reshaped
 
 
     def regrid_data(self, data_dict): # Need to change the name of this.
