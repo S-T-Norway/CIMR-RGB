@@ -1,0 +1,7 @@
+include configs/cimr_rgb_logger_config.json
+include dpr/Grids/NSIDC_PS/NSIDC0771_CellArea_PS_N12.5km_v1.0.nc
+include dpr/Grids/NSIDC_PS/NSIDC0771_CellArea_PS_S12.5km_v1.0.nc
+include dpr/Grids/NSIDC_PS/NSIDC0771_CellArea_PS_N25km_v1.0.nc
+include dpr/Grids/NSIDC_PS/NSIDC0771_CellArea_PS_S25km_v1.0.nc
+include dpr/Grids/NSIDC_PS/NSIDC0771_CellArea_PS_N6.25km_v1.0.nc
+include dpr/Grids/NSIDC_PS/NSIDC0771_CellArea_PS_S6.25km_v1.0.nc

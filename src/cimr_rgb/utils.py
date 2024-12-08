@@ -1,0 +1,126 @@
+"""
+Utility functions for the RGB.
+"""
+
+from numpy import delete, r_, array, linalg, column_stack, cos, sin, radians, arccos
+
+EARTH_RADIUS = 6378000
+
+
+def remove_overlap(array, overlap):
+    """
+    Removes overlap scans from the start and end of the array.
+
+    Parameters
+    ----------
+    array: np.ndarray
+        Array to remove overlap from
+    overlap: int
+        Number of scans to remove from the start and end of the array
+
+    Returns
+    -------
+    np.ndarray
+        Array with overlap scans removed
+    """
+    return delete(array, r_[0:overlap, array.shape[0] - overlap:array.shape[0]], axis=0)
+
+
+
+def interleave_bits(x, y):
+    """
+    This function creates a unique integer from two coordinates by interleaving their bits.
+
+    Parameters
+    ----------
+    x: int
+        First coordinate
+    y: int
+        Second coordinate
+
+    Returns
+    -------
+    z: int
+        Unique integer created from the two coordinates
+    """
+    z = 0
+    for i in range(max(x.bit_length(), y.bit_length())):
+        z |= (x & (1 << i)) << i | (y & (1 << i)) << (i + 1)
+    return int(z)
+
+
+
+def deinterleave_bits(z):
+    """
+    This function extracts the two coordinates from a unique integer created by interleave_bits.
+
+    Parameters
+    ----------
+    z: int
+        Unique integer created from two coordinates
+
+    Returns
+    -------
+    x: int
+        First coordinate
+    y: int
+        Second coordinate
+    """
+    x = y = 0
+    for i in range(0, z.bit_length()):
+        # Extract the bit at position i and shift it to the right position
+        # For x, we take every second bit starting from the LSB (least significant bit)
+        # For y, it's every second bit as well, but starting from the next bit over from x's start
+        x |= (z & (1 << (2*i))) >> i
+        y |= (z & (1 << (2*i + 1))) >> (i + 1)
+    return x, y
+
+
+# function to normalize a vector (or a list of vectors) to 1
+def normalize(vec):
+    vec = array(vec)
+    if len(vec.shape) > 1:
+        vec_norm = array(vec) / linalg.norm(vec, axis=1)[:, None]
+    else:
+        vec_norm = array(vec) / linalg.norm(vec)
+    return vec_norm
+
+
+
+def generic_transformation_matrix(x0, y0, z0, x1, y1, z1):
+    A = column_stack((x0, y0, z0))
+    B = column_stack((x1, y1, z1))
+    R = B @ linalg.inv(A)
+    return R
+
+
+# returns the rotation matrix around a given axis and a given angle
+def rotation_matrix(axis, angle):
+    assert axis in ['x', 'y', 'z']
+
+    if axis == 'x':
+        matrix = array([[1, 0, 0],
+                           [0, cos(angle), -sin(angle)],
+                           [0, sin(angle), cos(angle)]])
+
+    if axis == 'y':
+        matrix = array([[cos(angle), 0, sin(angle)],
+                           [0, 1, 0],
+                           [-sin(angle), 0, cos(angle)]])
+
+    if axis == 'z':
+        matrix = array([[cos(angle), -sin(angle), 0],
+                           [sin(angle), cos(angle), 0],
+                           [0, 0, 1]])
+
+    return matrix
+
+def great_circle_distance(lon_1, lat_1, lon_2, lat_2):
+    phi1, phi2 = radians(lat_1), radians(lat_2)
+    lambda1, lambda2 = radians(lon_1), radians(lon_2)
+    # Spherical Law of Cosines formula
+    delta_sigma = arccos(
+        sin(phi1) * sin(phi2) + cos(phi1) * cos(phi2) * cos(lambda2 - lambda1)
+    )
+    distance = EARTH_RADIUS * delta_sigma
+    return distance
