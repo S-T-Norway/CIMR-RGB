@@ -302,7 +302,8 @@ class BGInterp:
 
             if source_ant_patterns is None or target_ant_pattern is None:
                 # Log this in future to fix it
-                print(f"target_cell: {target_cell} integration grid couldn't be constructed")
+                #print(f"target_cell: {target_cell} integration grid couldn't be constructed")
+                self.logger.info(f"target_cell: {target_cell} integration grid couldn't be constructed")
                 weights[target_cell, : len(input_samples)] = nan
                 continue
 
@@ -416,7 +417,7 @@ class BGInterp:
 
             if "nedt" in variable:
                 # print(variable)
-                self.logger.info(f"`{variable}`")
+                self.logger.info(f"Variable is: `{variable}`")
                 variable_dict_out[variable] = self.get_nedt(
                     weights, samples_dict, variable_dict[variable]
                 )
