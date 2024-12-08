@@ -18,6 +18,16 @@ import time
 
 from numpy import full, nan, array
 import psutil 
+import numpy as np 
+import scipy as sp 
+import pyresample
+import h5py 
+import netCDF4 as nc 
+import tqdm 
+import pyproj 
+import shapely
+import matplotlib 
+import cartopy 
 
 # ---- Testing ----
 #import matplotlib
@@ -158,11 +168,25 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
             ['std', 'save-to-disk',  str, "Value for OutputData/save_to_disk parameter."], 
         'OutputData/output_path': 
             ['op', 'output-path',  str, "Value for OutputData/output_path parameter."], 
+        'OutputData/version': 
+            ['v', 'version',  str, "Value for OutputData/version parameter."], 
+        'OutputData/creator_name': 
+            ['cn', 'creator-name',  str, "Value for OutputData/creator_name parameter."], 
+        'OutputData/creator_email': 
+            ['ce', 'creator-email',  str, "Value for OutputData/creator_email parameter."], 
+        'OutputData/creator_url': 
+            ['cu', 'creator-url',  str, "Value for OutputData/creator_url parameter."], 
+        'OutputData/creator_institution': 
+            ['ci', 'creator-institution',  str, "Value for OutputData/creator_institution parameter."], 
+        'OutputData/timestamp_fmt': 
+            ['tf', 'timestamp_fmt',  str, "Value for OutputData/timestamp_fmt parameter."], 
         # Logging params 
         'LoggingParams/config_path': 
             ['cp', 'logging-params-config', str, "Value for LoggingParams/config_path parameter."], 
         'LoggingParams/decorate': 
             ['d', 'logging-params-decorate', str, "Value for LoggingParams/decorate parameter."], 
+        'LoggingParams/logger_name': 
+            ['ln', 'logger_name', str, "Value for LoggingParams/logger_name parameter."], 
     }
 
 
@@ -180,8 +204,6 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
 
     root, tree = ConfigFile.read_config(rgb_config_path)
 
-    # TODO: LoggingParams may not work properly here. Check it 
-    # 
     # Looping through valid parameters and assign its value if parameter is not
     # empty. Else, use default value provided via parameter file. 
     for key, value in valid_config_params.items():
@@ -265,16 +287,80 @@ def get_rgb_configuration(parser: argparse.ArgumentParser,
 
     logger.info("---------------------")
     
-    logger.info(f"Input File:              {rgb_config.input_data_path}")   
-    logger.info(f"Input Data Type:         {rgb_config.input_data_type}") 
-    logger.info(f"Split into Fore and Aft: {rgb_config.split_fore_aft}") 
-    logger.info(f"Save to Disk:            {rgb_config.save_to_disk}") 
-    logger.info(f"Regridding Algorithm:    {rgb_config.regridding_algorithm}") 
-    logger.info(f"Source Band:             {rgb_config.source_band}")       
-    logger.info(f"Target Band:             {rgb_config.target_band}") 
-    logger.info(f"Grid Type:               {rgb_config.grid_type}") 
-    logger.info(f"Grid Definition:         {rgb_config.grid_definition}") 
-    logger.info(f"Projection Definition:   {rgb_config.projection_definition}")
+    logger.info(f"Input File:                 {rgb_config.input_data_path}")   
+    logger.info(f"Input Data Type:            {rgb_config.input_data_type}") 
+    logger.info(f"Antenna Patterns Path:      {rgb_config.antenna_patterns_path}")
+    logger.info(f"Quality Control:            {rgb_config.quality_control}")
+    logger.info(f"Split into Fore and Aft:    {rgb_config.split_fore_aft}") 
+    logger.info(f"Save to Disk:               {rgb_config.save_to_disk}") 
+    logger.info(f"Output Path:                {rgb_config.output_path}")
+    logger.info(f"Product Version:            {rgb_config.product_version}")
+    logger.info(f"Creator Name:               {rgb_config.creator_name}")
+    logger.info(f"Creator Email:              {rgb_config.creator_email}")
+    logger.info(f"Creator URL:                {rgb_config.creator_url}")
+    logger.info(f"Creator Institution:        {rgb_config.creator_institution}")
+    logger.info(f"Timestamp Format:           {rgb_config.timestamp_fmt}")
+    logger.info(f"Regridding Algorithm:       {rgb_config.regridding_algorithm}") 
+    logger.info(f"Source Band:                {rgb_config.source_band}")       
+    logger.info(f"Target Band:                {rgb_config.target_band}") 
+    logger.info(f"Grid Type:                  {rgb_config.grid_type}") 
+    logger.info(f"Grid Definition:            {rgb_config.grid_definition}") 
+    logger.info(f"Projection Definition:      {rgb_config.projection_definition}")
+    logger.info(f"Reduced Grid Indices:       {rgb_config.reduced_grid_inds}")
+    logger.info(f"Regridding Algorithm:       {rgb_config.regridding_algorithm}")
+    logger.info(f"Search Radius:              {rgb_config.search_radius}")
+    logger.info(f"Max Neighbour:              {rgb_config.max_neighbours}")
+    logger.info(f"Variables to Regrid:        {rgb_config.variables_to_regrid}")
+    logger.info(f"Boresight Shift:            {rgb_config.boresight_shift}")
+    if rgb_config.regridding_algorithm in ["BG", "RSIR", "LW", "CG"]:
+        logger.info(f"Source Antenna Method:      {rgb_config.source_antenna_method}")
+        logger.info(f"Target Antenna Method:      {rgb_config.target_antenna_method}")
+        logger.info(f"Polarisation Method:        {rgb_config.polarisation_method}")
+        logger.info(f"Source Antenna Threshold:   {rgb_config.source_antenna_threshold}")
+        logger.info(f"Target Antenna Threshold:   {rgb_config.target_antenna_threshold}")
+        logger.info(f"Max Theta Antenna Patterns: {rgb_config.max_theta_antenna_patterns}")
+        logger.info(f"MRF Grid Definition:        {rgb_config.MRF_grid_definition}")
+        logger.info(f"MRF Grid Definition:        {rgb_config.MRF_projection_definition}")
+        logger.info(f"Source Gaussian Params:     {rgb_config.source_gaussian_params}")
+        logger.info(f"Target Gaussian Params:     {rgb_config.target_gaussian_params}")
+    else: 
+        logger.info(f"Source Antenna Method:      N/A")#{rgb_config.source_antenna_method}")
+        logger.info(f"Target Antenna Method:      N/A")#{rgb_config.target_antenna_method}")
+        logger.info(f"Polarisation Method:        N/A")#{rgb_config.polarisation_method}")
+        logger.info(f"Source Antenna Threshold:   N/A")#{rgb_config.source_antenna_threshold}")
+        logger.info(f"Target Antenna Threshold:   N/A")#{rgb_config.target_antenna_threshold}")
+        logger.info(f"Max Theta Antenna Patterns: N/A")#{rgb_config.max_theta_antenna_patterns}")
+        logger.info(f"MRF Grid Definition:        N/A")#{rgb_config.MRF_grid_definition}")
+        logger.info(f"MRF Grid Definition:        N/A")#{rgb_config.MRF_projection_definition}")
+        logger.info(f"Source Gaussian Params:     N/A")#{rgb_config.source_gaussian_params}")
+        logger.info(f"Target Gaussian Params:     N/A")#{rgb_config.target_gaussian_params}")
+    if rgb_config.regridding_algorithm in ["RSIR"]:
+        logger.info(f"rSIR Iteration:             {rgb_config.rsir_iteration}")
+    else: 
+        logger.info(f"rSIR Iteration:             N/A")#{rgb_config.rsir_iteration}")
+    if rgb_config.regridding_algorithm in ["BG"]:
+        logger.info(f"BG Smoothing:               {rgb_config.bg_smoothing}")
+    else: 
+        logger.info(f"BG Smoothing:               N/A")#{rgb_config.bg_smoothing}")
+    logger.info(f"Logger Name:                {rgb_config.logger_name}") 
+    # Can give an entire dict as output 
+    #logger.info(f"{rgb_config.logpar_config}") 
+    logger.info(f"Use RGB Decorator:          {rgb_config.logpar_decorate}") 
+
+    logger.info("---------------------")
+
+    logger.info("The following libraries were used:")
+    logger.info(f"netCDF4:                    v{nc.__version__}") 
+    logger.info(f"numpy:                      v{np.__version__}")  
+    logger.info(f"pyresample:                 v{pyresample.__version__}")
+    logger.info(f"scipy:                      v{sp.__version__}")
+    logger.info(f"h5py:                       v{h5py.__version__}")
+    logger.info(f"pyproj:                     v{pyproj.__version__}")
+    logger.info(f"tqdm:                       v{tqdm.__version__}")
+    logger.info(f"psutil:                     v{psutil.__version__}")
+    logger.info(f"cartopy:                    v{cartopy.__version__}")
+    logger.info(f"shapely:                    v{shapely.__version__}")
+    logger.info(f"matplotlib:                 v{matplotlib.__version__}")
 
     logger.info("---------------------")
 
@@ -313,7 +399,7 @@ def main():
     # Will use the default value of config_file if none is provided via command line: 
     # https://docs.python.org/3/library/argparse.html#nargs 
     parser.add_argument('config_file', type = str, help = "Path to the XML parameter file.", 
-                    nargs="?", default = rgb_config_path)
+                    nargs="?")#, default = rgb_config_path)
 
     rgb_config        = get_rgb_configuration(parser = parser)#, config_file = rgb_config_path)
 
