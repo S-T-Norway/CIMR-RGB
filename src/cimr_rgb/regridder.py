@@ -635,7 +635,7 @@ class ReGridder:
                     decorator = RGBLogging.track_perf, 
                     logger    = self.logger 
                     )(self.sample_selection_brute_force) 
-                samples_dict, variable_dict = tracked_func(variable_dict, target_grid)
+                samples_dict, variable_dict = tracked_func(variable_dict)
 
             if self.config.split_fore_aft:
 
