@@ -16,9 +16,9 @@ from numpy import array, full, nan, nanmean, polyfit, isnan, isinf
 
 
 # Add RGB remapped IDS netCDF here
-ids_data_path = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/T_15/SMAP_L1C_IDS_25km_20241203183125_T_15.nc'
+ids_data_path = ''
 # Add the RGB remapped RSIR netCDF here
-rsir_data_path = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/T_15/SMAP_L1C_RSIR_25km_20241203182749_T_15.nc'
+rsir_data_path = ''
 
 GRID = 'STEREO_N25km'
 PROJECTION = 'PS_N'

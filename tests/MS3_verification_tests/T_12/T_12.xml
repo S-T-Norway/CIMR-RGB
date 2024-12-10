@@ -18,7 +18,7 @@
     </GridParams>
     <ReGridderParams>
       <regridding_algorithm>IDS</regridding_algorithm>
-      <search_radius>18</search_radius>
+      <search_radius></search_radius>
       <max_neighbours>20</max_neighbours>
       <variables_to_regrid>bt_h bt_v</variables_to_regrid>
       <source_antenna_method>real</source_antenna_method>
@@ -37,7 +37,7 @@
     </ReGridderParams>
   <OutputData>
     <save_to_disk>True</save_to_disk>
-    <output_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/T_12</output_path>
+    <output_path>/home/beywood/Desktop/MS3/CIMR-RGB/tests/MS3_verification_tests/T_12</output_path>
     <version>1.0.0</version>
     <creator_name>insert your name</creator_name>
     <!-- email is not an optional parameter, format
