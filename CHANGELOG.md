@@ -14,7 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Implemented 6 different algorithms:
     - Backus Gilbert (BG) inversion
     - radiometric Scaterometer Image Reconstruction (RSIR)
-    - Landweber (LW)s
+    - Landweber (LW)s. [**Note**]: Landweber algorithm is implemented in iterative_methods, but not tested or working on the full pipeline.
+    - Conjugate Gradients (CG) methods
     - Inverse Distance Squared (IDS)
     - Nearest Neighbour (NN)
     - Drop-in-the-Bucket (DIB)

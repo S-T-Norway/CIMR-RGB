@@ -18,14 +18,9 @@ from grid_generator import GRIDS
 from numpy import array, full, nan, nanmean, polyfit, isnan, isinf
 
 # Add RGB remapped IDS netCDF here
-ids_data_path = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/T_19/CIMR_L1R_IDS_36km_2024-12-04_13-59-10_T31_SR18.nc'
-# ids_data_path = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/CIMR_L1R_IDS_36km_2024-12-04_13-06-26_SR30.nc'
-# ids_data_path = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/CIMR_L1R_IDS_36km_2024-12-04_13-09-31_SR100.nc'
-# ids_data_path = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/CIMR_L1R_IDS_36km_2024-12-04_13-10-09_SR200.nc'
+ids_data_path = ''
 # Add the RGB remapped BG netCDF here
-
-
-bg_data_path = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/T_19/CIMR_L1R_BG_36km_2024-12-04_14-59-33.nc'
+bg_data_path = ''
 
 BAND = 'L_BAND'
 PROJECTION = 'C_BAND_TARGET'

@@ -18,9 +18,9 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
 
 # Add RGB remapped netCDF here
-rgb_data = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/T_12/SMAP_L1C_IDS_36km_2024-12-06_16-15-26.nc'
+rgb_data = ''
 # Add the NASA version you are comparing to here
-nasa_data = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/T_12/SMAP_L1C_TB_47185_D_20231201T212059_R19240_002.h5'
+nasa_data = ''
 
 GRID = 'EASE2_G36km'
 PROJECTION = 'G'
