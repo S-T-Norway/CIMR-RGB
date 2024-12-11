@@ -491,7 +491,7 @@ class GridGenerator:
             result = tracked_func(return_resolution=return_resolution)
 
         elif "MERC" in self.grid_definition:
-            return_resolution = False
+            # return_resolution = False
             # result = self.generate_grid_xy_mercator(return_resolution=return_resolution)
             tracked_func = RGBLogging.rgb_decorate_and_execute(
                 decorate=self.decorate,
