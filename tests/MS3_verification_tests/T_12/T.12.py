@@ -5,6 +5,7 @@
 import sys
 import os
 import pathlib as pb
+import subprocess as sbps
 import warnings
 
 with warnings.catch_warnings():
@@ -25,12 +26,14 @@ import cimr_grasp.grasp_io as grasp_io
 
 repo_root = grasp_io.find_repo_root()
 # Add RGB remapped netCDF here
-rgb_data = grasp_io.find_repo_root().joinpath(
-    "MS3_verification_tests/T_12/SMAP_L1C_IDS_36km_test.nc"
+rgb_data = repo_root.joinpath(
+    "output/MS3_verification_tests/T_12/SMAP_L1C_IDS_36km_test.nc"
 )  # ""
 print(rgb_data)
 # Add the NASA version you are comparing to here
-nasa_data = ""
+nasa_data = repo_root.joinpath(
+    "dpr/L1C/SMAP/NASA/SMAP_L1C_TB_47185_D_20231201T212059_R19240_002.h5"
+)  # ""
 
 GRID = "EASE2_G36km"
 PROJECTION = "G"
@@ -298,6 +301,54 @@ class SMAP_comparison:
         plt.show()
 
 
+def run_python_subprocess(config_path):
+    """
+    Runs a Python script as a subprocess, displaying output in real-time.
+
+    Parameters:
+    ----------
+    script_path : str
+        Path to the Python script to be executed.
+    *args : str
+        Additional arguments to pass to the script.
+
+    Returns:
+    ----------
+    int
+        Exit code of the subprocess.
+    """
+    try:
+        # Construct the command
+        # command = [sys.executable, script_path] + list(args)
+        command = [
+            "python",
+            "-m",
+            "cimr_rgb",
+            str(config_path),
+        ]  # Adjust command if needed
+
+        # Run the subprocess and allow real-time output
+        result = sbps.run(
+            command,
+            stdout=sys.stdout,  # Redirect stdout to the parent process's stdout
+            stderr=sys.stderr,  # Redirect stderr to the parent process's stderr
+        )
+
+        # Return the exit code
+        return result.returncode
+    except Exception as e:
+        print(f"Error occurred: {e}", file=sys.stderr)
+        return -1
+
+
 if __name__ == "__main__":
+    # IDS
+    config_path = grasp_io.find_repo_root().joinpath(
+        "tests/MS3_verification_tests/T_12/T_12_IDS.xml"
+    )
+    exit_code = run_python_subprocess(config_path=config_path)
+    print(f"Subprocess exited with code: {exit_code}")
+
+    # CIMR_comparison(ids_data_path, rsir_data_path)
     SMAP_comparison(rgb_data, nasa_data).map_compare()
     SMAP_comparison(rgb_data, nasa_data).scatter_compare()

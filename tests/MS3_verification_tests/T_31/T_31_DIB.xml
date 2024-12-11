@@ -37,7 +37,7 @@
   </ReGridderParams>
   <OutputData>
     <save_to_disk>True</save_to_disk>
-    <output_path>./MS3_verification_tests/T_31</output_path>
+    <output_path>./output/MS3_verification_tests/T_31</output_path>
     <version>1.0.0</version>
     <creator_name>insert your name</creator_name>
     <!-- email is not an optional parameter, format
@@ -45,7 +45,7 @@
     <creator_email>test@email.com</creator_email>
     <creator_url>insert your url</creator_url>
     <creator_institution>insert your institution</creator_institution>
-    <timestamp />
+    <timestamp>test</timestamp>
     <timestamp_fmt>%Y-%m-%d_%H-%M-%S</timestamp_fmt>
   </OutputData>
   <LoggingParams>
