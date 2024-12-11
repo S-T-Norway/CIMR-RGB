@@ -7,6 +7,8 @@ class NNInterp:
 
     @staticmethod
     def NN(samples_dict, variable):
+        if samples_dict['indexes'].shape[1] != 1:
+            samples_dict['indexes'] = samples_dict['indexes'][:, 0]
         values = take(variable, samples_dict['indexes'])
         return values
 
