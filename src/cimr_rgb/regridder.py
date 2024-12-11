@@ -778,7 +778,7 @@ class ReGridder:
 
                 # Add cell_row and cell_col indexes
                 #cell_row, cell_col = self.create_output_grid_inds(samples_dict['grid_1d_index'])
-                if self.config.regridding_algorithm != 'LW':
+                if self.config.regridding_algorithm not in ['Lw', 'CG']:
                     tracked_func  = RGBLogging.rgb_decorate_and_execute(
                         decorate  = self.logpar_decorate,
                         decorator = RGBLogging.track_perf,
