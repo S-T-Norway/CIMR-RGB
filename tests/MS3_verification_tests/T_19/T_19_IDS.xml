@@ -1,20 +1,21 @@
 <?xml version='1.0' encoding='utf-8'?>
 <config>
   <InputData>
-    <type>SMAP</type>
-    <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>
-    <antenna_patterns_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/antenna_patterns</antenna_patterns_path>
-    <split_fore_aft>True</split_fore_aft>
-    <source_band>C</source_band>
-    <target_band>L</target_band>
+    <type>CIMR</type>
+    <path>
+      ./dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
+    <antenna_patterns_path>./dpr/antenna_patterns</antenna_patterns_path>
+    <split_fore_aft>False</split_fore_aft>
+    <source_band>L</source_band>
+    <target_band>C</target_band>
     <LMT>2200</LMT>
     <quality_control>True</quality_control>
   </InputData>
   <GridParams>
-    <grid_type>L1C</grid_type>
-    <grid_definition>STEREO_S25km</grid_definition>
-    <projection_definition>PS_S</projection_definition>
-    <reduced_grid_inds></reduced_grid_inds>
+    <grid_type>L1R</grid_type>
+    <grid_definition></grid_definition>
+    <projection_definition></projection_definition>
+    <reduced_grid_inds>0 200 250 300</reduced_grid_inds>
   </GridParams>
   <ReGridderParams>
     <regridding_algorithm>IDS</regridding_algorithm>
@@ -37,7 +38,7 @@
   </ReGridderParams>
   <OutputData>
     <save_to_disk>True</save_to_disk>
-    <output_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/T_16</output_path>
+    <output_path>./output/MS3_verification_tests/T_19</output_path>
     <version>1.0.0</version>
     <creator_name>insert your name</creator_name>
     <!-- email is not an optional parameter, format
@@ -45,7 +46,7 @@
     <creator_email>test@email.com</creator_email>
     <creator_url>insert your url</creator_url>
     <creator_institution>insert your institution</creator_institution>
-    <timestamp />
+    <timestamp>test</timestamp>
     <timestamp_fmt>%Y-%m-%d_%H-%M-%S</timestamp_fmt>
   </OutputData>
   <LoggingParams>

@@ -2,8 +2,9 @@
 <config>
   <InputData>
     <type>CIMR</type>
-    <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
-    <antenna_patterns_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/antenna_patterns</antenna_patterns_path>
+    <path>
+      ./dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
+    <antenna_patterns_path>./dpr/antenna_patterns</antenna_patterns_path>
     <split_fore_aft>False</split_fore_aft>
     <source_band>L</source_band>
     <target_band>C</target_band>
@@ -37,7 +38,7 @@
   </ReGridderParams>
   <OutputData>
     <save_to_disk>True</save_to_disk>
-    <output_path>/home/beywood/Desktop/MS3/CIMR-RGB/tests/MS3_verification_tests/T_19</output_path>
+    <output_path>./output/MS3_verification_tests/T_19</output_path>
     <version>1.0.0</version>
     <creator_name>insert your name</creator_name>
     <!-- email is not an optional parameter, format
@@ -45,7 +46,7 @@
     <creator_email>test@email.com</creator_email>
     <creator_url>insert your url</creator_url>
     <creator_institution>insert your institution</creator_institution>
-    <timestamp />
+    <timestamp>test</timestamp>
     <timestamp_fmt>%Y-%m-%d_%H-%M-%S</timestamp_fmt>
   </OutputData>
   <LoggingParams>

@@ -14,36 +14,31 @@ import matplotlib.pyplot as plt
 
 plt.ion()
 
-# sys.path.append('/home/beywood/ST/CIMR_RGB/CIMR-RGB/src/cimr_rgb')
+# sys.path.append("/home/beywood/ST/CIMR_RGB/CIMR-RGB/src/cimr_rgb")
 from numpy import array, full, nan, nanmean, polyfit, isnan, isinf
-
 
 from cimr_rgb.grid_generator import GRIDS
 import cimr_grasp.grasp_io as grasp_io
 
+
 repo_root = grasp_io.find_repo_root()
 # Add RGB remapped IDS netCDF here
 ids_data_path = pb.Path(repo_root).joinpath(
-    "output/MS3_verification_tests/T_15/SMAP_L1C_IDS_25km_test.nc"
+    "output/MS3_verification_tests/T_16/SMAP_L1C_IDS_25km_test.nc"
 )  # ""
-# Add the RGB remapped DIB netCDF here
-rsir_data_path = pb.Path(repo_root).joinpath(
-    "output/MS3_verification_tests/T_15/SMAP_L1C_RSIR_25km_test.nc"
+# Add the RGB remapped BG netCDF here
+bg_data_path = pb.Path(repo_root).joinpath(
+    "output/MS3_verification_tests/T_16/SMAP_L1C_BG_25km_test.nc"
 )
 
-# Add RGB remapped IDS netCDF here
-# ids_data_path = ""
-# Add the RGB remapped RSIR netCDF here
-# rsir_data_path = ""
-
-GRID = "STEREO_N25km"
-PROJECTION = "PS_N"
+GRID = "STEREO_S25km"
+PROJECTION = "PS_S"
 
 
 class SMAP_comparison:
-    def __init__(self, ids_data_path, rsir_data_path):
+    def __init__(self, ids_data_path, bg_data_path):
         self.ids_data = self.get_netcdf_data(ids_data_path)
-        self.rsir_data = self.get_netcdf_data(rsir_data_path)
+        self.bg_data = self.get_netcdf_data(bg_data_path)
 
     @staticmethod
     def get_netcdf_data(path):
@@ -75,25 +70,26 @@ class SMAP_comparison:
                         continue
                     grid[row[count], col[count]] = sample
                 gridded_vars[bt] = grid
+
             return gridded_vars
 
     def map_compare(self):
         cmap = "viridis"
         # bt_h plt
         fig, axs = plt.subplots(2, 3, constrained_layout=True)
-        im00 = axs[0, 0].imshow(self.rsir_data["bt_h_fore"][:, :], cmap=cmap)
-        axs[0, 0].set_title("RSIR Remap (bt_h_fore)")
+        im00 = axs[0, 0].imshow(self.bg_data["bt_h_fore"][:, :], cmap=cmap)
+        axs[0, 0].set_title("BG Remap (bt_h_fore)")
         im01 = axs[0, 1].imshow(self.ids_data["bt_h_fore"][:, :], cmap=cmap)
         axs[0, 1].set_title("IDS Remap (bt_h_fore)")
-        bt_h_fore_diff = abs(self.rsir_data["bt_h_fore"] - self.ids_data["bt_h_fore"])
+        bt_h_fore_diff = abs(self.bg_data["bt_h_fore"] - self.ids_data["bt_h_fore"])
         im02 = axs[0, 2].imshow(bt_h_fore_diff[:, :], cmap=cmap)
         axs[0, 2].set_title("Difference (bt_h_fore)")
         # aft
-        im10 = axs[1, 0].imshow(self.rsir_data["bt_h_aft"][:, :], cmap=cmap)
-        axs[1, 0].set_title("RSIR Remap (bt_h_aft)")
+        im10 = axs[1, 0].imshow(self.bg_data["bt_h_aft"][:, :], cmap=cmap)
+        axs[1, 0].set_title("BG Remap (bt_h_aft)")
         im11 = axs[1, 1].imshow(self.ids_data["bt_h_aft"][:, :], cmap=cmap)
         axs[1, 1].set_title("IDS Remap (bt_h_aft)")
-        bt_h_aft_diff = abs(self.rsir_data["bt_h_aft"] - self.ids_data["bt_h_aft"])
+        bt_h_aft_diff = abs(self.bg_data["bt_h_aft"] - self.ids_data["bt_h_aft"])
         im12 = axs[1, 2].imshow(bt_h_aft_diff[:, :], cmap=cmap)
         axs[1, 2].set_title("Difference (bt_h_aft)")
         fig.colorbar(im02, ax=axs[0])
@@ -117,15 +113,15 @@ class SMAP_comparison:
         # axs[0,2].text(100, 300, f"mean(abs(bt_diff)) = {aft_mean_diff}K")
         axs[0, 2].text(
             50,
-            300,
-            rf"$\mu = \frac{{1}}{{n}} \sum_{{i=1}}^{{n}} | \mathrm{{IDS}}_i - \mathrm{{RSIR}}_i |$",
+            250,
+            rf"$\mu = \frac{{1}}{{n}} \sum_{{i=1}}^{{n}} | \mathrm{{IDS}}_i - \mathrm{{BG}}_i |$",
             fontsize=14,
             color="black",
         )
 
         axs[0, 2].text(
             50,
-            350,
+            300,
             rf"$\mu_{{fore}} =  {fore_mean_diff:.2f} K, \ \text{{or}} \ {fore_percent_diff:.2f}\%$",
             fontsize=14,
             color="black",
@@ -156,13 +152,13 @@ class SMAP_comparison:
         return x, y, m, b, y_fit, r_squared
 
     def scatter_compare(self):
-        x = self.rsir_data["bt_h_fore"].flatten()
+        x = self.bg_data["bt_h_fore"].flatten()
         y = self.ids_data["bt_h_fore"].flatten()
         x_h_fore, y_h_fore, m_h_fore, b_h_fore, y_fit_h_fore, r_squared = (
             self.scatter_stats(x, y)
         )
 
-        x = self.rsir_data["bt_h_aft"].flatten()
+        x = self.bg_data["bt_h_aft"].flatten()
         y = self.ids_data["bt_h_aft"].flatten()
         x_h_aft, y_h_aft, m_h_aft, b_h_aft, y_fit_h_aft, r_squared = self.scatter_stats(
             x, y
@@ -173,14 +169,14 @@ class SMAP_comparison:
         axs[0].plot(x_h_fore, y_fit_h_fore, color="red")
         axs[0].legend(title=f"$R^2 = {r_squared:.3f}$")
         axs[0].set_title("bt_h_fore")
-        axs[0].set_xlabel("RSIR BT [K]")
+        axs[0].set_xlabel("BG BT [K]")
         axs[0].set_ylabel("IDS BT [K]")
 
         axs[1].scatter(x_h_aft, y_h_aft)
         axs[1].plot(x_h_aft, y_fit_h_aft, color="red")
         axs[1].legend(title=f"$R^2 = {r_squared:.3f}$")
         axs[1].set_title("bt_h_aft")
-        axs[1].set_xlabel("RSIR BT [K]")
+        axs[1].set_xlabel("BG BT [K]")
         axs[1].set_ylabel("IDS BT [K]")
 
         plt.show()
@@ -229,18 +225,18 @@ def run_python_subprocess(config_path):
 if __name__ == "__main__":
     # IDS
     config_path = grasp_io.find_repo_root().joinpath(
-        "tests/MS3_verification_tests/T_15/T_15_IDS.xml"
+        "tests/MS3_verification_tests/T_16/T_16_IDS.xml"
     )
     exit_code = run_python_subprocess(config_path=config_path)
     print(f"Subprocess exited with code: {exit_code}")
 
     # DIB
     config_path = grasp_io.find_repo_root().joinpath(
-        "tests/MS3_verification_tests/T_15/T_15_RSIR.xml"
+        "tests/MS3_verification_tests/T_16/T_16_BG.xml"
     )
     exit_code = run_python_subprocess(config_path=config_path)
     print(f"Subprocess exited with code: {exit_code}")
 
-    SMAP_comparison(ids_data_path, rsir_data_path).map_compare()
-    SMAP_comparison(ids_data_path, rsir_data_path).scatter_compare()
+    SMAP_comparison(ids_data_path, bg_data_path).map_compare()
+    SMAP_comparison(ids_data_path, bg_data_path).scatter_compare()
 

@@ -2,8 +2,8 @@
 <config>
   <InputData>
     <type>AMSR2</type>
-    <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/AMSR2/GW1AM2_202308301033_051D_L1SGBTBR_2220220.h5</path>
-    <antenna_patterns_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/antenna_patterns</antenna_patterns_path>
+    <path>./dpr/L1B/AMSR2/GW1AM2_202308301033_051D_L1SGBTBR_2220220.h5</path>
+    <antenna_patterns_path>./dpr/antenna_patterns</antenna_patterns_path>
     <split_fore_aft>False</split_fore_aft>
     <source_band>10 23 89a</source_band>
     <target_band>6</target_band>
@@ -37,7 +37,7 @@
   </ReGridderParams>
   <OutputData>
     <save_to_disk>True</save_to_disk>
-    <output_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/T_31</output_path>
+    <output_path>./MS3_verification_tests/T_31</output_path>
     <version>1.0.0</version>
     <creator_name>insert your name</creator_name>
     <!-- email is not an optional parameter, format
