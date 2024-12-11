@@ -2,8 +2,8 @@
 <config>
   <InputData>
     <type>CIMR</type>
-    <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
-    <antenna_patterns_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/antenna_patterns</antenna_patterns_path>
+    <path>../../dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
+    <antenna_patterns_path>../../dpr/antenna_patterns</antenna_patterns_path>
     <split_fore_aft>True</split_fore_aft>
     <source_band>KA</source_band>
     <target_band>L</target_band>
@@ -37,7 +37,7 @@
   </ReGridderParams>
   <OutputData>
     <save_to_disk>True</save_to_disk>
-    <output_path>/home/beywood/Desktop/MS3/CIMR-RGB/notebooks/L1b_L1r_L1c</output_path>
+    <output_path>output</output_path>
     <version>1.0.0</version>
     <creator_name>insert your name</creator_name>
     <!-- email is not an optional parameter, format
