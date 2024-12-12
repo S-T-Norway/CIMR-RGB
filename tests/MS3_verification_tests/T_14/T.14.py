@@ -269,7 +269,6 @@ class AMSR2_comparison:
         )  # ""
         plt.savefig(img_path, dpi=300)
         plt.show()
-        plt.show()
 
 
 def run_python_subprocess(config_path):
