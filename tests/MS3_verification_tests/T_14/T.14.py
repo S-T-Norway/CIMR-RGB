@@ -77,7 +77,7 @@ class AMSR2_comparison:
         cmap = "viridis"
         # bt_h plt
         # ---------------------- 7_BAND ----------------------
-        fig, axs = plt.subplots(1, 3, constrained_layout=True)
+        fig, axs = plt.subplots(1, 3, figsize=(20, 12), constrained_layout=True)
         fig.suptitle("7 -- > 6")
         plt.subplots_adjust(wspace=0.01)
         im00 = axs[0].imshow(bt_h_dib_7, cmap=cmap)
@@ -92,6 +92,10 @@ class AMSR2_comparison:
         im02 = axs[2].imshow(bt_h_diff, cmap=cmap)
         axs[2].set_title("Difference (bt_h)")
         fig.colorbar(im02, ax=axs[2])
+        img_path = repo_root.joinpath(
+            "output/MS3_verification_tests/T_14/T_14_difference1.png"
+        )  # ""
+        plt.savefig(img_path, dpi=300)
         plt.show()
 
         # Add Statistics
@@ -129,7 +133,7 @@ class AMSR2_comparison:
         )
 
         # # ---------------------- 18_BAND ----------------------
-        fig, axs = plt.subplots(1, 3, constrained_layout=True)
+        fig, axs = plt.subplots(1, 3, figsize=(20, 12), constrained_layout=True)
         fig.suptitle("18 -- > 6")
         im7 = axs[0].imshow(bt_h_dib_18, cmap=cmap)
         axs[0].set_title("DIB Remap (bt_h)")
@@ -159,11 +163,15 @@ class AMSR2_comparison:
             fontsize=14,
             color="black",
         )
+        img_path = repo_root.joinpath(
+            "output/MS3_verification_tests/T_14/T_14_difference2.png"
+        )  # ""
+        plt.savefig(img_path, dpi=300)
 
         plt.show()
         #
         # # ---------------------- 89b_BAND ----------------------
-        fig, axs = plt.subplots(1, 3, constrained_layout=True)
+        fig, axs = plt.subplots(1, 3, figsize=(20, 12), constrained_layout=True)
         fig.suptitle("89b -- > 6")
         im20 = axs[0].imshow(bt_h_dib_89b, cmap=cmap)
         axs[0].set_title("DIB Remap (bt_h)")
@@ -193,6 +201,10 @@ class AMSR2_comparison:
             fontsize=14,
             color="black",
         )
+        img_path = repo_root.joinpath(
+            "output/MS3_verification_tests/T_14/T_14_difference3.png"
+        )  # ""
+        plt.savefig(img_path, dpi=300)
 
         plt.show()
 
@@ -230,7 +242,7 @@ class AMSR2_comparison:
             self.scatter_stats(x_89b, y_89b)
         )
 
-        fig, axs = plt.subplots(1, 3)
+        fig, axs = plt.subplots(1, 3, figsize=(20, 12))
         plt.suptitle("L1R AMSR2 Remap to the footprints of Band 6")
         axs[0].scatter(x_h_7, y_h_7)
         axs[0].plot(x_h_7, y_fit_h_7, color="red")
@@ -252,6 +264,11 @@ class AMSR2_comparison:
         axs[2].set_title("bt_h (Band 89b)")
         axs[2].set_xlabel("DIB BT [K]")
         axs[2].set_ylabel("IDS BT [K]")
+        img_path = repo_root.joinpath(
+            "output/MS3_verification_tests/T_14/T_14_scatter.png"
+        )  # ""
+        plt.savefig(img_path, dpi=300)
+        plt.show()
         plt.show()
 
 
