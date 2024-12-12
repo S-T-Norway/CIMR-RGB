@@ -63,7 +63,7 @@ class CIMR_comparison:
     def map_compare(self):
         cmap = "viridis"
         # bt_h plt
-        fig, axs = plt.subplots(3, 1, constrained_layout=True)
+        fig, axs = plt.subplots(3, 1, figsize=(20, 12), constrained_layout=True)
         im00 = axs[0].imshow(self.bg_data["bt_h"][:, :, 0], cmap=cmap)
         axs[0].set_title("BG Remap (bt_h)")
         im01 = axs[1].imshow(self.ids_data["bt_h"][:, :, 0], cmap=cmap)
@@ -101,6 +101,10 @@ class CIMR_comparison:
             fontsize=14,
             color="black",
         )
+        img_path = repo_root.joinpath(
+            "output/MS3_verification_tests/T_19/T_19_difference1.png"
+        )  # ""
+        plt.savefig(img_path, dpi=300)
         plt.show()
 
     @staticmethod
@@ -125,13 +129,17 @@ class CIMR_comparison:
             self.scatter_stats(x, y)
         )
 
-        fig, axs = plt.subplots()
+        fig, axs = plt.subplots(figsize=(20, 12))
         axs.scatter(x_h_fore, y_h_fore)
         axs.plot(x_h_fore, y_fit_h_fore, color="red")
         axs.legend(title=f"$R^2 = {r_squared:.3f}$")
         axs.set_title("bt_h")
         axs.set_xlabel("BG BT [K]")
         axs.set_ylabel("IDS BT [K]")
+        img_path = repo_root.joinpath(
+            "output/MS3_verification_tests/T_19/T_19_scatter.png"
+        )  # ""
+        plt.savefig(img_path, dpi=300)
         plt.show()
 
 

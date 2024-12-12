@@ -80,7 +80,7 @@ class SMAP_comparison:
     def map_compare(self):
         cmap = "viridis"
         # bt_h plt
-        fig, axs = plt.subplots(2, 3, constrained_layout=True)
+        fig, axs = plt.subplots(2, 3, figsize=(20, 12), constrained_layout=True)
         im00 = axs[0, 0].imshow(self.rsir_data["bt_h_fore"][:, :], cmap=cmap)
         axs[0, 0].set_title("RSIR Remap (bt_h_fore)")
         im01 = axs[0, 1].imshow(self.ids_data["bt_h_fore"][:, :], cmap=cmap)
@@ -138,6 +138,10 @@ class SMAP_comparison:
             fontsize=14,
             color="black",
         )
+        img_path = repo_root.joinpath(
+            "output/MS3_verification_tests/T_15/T_15_difference1.png"
+        )  # ""
+        plt.savefig(img_path, dpi=300)
         plt.show()
 
     @staticmethod
@@ -168,7 +172,7 @@ class SMAP_comparison:
             x, y
         )
 
-        fig, axs = plt.subplots(1, 2)
+        fig, axs = plt.subplots(1, 2, figsize=(20, 12))
         axs[0].scatter(x_h_fore, y_h_fore)
         axs[0].plot(x_h_fore, y_fit_h_fore, color="red")
         axs[0].legend(title=f"$R^2 = {r_squared:.3f}$")
@@ -182,6 +186,10 @@ class SMAP_comparison:
         axs[1].set_title("bt_h_aft")
         axs[1].set_xlabel("RSIR BT [K]")
         axs[1].set_ylabel("IDS BT [K]")
+        img_path = repo_root.joinpath(
+            "output/MS3_verification_tests/T_15/T_15_scatter.png"
+        )  # ""
+        plt.savefig(img_path, dpi=300)
 
         plt.show()
 
@@ -243,4 +251,3 @@ if __name__ == "__main__":
 
     SMAP_comparison(ids_data_path, rsir_data_path).map_compare()
     SMAP_comparison(ids_data_path, rsir_data_path).scatter_compare()
-
