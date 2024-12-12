@@ -100,3 +100,18 @@ from within the root of the repo.
 ## Tutorials
 
 Python notebooks with explanations are available inside the `notebooks` directory in the root of the repo.
+
+## Acknowledgement
+
+Part of the code uses NSIDC grids located inside `dpr/Grids/NSIDC_PS` in its
+routines. This data is is freely available on NASA website and can be found by
+following this link:
+[https://nsidc.org/data/nsidc-0771/versions/1](https://nsidc.org/data/nsidc-0771/versions/1)
+
+The following is hence applicable:
+
+Stewart, J. S., Meier, W. N. & Scott, D. J. (2022). Polar Stereographic
+Ancillary Grid Information. (NSIDC-0771, Version 1). [Data Set]. Boulder,
+Colorado USA. NASA National Snow and Ice Data Center Distributed Active Archive
+Center. https://doi.org/10.5067/N6INPBT8Y104. Polar Stereographic Grids. Date
+Accessed 12-11-2024.

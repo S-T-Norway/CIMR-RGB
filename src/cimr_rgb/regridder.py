@@ -3,7 +3,7 @@ import warnings
 import functools 
 
 import numpy as np
-from numpy import meshgrid, isinf, where, full, nan, nanmin, zeros, unravel_index, all, sum, ones, unique, inf, ravel_multi_index, split, stack
+from numpy import meshgrid, isinf, where, full, nan, nanmin, zeros, unravel_index, all, sum, ones, unique, inf, ravel_multi_index, split, stack, arange
 from pyresample import kd_tree, geometry
 
 # import matplotlib
@@ -635,7 +635,7 @@ class ReGridder:
                     decorator = RGBLogging.track_perf, 
                     logger    = self.logger 
                     )(self.sample_selection_brute_force) 
-                samples_dict, variable_dict = tracked_func(variable_dict, target_grid)
+                samples_dict, variable_dict = tracked_func(variable_dict)
 
             if self.config.split_fore_aft:
 
@@ -778,15 +778,26 @@ class ReGridder:
 
                 # Add cell_row and cell_col indexes
                 #cell_row, cell_col = self.create_output_grid_inds(samples_dict['grid_1d_index'])
-                tracked_func  = RGBLogging.rgb_decorate_and_execute(
-                    decorate  = self.logpar_decorate, 
-                    decorator = RGBLogging.track_perf, 
-                    logger    = self.logger 
-                    )(self.create_output_grid_inds) 
-                cell_row, cell_col = tracked_func(samples_dict['grid_1d_index'])
+                if self.config.regridding_algorithm not in ['Lw', 'CG']:
+                    tracked_func  = RGBLogging.rgb_decorate_and_execute(
+                        decorate  = self.logpar_decorate,
+                        decorator = RGBLogging.track_perf,
+                        logger    = self.logger
+                        )(self.create_output_grid_inds)
+                    cell_row, cell_col = tracked_func(samples_dict['grid_1d_index'])
 
-                variable_dict_out['cell_row'] = cell_row
-                variable_dict_out['cell_col'] = cell_col
+                    variable_dict_out['cell_row'] = cell_row
+                    variable_dict_out['cell_col'] = cell_col
+
+                else:
+                    cell_row = arange(self.config.reduced_grid_inds[0], self.config.reduced_grid_inds[1])
+                    cell_col = arange(self.config.reduced_grid_inds[2], self.config.reduced_grid_inds[3])
+
+                    cell_col, cell_row = meshgrid(cell_col, cell_row)
+                    cell_row = cell_row.flatten()
+                    cell_col = cell_col.flatten()
+                    variable_dict_out['cell_row'] = cell_row
+                    variable_dict_out['cell_col'] = cell_col
 
                 # Add regridding_n_samples
                 if 'regridding_n_samples' in self.config.variables_to_regrid:
@@ -846,7 +857,3 @@ class ReGridder:
             data_dict_out = tracked_func(data_dict_out)
 
         return data_dict_out
-
-
-
-

@@ -113,7 +113,7 @@ def conjugate_gradient_ne(A, Y, lambda_param=1e-4, n_iter=1000, rtol=1e-5):
 
     print(f"Reached maximum iterations without full convergence, relative error: {rel_error}")
     return X, count
-
+0
 
 def conjugate_gradient_ne_nedt(A, varY, n_iter):
 
@@ -152,7 +152,7 @@ class MIIinterp:
         #define output variable dictionary
         variable_dict_out = {}
         for variable in variable_dict:
-            variable_dict_out[variable] = np.zeros((len(target_grid[0]), len(target_grid[1])))
+            variable_dict_out[variable] = np.zeros(target_grid[0].shape)
 
         if self.config.source_antenna_method == 'gaussian':
             Rpattern = self.source_ap.estimate_max_ap_radius(self.config.source_gaussian_params[0], self.config.source_gaussian_params[1])
@@ -169,8 +169,8 @@ class MIIinterp:
 
         #rows and columns of reduced grid into the total output grid
         rows_output, cols_output = np.unravel_index(samples_dict['grid_1d_index'], (output_grid.n_rows, output_grid.n_cols))
-        imin, imax = rows_output.min(), rows_output.max()
-        jmin, jmax = cols_output.min(), cols_output.max()
+        imin, imax = cols_output.min(), cols_output.max()
+        jmin, jmax = rows_output.min(), rows_output.max()
 
         #TODO: choose optimal max_chunk_size depending on available memory
         max_chunk_size = 100
@@ -197,10 +197,10 @@ class MIIinterp:
                     j2 = jmax-jmin
 
                 #lon and lat of chunk corners
-                chunkx1, chunky1 = output_grid.rowcol_to_xy(imin + i1, jmin + j1)   # 1 --- 2
-                chunkx2, chunky2 = output_grid.rowcol_to_xy(imin + i1, jmin + j2)   # |     |
-                chunkx3, chunky3 = output_grid.rowcol_to_xy(imin + i2, jmin + j1)   # |     |
-                chunkx4, chunky4 = output_grid.rowcol_to_xy(imin + i2, jmin + j2)   # 3 --- 4
+                chunkx1, chunky1 = output_grid.rowcol_to_xy(jmin + j1, imin + i1)   # 1 --- 2
+                chunkx2, chunky2 = output_grid.rowcol_to_xy(jmin + j1, imin + i2)   # |     |
+                chunkx3, chunky3 = output_grid.rowcol_to_xy(jmin + j2, imin + i1)   # |     |
+                chunkx4, chunky4 = output_grid.rowcol_to_xy(jmin + j2, imin + i2)   # 3 --- 4
 
                 chunklon1, chunklat1 = output_grid.xy_to_lonlat(chunkx1, chunky1)
                 chunklon2, chunklat2 = output_grid.xy_to_lonlat(chunkx2, chunky2)
@@ -317,7 +317,7 @@ class MIIinterp:
                     jdn = int_dom_lons.shape[0] - n_cell_dn
 
                     if variable in self.config.variables_to_regrid:
-                        variable_dict_out[variable][imin+i1:imin+i2, jmin+j1:jmin+j2] = X1.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
+                        variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = X1.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
 
                     nedt_var = 'nedt'+variable[-2:]
                     if 'bt' in variable and nedt_var in self.config.variables_to_regrid:
@@ -329,11 +329,11 @@ class MIIinterp:
                                                                    lambda_param = self.config.regularization_parameter, 
                                                                    n_iter       = n_iter
                             )
-                        variable_dict_out[nedt_var][imin+i1:imin+i2, jmin+j1:jmin+j2] = Xnedt.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
-                      
+                        variable_dict_out[nedt_var][jmin+j1:jmin+j2, imin+i1:imin+i2] = Xnedt.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
+
         # JOSEPH: check that the variables are reshaped correctly. right now  variable_dict_out[var] is a 2D array with the shape of the output grid
         for variable in variable_dict_out:
-            variable_dict_out[variable] = variable_dict_out[variable].flatten()
+            variable_dict_out[variable] = variable_dict_out[variable][jmin:jmax, imin:imax].flatten()
 
         return variable_dict_out
 

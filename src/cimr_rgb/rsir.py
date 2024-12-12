@@ -107,6 +107,9 @@ class rSIRInterp:
             ap_radii=pattern_radii
         )
 
+        if 0 in int_dom_lons.shape or 0 in int_dom_lats.shape:
+            return None, None
+
         # Project source patterns to grid
         source_ant_patterns = []
         for sample in source_inds:
