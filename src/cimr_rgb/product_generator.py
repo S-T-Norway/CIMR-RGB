@@ -470,84 +470,6 @@ CDL = {
             },
         },
     },
-    # "L1C_SPECIFIC_ATTRIBUTES": {
-    #     "cell_col": {
-    #         "units": "Grid y-coordinate",
-    #         "long_name": "Grid column Index for the chosen output grid",
-    #         "grid_mapping": "crs",
-    #         "coverage_content_type": "Grid",
-    #         "valid_range": "TBD",
-    #         "_Storage": "chunked",
-    #         "_ChunkSizes": "256, 256",
-    #         #"_FillValue": nc.default_fillvals['f8'],
-    #         "comment": "Grid column Index for the chosen output grid"
-    #     },
-    #     "cell_row": {
-    #         "units": "Grid x-coordinate",
-    #         "long_name": "Grid row Index for the chosen output grid",
-    #         "grid_mapping": "crs",
-    #         "coverage_content_type": "Grid",
-    #         "valid_range": "TBD",
-    #         "_Storage": "chunked",
-    #         "_ChunkSizes": "256, 256",
-    #         #"_FillValue": nc.default_fillvals['f8'], # Int
-    #         "comment": "Grid row Index for the chosen output grid"
-    #     },
-    # },
-    # "GLOBAL_ATTRIBUTES" : {
-    #     "conventions": "CF-1.6",
-    #     "id": "TBD",
-    #     "naming_authority": "European Space Agency",
-    #     "history": "TBD",
-    #     "source": "TBD",
-    #     "processing_level": "TBD", #f"{self.config.grid_type}",
-    #     "comment": "TBD",
-    #     "acknowledgement": "TBD",
-    #     "license": "None",
-    #     "standard_name_vocabulary": "TBD",
-    #     "date_created": "TBD", #f"{l1c_utc_time}",
-    #     "creator_name": "TBD",
-    #     "creator_email": "TBD",
-    #     "creator_url": "TBD",
-    #     "institution": "European Space Agency",
-    #     "project": "CIMR Re-Gridding Toolbox",
-    #     "program": "TBD",
-    #     "contributor_name": "TBD",
-    #     "contributor_role": "TBD",
-    #     "publisher_name": "TBD",
-    #     "publisher_email": "TBD",
-    #     "publisher_url": "TBD",
-    #     "geospatial_bounds": "TBD",
-    #     "geospatial_bounds_crs": "TBD",
-    #     "geospatial_bounds_vertical_crs": "TBD",
-    #     "geospatial_lat_min": "TBD",
-    #     "geospatial_lat_max": "TBD",
-    #     "geospatial_lon_min": "TBD",
-    #     "geospatial_lon_max": "TBD",
-    #     "time_coverage_start": "TBD",
-    #     "time_coverage_end": "TBD",
-    #     "time_coverage_duration": "TBD",
-    #     "time_coverage_resolution": "TBD",
-    #     "geospatial_lat_units": "degrees north",
-    #     "geospatial_lat_resolution": "TBD",
-    #     "geospatial_lon_units": "degrees north",
-    #     "geospatial_lon_resolution": "TBD",
-    #     "date_modified": "TBD",
-    #     "date_issued": "TBD",
-    #     "date_metadata_modified": "TBD",
-    #     "product_version": "TBD",
-    #     "platform": "TBD", #f"{self.config.input_data_type}",
-    #     "instrument": "TBD", #f"{self.config.input_data_type}",
-    #     "metadata_link": "TBD",
-    #     "keywords": "TBD",
-    #     "keywords_vocabulary": "TBD",
-    #     "references": "TBD",
-    #     "input_level1b_filenames": "TBD", #f"{pb.Path(self.config.input_data_path).resolve().name}", #"TBD",
-    #     "level_01_atbd": "TBD",
-    #     "mission_requirement_document": "TBD",
-    #     "antenna_pattern_files": "TBD",
-    #     "antenna_pattern_source": "TBD"
-    # }
 }
 
 
@@ -578,30 +500,57 @@ class ProductGenerator:
     # Getting netCDF dataset
     def generate_global_metadata(self, data_dict: dict) -> dict:
         """
-        geospatial_lat_min and geospatial_lat_max:
+        Generates a dictionary of global metadata attributes for a netCDF dataset.
 
-            These attributes define the minimum and maximum latitude values (in degrees) that the data covers.
-            They indicate the vertical spatial extent of the dataset in terms of geographic coordinates.
+        This method compiles metadata attributes relevant to the dataset, including geospatial
+        bounds, antenna patterns, creator information, and other attributes based on the
+        dataset configuration and input data type.
 
-        geospatial_lon_min and geospatial_lon_max:
+        Parameters
+        ----------
+        data_dict : dict
+            A dictionary containing data relevant to the generation of metadata. Keys include
+            details such as latitude, longitude, and cell indices for geospatial calculations.
 
-            These attributes define the minimum and maximum longitude values (in degrees) that the data covers.
-            They indicate the horizontal spatial extent of the dataset in terms of geographic coordinates.
+        Returns
+        -------
+        GLOBAL_ATTRIBUTES : dict
+            A dictionary containing key-value pairs of metadata attributes for the netCDF dataset.
+            These attributes include spatial, temporal, and processing-related information.
 
-        geospatial_bounds:
+        Notes
+        -----
+        - Geospatial Metadata:
+            - `geospatial_lat_min` and `geospatial_lat_max` define the minimum and maximum
+              latitude values (in degrees) of the data.
+            - `geospatial_lon_min` and `geospatial_lon_max` define the minimum and maximum
+              longitude values (in degrees) of the data.
+            - `geospatial_bounds` specifies the spatial bounds as a polygon.
+            - `geospatial_bounds_crs` defines the coordinate reference system (e.g., EPSG:4326).
 
-            This attribute specifies the spatial bounds of the dataset as a polygon, typically formatted as POLYGON((lon1 lat1, lon2 lat2, ..., lonN latN, lon1 lat1)).
-            It provides the exact spatial geometry for the region covered by the data.
+        - Antenna Pattern Metadata:
+            - Attributes such as `antenna_pattern_files` and `antenna_pattern_source` describe
+              the source and files associated with antenna patterns, depending on the input data type.
+            - Supported input data types include `CIMR`, `AMSR2`, and `SMAP`.
 
-        geospatial_bounds_crs:
+        - Temporal Metadata:
+            - Attributes like `date_created`, `date_modified`, and `date_issued` are generated
+              in ISO 8601 format based on the configuration timestamp.
 
-            Defines the coordinate reference system (CRS) used for the geospatial_bounds attribute.
-            For example, it could be EPSG:4326, which corresponds to the WGS84 geographic coordinate system.
+        - Processing Metadata:
+            - Metadata attributes related to the processing level, input file, and regridding
+              algorithm are included.
 
-        geospatial_bounds_vertical_crs:
+        Raises
+        ------
+        ValueError
+            If an invalid `input_data_type` is provided. Supported values are `CIMR`, `AMSR2`, and `SMAP`.
 
-            Specifies the vertical coordinate reference system, if the dataset includes altitude or depth information.
-            Common examples include EGM96 (Earth Gravitational Model 1996) or other vertical datums.
+        Examples
+        --------
+        >>> metadata = generator.generate_global_metadata(data_dict)
+        >>> print(metadata["geospatial_lat_min"])
+        -90.0
         """
 
         # Convert the datetime object to ISO 8601 format
@@ -750,22 +699,59 @@ class ProductGenerator:
         return GLOBAL_ATTRIBUTES
 
     def get_minmax_vals(self, array):
+        """
+        Computes the minimum and maximum values of a NumPy array, ignoring NaN values.
+
+        This method calculates the smallest and largest numerical values in the provided array
+        while ignoring any NaN entries.
+
+        Parameters
+        ----------
+        array : numpy.ndarray
+            The input array from which to compute the minimum and maximum values.
+
+        Returns
+        -------
+        min_value : float
+            The minimum value in the array, ignoring NaN values.
+        max_value : float
+            The maximum value in the array, ignoring NaN values.
+
+        Notes
+        -----
+        - If the array contains only NaN values, both `min_value` and `max_value` will raise an error.
+        - This method uses `numpy.nanmin` and `numpy.nanmax` to handle NaN values gracefully.
+        """
+
         min_value = np.nanmin(array)  # Ignores NaN
         max_value = np.nanmax(array)  # Ignores NaN
 
         return min_value, max_value
 
-    def add_bounding_box(self, input_array, mask_value=np.nan):
+    def add_bounding_box(self, input_array: np.ndarray) -> np.ndarray:
         """
-        Add a bounding box around a 2D array with the edges set to 1
-        and the rest set to a masked value or kept unchanged.
+        Adds a bounding box to a 2D array, setting edge values to their original values and
+        masking the rest.
 
-        Args:
-            array (numpy.ndarray): Input 2D array.
-            mask_value (float): Value to mask the interior of the array.
+        This method processes a 2D array by identifying non-NaN values, creating a bounding box
+        that preserves the first and last non-masked values in each row, and masking all other values.
 
-        Returns:
-            numpy.ndarray: Array with the bounding box added.
+        Parameters
+        ----------
+        input_array : numpy.ndarray
+            The input 2D array to which the bounding box will be added. NaN values are treated as masked.
+
+        Returns
+        -------
+        output : numpy.ndarray
+            A 2D masked array with a bounding box added. The edges of each row retain the first and last
+            non-NaN values, while other elements are masked.
+
+        Notes
+        -----
+        - The input array is treated as a masked array, with NaN values automatically masked.
+        - The bounding box preserves only the first and last non-masked values in each row.
+        - If a row contains no non-masked values, the entire row will remain masked in the output.
         """
 
         # Mask the NaN values
@@ -821,7 +807,8 @@ class ProductGenerator:
 
         return output_array
 
-    # This is for L1C only
+    # TODO: Figure this one out properly
+    # This is for L1C only (?)
     def compute_geospatial_attributes(
         self,
         longitude,
@@ -832,15 +819,66 @@ class ProductGenerator:
         epsg_num,  # grid, projection_string
     ):
         """
-        Compute geospatial attributes for a given grid and its projection.
+        Computes geospatial attributes for a given grid and its projection.
 
-        Args:
-            grid (dict): Dictionary containing grid parameters like 'x_min', 'y_max', 'res', 'n_cols', 'n_rows'.
-            projection_string (str): PROJ string for the grid's projection.
+        This method calculates geospatial bounds, resolutions, and other metadata attributes
+        for a dataset based on its latitude, longitude, and grid configuration.
 
-        Returns:
-            dict: Dictionary containing derived geospatial attributes.
+        Parameters
+        ----------
+        longitude : numpy.ndarray
+            1D array of longitude values for the dataset.
+        latitude : numpy.ndarray
+            1D array of latitude values for the dataset.
+        cell_row : numpy.ndarray or list
+            Row indices corresponding to the grid cells for each point in the dataset.
+        cell_col : numpy.ndarray or list
+            Column indices corresponding to the grid cells for each point in the dataset.
+        res : float
+            Resolution of the grid, used to compute latitude and longitude resolutions.
+        epsg_num : int
+            EPSG code representing the coordinate reference system (CRS) of the grid.
+
+        Returns
+        -------
+        geospatial_attributes : dict
+            A dictionary containing geospatial attributes:
+            - `geospatial_lat_min`: Minimum latitude.
+            - `geospatial_lat_max`: Maximum latitude.
+            - `geospatial_lon_min`: Minimum longitude.
+            - `geospatial_lon_max`: Maximum longitude.
+            - `geospatial_bounds_crs`: CRS for geospatial bounds in EPSG format.
+            - `geospatial_lat_resolution`: Latitude resolution.
+            - `geospatial_lon_resolution`: Longitude resolution.
+
+        Notes
+        -----
+        - Latitude and longitude values are masked using a bounding box to ensure only
+          valid values are used in the calculations.
+        - A polygon representing the geospatial bounds is created using the valid
+          coordinates, ensuring the polygon is closed.
+        - This method leverages Shapely's `Polygon` to generate the Well-Known Text (WKT)
+          representation of the geospatial bounds.
+
+        Raises
+        ------
+        ValueError
+            If the input latitude or longitude arrays are empty or invalid.
+
+        Examples
+        --------
+        >>> geospatial_attrs = compute_geospatial_attributes(
+        ...     longitude=array_lon,
+        ...     latitude=array_lat,
+        ...     cell_row=row_indices,
+        ...     cell_col=col_indices,
+        ...     res=1000,
+        ...     epsg_num=4326
+        ... )
+        >>> print(geospatial_attrs["geospatial_lat_min"])
+        -90.0
         """
+
         # res, n_cols, n_rows = grid["res"], grid["n_cols"], grid["n_rows"]
 
         # Retrieving max/min values for lons and lats
@@ -874,66 +912,16 @@ class ProductGenerator:
 
         # Print the POLYGON WKT (Well-Known Text) representation
         # print("POLYGON:", polygon)
-        print("POLYGON WKT:", polygon.wkt)
-        # exit()
+        # print("POLYGON WKT:", polygon.wkt)
 
         # Define geospatial bounds as a polygon
         geospatial_bounds = polygon.wkt  # f"POLYGON(({lon_min} {lat_min}, {lon_max} {lat_min}, {lon_max} {lat_max}, {lon_min} {lat_max}, {lon_min} {lat_min}))"
-
-        # Extract grid properties
-        # x_min, y_max = grid["x_min"], grid["y_max"]
-        # res, n_cols, n_rows = grid["res"], grid["n_cols"], grid["n_rows"]
-
-        # Calculate bounding box in projected coordinates
-        # x_max = x_min + (n_cols * res)
-        # y_min = y_max - (n_rows * res)
-
-        # print(f"x_min = {x_min}, x_max = {x_max}")
-        # print(f"y_min = {y_min}, y_max = {y_max}")
-
-        # transform to geographic coordinates
-        # projection = pyproj.Proj(projection_string)
-        # lon_min, lat_max = projection(x_min, y_max, inverse=True)
-        # lon_max, lat_min = projection(x_max, y_min, inverse=True)
-
-        # print(f"lat_min = {lat_min}, lat_max = {lat_max}")
-        # print(f"lon_min = {lon_min}, lon_max = {lon_max}")
-
-        # lon_min, lat_min = projection(x_min, y_min, inverse=True)
-        # lon_max, lat_max = projection(x_max, y_max, inverse=True)
-
-        # print(f"lat_min = {lat_min}, lat_max = {lat_max}")
-        # print(f"lon_min = {lon_min}, lon_max = {lon_max}")
-
-        # # Set up the transformer
-        # transformer = pyproj.Transformer.from_proj(
-        #     proj_from=projection_string, proj_to="epsg:4326", always_xy=True
-        # )
-
-        # # Transform grid corners
-        # lon_min, lat_min = transformer.transform(x_min, y_min)
-        # lon_max, lat_max = transformer.transform(x_max, y_max)
-
-        # print(f"lat_min = {lat_min}, lat_max = {lat_max}")
-        # print(f"lon_min = {lon_min}, lon_max = {lon_max}")
-
-        # print(projection_string)
-
-        # exit()
-
-        # Transform a point and its neighbor one resolution unit apart
-        # lon1, lat1 = projection(  # transformer.transform(
-        #     x_min, y_max
-        # )  # Top left corner of the grid/bounding box
-        # lon2, lat2 = projection(  # transformer.transform(
-        #     x_min + res, y_max - res
-        # )
 
         # Calculate lat/lon resolution
         lat_res = abs(lat_max - lat_min) / res  # abs(lat2 - lat1)
         lon_res = abs(lon_max - lon_min) / res  # abs(lon2 - lon1)
 
-        print(lon_res, lat_res)
+        # print(lon_res, lat_res)
         # exit()
 
         # Return geospatial attributes
@@ -942,7 +930,7 @@ class ProductGenerator:
             "geospatial_lat_max": lat_max,
             "geospatial_lon_min": lon_min,
             "geospatial_lon_max": lon_max,
-            "geospatial_bounds": geospatial_bounds,
+            # "geospatial_bounds": geospatial_bounds,
             "geospatial_bounds_crs": f"EPSG:{epsg_num}",  # {grid['epsg']}",  # "EPSG:4326",
             "geospatial_lat_resolution": lat_res,
             "geospatial_lon_resolution": lon_res,
@@ -1088,6 +1076,7 @@ class ProductGenerator:
         return glob_dims_dict
         # -----------------------------------
 
+    # TODO: There is shape mismatch, which needs to be investigated
     def populate_global_dimensions_cimr(
         self,
         glob_dims_dict,
@@ -1095,7 +1084,58 @@ class ProductGenerator:
         var_name,
         var_shape,
     ):
-        """Method to populate global dimensions for CIMR project."""
+        """
+        Populates global dimensions for the CIMR project based on grid type and variable details.
+
+        This method updates the global dimensions dictionary with values specific to the CIMR
+        project's requirements. It handles differences between `L1C` and `L1R` grid types and
+        processes variable names and shapes accordingly.
+
+        Parameters
+        ----------
+        glob_dims_dict : dict
+            A dictionary to be populated with global dimension names as keys and their corresponding sizes as values.
+        band_name : str
+            The name of the band for which dimensions are being defined.
+        var_name : str
+            The name of the variable whose dimensions are being processed.
+        var_shape : tuple of int
+            The shape of the variable, used to infer dimension sizes.
+
+        Returns
+        -------
+        glob_dims_dict : dict
+            The updated dictionary with global dimensions populated based on the CIMR project's specifications.
+
+        Notes
+        -----
+        - For `L1C` grid type:
+            - The `time` dimension is always set to 1.
+            - Variables with "regridding_l1b_orphans" in their name are treated as having
+              dimensions corresponding to `L1R` data instead of `L1C`.
+            - Dimensions such as `n_l1b_scans` are derived from the variable shape.
+            - There may be a shape mismatch for `n_samples_{band}_BAND` and `n_feeds_{band}_BAND`,
+              which requires further investigation.
+        - For `L1R` grid type:
+            - The `n_l1b_scans` dimension is derived directly from the first element of `var_shape`.
+
+        Raises
+        ------
+        ValueError
+            If the `grid_type` is neither `L1C` nor `L1R`.
+
+        Examples
+        --------
+        >>> glob_dims = populate_global_dimensions_cimr(
+        ...     glob_dims_dict={},
+        ...     band_name="K",
+        ...     var_name="regridding_l1b_orphans",
+        ...     var_shape=(100, 200, 2)
+        ... )
+        >>> print(glob_dims["n_l1b_scans"])
+        100
+        """
+
         if self.config.grid_type == "L1C":
             glob_dims_dict["time"] = 1
             # This variable is special since its shape is of L1R not L1C data
@@ -1118,7 +1158,59 @@ class ProductGenerator:
         return glob_dims_dict
 
     def generate_new_product(self, data_dict: dict):
-        """Main method of the class. Its purpose is to create the the end data product."""
+        """
+        Main method of the class. Its purpose is to create the end data product. It
+        generates a new netCDF product file based on the input data and
+        configuration.
+
+        This method creates a netCDF file, sets global and local metadata, organizes data
+        into groups and subgroups, defines dimensions, and writes variables with attributes
+        according to the CIMR project specifications.
+
+        Parameters
+        ----------
+        data_dict : dict
+            Dictionary containing the data to be written to the netCDF file. The structure
+            includes band-specific variables, their names, values, and associated metadata.
+
+        Returns
+        -------
+        None
+            The method writes the output directly to a netCDF file specified by the configuration.
+
+        Notes
+        -----
+        - Global Attributes:
+            - Metadata such as `conventions`, `processing_level`, `creator_name`, and geospatial
+              bounds are generated and written as global attributes.
+        - Grouping:
+            - Data is organized into hierarchical groups (e.g., by projection or bands)
+              based on the `grid_type` (`L1C` or `L1R`).
+        - Dimensions:
+            - Dimensions like `time`, `n_l1b_scans`, and band-specific dimensions are defined
+              dynamically based on the data and written to the file.
+        - Variables:
+            - Variables are created with appropriate dimensions, chunk sizes, data types,
+              and attributes such as `long_name` and `comment`.
+            - Supports additional processing for `fore` and `aft` variables when `split_fore_aft`
+              is enabled in the configuration.
+
+        Raises
+        ------
+        ValueError
+            If an invalid `grid_type` or `regridding_algorithm` is provided in the configuration.
+        IOError
+            If there is an error creating or writing to the netCDF file.
+
+        Examples
+        --------
+        >>> generator = ProductGenerator(config)
+        >>> data_dict = {
+        ...     "K": {"temperature_fore": np.array(...), "cell_row": np.array(...), ...},
+        ...     ...
+        ... }
+        >>> generator.generate_new_product(data_dict)
+        """
 
         # Getting filename (in simplified format)
         outfile = self.get_processor_filename_in_simplified_fmt()
@@ -1369,494 +1461,6 @@ class ProductGenerator:
                                             "_ChunkSizes", f"{chunk_size}"
                                         )
 
-            # exit()
-
-    # TODO: This is an old method and it should be removed
-    # def generate_product(self, data_dict: dict):
-    #     """
-    #     Method to generate resulting product
-    #     """
-
-    #     # # --------------------------
-    #     # # Working this the filename
-    #     # if self.config.grid_definition is not None:
-    #     #     grid_res = re.search(
-    #     #         r"(\d+(?:\.\d+)?)km", self.config.grid_definition
-    #     #     ).group()
-    #     # else:
-    #     #     grid_res = ""
-    #     # # Get the current date and time
-    #     # # l1c_utc_time = datetime.datetime.now()
-
-    #     # # Format the date and time as "YYYYMMDDHHMMSS"
-    #     # l1c_utc_time = (
-    #     #     self.config.timestamp
-    #     # )  # self.config.file_time_signature #l1c_utc_time.strftime("%Y%m%d%H%M%S")
-    #     # # print(l1c_utc_time)
-    #     # # exit()
-
-    #     # if self.config.grid_definition is not None:
-    #     #     outfile = f"{self.config.input_data_type}_{self.config.grid_type}_{self.config.regridding_algorithm}_{grid_res}_{l1c_utc_time}.nc"
-    #     # else:
-    #     #     outfile = f"{self.config.input_data_type}_{self.config.grid_type}_{self.config.regridding_algorithm}_{l1c_utc_time}.nc"
-
-    #     # outfile = pb.Path(f"{self.config.output_path}/{outfile}").resolve()
-    #     # # --------------------------
-
-    #     outfile = self.get_processor_filename_in_simplified_fmt()
-
-    #     GLOBAL_ATTRIBUTES = self.generate_global_metadata(data_dict=data_dict)
-
-    #     with nc.Dataset(outfile, "w", format="NETCDF4") as dataset:
-    #         # Set each global attribute in the netCDF file
-    #         for attr, value in GLOBAL_ATTRIBUTES.items():
-    #             dataset.setncattr(attr, value)
-
-    #         # -------------------------------------------------
-    #         # Creating Global Dimensions
-    #         # The L1R template has the following dims:
-
-    #         # CIMR_E2ESv110_L1B_Product_Format_v0.6.nc
-
-    #         # netcdf CIMR_E2ESv110_L1B_Product_Format_v0.6 {
-    #         # dimensions:
-    #         # 	n_feeds_L_BAND = 1 ;
-    #         # 	n_feeds_C_BAND = 4 ;
-    #         # 	n_feeds_X_BAND = 4 ;
-    #         # 	n_feeds_KU_BAND = 8 ;
-    #         # 	n_feeds_KA_BAND = 8 ;
-    #         # 	n_scans = 2 ;
-    #         # 	n_samples_L_BAND = 138 ;
-    #         # 	n_samples_C_BAND = 549 ;
-    #         # 	n_samples_X_BAND = 561 ;
-    #         # 	n_samples_KU_BAND = 1538 ;
-    #         # 	n_samples_KA_BAND = 2079 ;
-
-    #         # if self.config.grid_type == "L1R":
-    #         #     # TODO: this should be in per band calculations
-    #         #     # dataset.createDimension('n_feeds_L_BAND', 1) #None)
-    #         #     # dataset.createDimension('n_feeds_X_BAND', 4) #None)
-    #         #     # dataset.createDimension('n_feeds_C_BAND', 4) #None)
-    #         #     # dataset.createDimension('n_feeds_KU_BAND', 8) #None)
-    #         #     # dataset.createDimension('n_feeds_KA_BAND', 8) #None)
-
-    #         #     # dataset.createDimension('n_scans', 2) #None)
-    #         #     # dataset.createDimension('n_samples_L_BAND', 138) #None)
-    #         #     # dataset.createDimension('n_samples_X_BAND', 561) #None)
-    #         #     # dataset.createDimension('n_samples_C_BAND', 549) #None)
-    #         #     # dataset.createDimension('n_samples_KU_BAND', 1538) #None)
-    #         #     # dataset.createDimension('n_samples_KA_BAND', 2079) #None)
-
-    #         #     for band_name in data_dict.keys():
-    #         #         if self.config.input_data_type == "CIMR":
-    #         #             if band_name == "L":
-    #         #                 feed_nums = 1
-    #         #         dataset.createDimension(f"n_feeds_{band_name}_BAND", feed_nums)
-    #         #         dataset.createDimension(f"n_samples_{band_name}_BAND", None)
-
-    #         #     dataset.createDimension("n_scans", None)
-
-    #         # elif self.config.grid_type == "L1C":
-    #         #     # Also, there should be per band calculations for n_feeds
-    #         #     # For L1C dimensions
-    #         #     # time = 0 // currently 1 <= single integer value
-    #         #     # x = {256..16384}
-    #         #     # y = {256..16384}
-    #         #     # n_l1b_scans = TBD
-    #         #     # n_samples = 0
-    #         #     # n_feeds_[L_BAND|C_BAND|X_BAND|KA_BAND|KU_BAND] = [1, 4, 4, 8, 8]
-    #         #     for band_name in data_dict.keys():
-    #         #         dataset.createDimension(f"n_feeds_{band_name}_BAND", None)
-    #         #         dataset.createDimension(f"n_samples_{band_name}_BAND", None)
-
-    #         #     dataset.createDimension("n_scans", None)
-    #         #     dataset.createDimension("n_l1b_scans", None)
-
-    #         #     # Creating Dimentions according to cdl
-    #         #     dataset.createDimension("time", 1)  # None)
-    #         #     dataset.createDimension("y", None)
-    #         #     dataset.createDimension("x", None)
-
-    #         # print(self.config.target_band)
-
-    #         # Creating nested groups according to cdl
-    #         if self.config.grid_type == "L1C":
-    #             top_group = dataset.createGroup(f"{self.config.projection_definition}")
-
-    #         elif self.config.grid_type == "L1R":
-    #             # target_band is a list
-    #             top_group = dataset.createGroup(
-    #                 f"{self.config.target_band[0]}_BAND_TARGET"
-    #             )
-
-    #         # Loop through the parameters defined inside CDL and compare their
-    #         # names to the ones provided inside pickled file. If they coincide
-    #         # we write them into specific group (defined in CDL). In addition,
-    #         # CDL values for CIMR have dimensions (time, x, y) while SMAP has
-    #         # only 1, so we also programmatically figure out the dimensons of
-    #         # the numpy array provided and save the data accordingly.
-    #         #
-    #         # [Note]: We start looping in this way and not from data_dict, because
-    #         # data_dict may contain _fore|_aft suffixes
-    #         for group_field, group_vals in CDL["LOCAL_ATTRIBUTES"].items():
-    #             self.logger.info(
-    #                 f"Creating group: {group_field}"
-    #             )  # . Group val: {group_vals}")
-
-    #             # group = data_group.createGroup(group_field)
-    #             group = top_group.createGroup(group_field)
-
-    #             # Some fields of Quality_information are not sub group of bands
-    #             # if group_field == "Quality_information":
-
-    #             # Looping through data dictionary and retrieving its variables (per band)
-    #             for band_name, band_var in data_dict.items():
-    #                 # Removing/skipping cell_row and cell_col if we encounter L1R
-    #                 # (since it is not needed for L1R)
-    #                 if self.config.grid_type == "L1R" and (
-    #                     band_var == "cell_row" or band_var == "cell_col"
-    #                 ):
-    #                     continue
-
-    #                 # Processing_flags are defined as a separate field
-    #                 # and not as sub field of specific band
-    #                 if group_field == "Processing_flags":
-    #                     band_group = group
-    #                 else:
-    #                     band_group = group.createGroup(f"{band_name}_BAND")
-
-    #                 for var_name, var_val in band_var.items():
-    #                     var_shape = var_val.shape
-
-    #                     # TODO: Expand the following for the case of AMSR2 and SMAP
-    #                     # -----------------------------------
-    #                     # Creating Global Dimensions
-    #                     # (if they do not yet exist)
-    #                     # -----------------------------------
-    #                     if self.config.input_data_type == "CIMR":
-    #                         if self.config.grid_type == "L1C":
-    #                             # Also, there should be per band calculations for n_feeds
-    #                             # For L1C dimensions
-    #                             # time = 0 // currently 1 <= single integer value
-    #                             # x = {256..16384}
-    #                             # y = {256..16384}
-    #                             # n_l1b_scans = TBD
-    #                             # n_samples = 0
-    #                             # n_feeds_[L_BAND|C_BAND|X_BAND|KA_BAND|KU_BAND] = [1, 4, 4, 8, 8]
-
-    #                             # Creating Dimensions according to cdl
-    #                             glob_dim_name = "time"
-    #                             glob_dim_val = 1
-    #                             self.create_global_dimensions(
-    #                                 glob_dim_name, glob_dim_val, dataset
-    #                             )
-
-    #                             glob_dim_name = "y"
-    #                             glob_dim_val = None
-    #                             self.create_global_dimensions(
-    #                                 glob_dim_name, glob_dim_val, dataset
-    #                             )
-
-    #                             glob_dim_name = "x"
-    #                             glob_dim_val = None
-    #                             self.create_global_dimensions(
-    #                                 glob_dim_name, glob_dim_val, dataset
-    #                             )
-    #                             # ('n_l1b_scans', 'n_samples', 'n_feeds')
-    #                             if "regridding_l1b_orphans" in var_name:
-    #                                 glob_dim_name = "n_l1b_scans"
-    #                                 glob_dim_val = var_shape[0]
-    #                                 self.create_global_dimensions(
-    #                                     glob_dim_name, glob_dim_val, dataset
-    #                                 )
-
-    #                                 glob_dim_name = f"n_samples_{band_name}_BAND"
-    #                                 glob_dim_val = var_shape[1]
-    #                                 self.create_global_dimensions(
-    #                                     glob_dim_name, glob_dim_val, dataset
-    #                                 )
-    #                                 glob_dim_name = f"n_feeds_{band_name}_BAND"
-    #                                 glob_dim_val = var_shape[2]
-    #                                 self.create_global_dimensions(
-    #                                     glob_dim_name, glob_dim_val, dataset
-    #                                 )
-    #                         elif self.config.grid_type == "L1R":
-    #                             # L1R does not contain x, y, time as L1C does
-    #                             glob_dim_name = "n_l1b_scans"
-    #                             glob_dim_val = var_shape[0]
-    #                             self.create_global_dimensions(
-    #                                 glob_dim_name, glob_dim_val, dataset
-    #                             )
-    #                             # TODO: The feeds are identified not as target band
-    #                             # but as a source band and hence we have a problem,
-    #                             # when source band is C (4 feeds) and target band
-    #                             # is L (1 feed). This should be fixed but after we
-    #                             # figure out the source/target band stuff for L1R
-    #                             # data. The same goes for `samples`.
-    #                             glob_dim_name = f"n_samples_{band_name}_BAND"
-    #                             glob_dim_val = None  # var_shape[1]
-    #                             self.create_global_dimensions(
-    #                                 glob_dim_name, glob_dim_val, dataset
-    #                             )
-    #                             glob_dim_name = f"n_feeds_{band_name}_BAND"
-    #                             glob_dim_val = None  # var_shape[2]
-    #                             self.create_global_dimensions(
-    #                                 glob_dim_name, glob_dim_val, dataset
-    #                             )
-    #                     else:
-    #                         for band_name in data_dict.keys():
-    #                             glob_dim_name = f"n_feeds_{band_name}_BAND"
-    #                             glob_dim_val = None
-    #                             self.create_global_dimensions(
-    #                                 glob_dim_name, glob_dim_val, dataset
-    #                             )
-    #                             glob_dim_name = f"n_samples_{band_name}_BAND"
-    #                             glob_dim_val = None
-    #                             self.create_global_dimensions(
-    #                                 glob_dim_name, glob_dim_val, dataset
-    #                             )
-
-    #                         glob_dim_name = "n_l1b_scans"
-    #                         glob_dim_val = None
-    #                         self.create_global_dimensions(
-    #                             glob_dim_name, glob_dim_val, dataset
-    #                         )
-
-    #                         if self.config.grid_type == "L1C":
-    #                             # Also, there should be per band calculations for n_feeds
-    #                             # For L1C dimensions
-    #                             # time = 0 // currently 1 <= single integer value
-    #                             # x = {256..16384}
-    #                             # y = {256..16384}
-    #                             # n_l1b_scans = TBD
-    #                             # n_samples = 0
-    #                             # n_feeds_[L_BAND|C_BAND|X_BAND|KA_BAND|KU_BAND] = [1, 4, 4, 8, 8]
-
-    #                             # Creating Dimentions according to cdl
-    #                             glob_dim_name = "time"
-    #                             glob_dim_val = 1
-    #                             self.create_global_dimensions(
-    #                                 glob_dim_name, glob_dim_val, dataset
-    #                             )
-
-    #                             glob_dim_name = "y"
-    #                             glob_dim_val = None
-    #                             self.create_global_dimensions(
-    #                                 glob_dim_name, glob_dim_val, dataset
-    #                             )
-
-    #                             glob_dim_name = "x"
-    #                             glob_dim_val = None
-    #                             self.create_global_dimensions(
-    #                                 glob_dim_name, glob_dim_val, dataset
-    #                             )
-    #                     # -----------------------------------
-
-    #                     # TODO:
-    #                     # For L1r we will have 3 dimensions: scan, sample, and feed <= scan is the same for all bands, but sample and feed are not
-    #                     # For L1C we will have 3 dimensions: time, y, and x <= the same for all bands
-    #                     #
-    #                     # So add if else statement
-    #                     # if self.config.grid_type == "L1C":
-    #                     #     var_dim = self.determine_dimension_l1c(var_shape)
-
-    #                     # elif self.config.grid_type == "L1R":
-    #                     #     var_dim = self.determine_dimension_l1r(band_name, var_shape)
-
-    #                     var_dim, chunk_size = self.determine_dimension(
-    #                         band_name=band_name, var_shape=var_shape
-    #                     )
-    #                     print(var_dim, var_shape)
-
-    #                     # -----------------------------------
-    #                     # Getting chunk sizes
-    #                     # -----------------------------------
-    #                     # if self.config.grid_type == "L1C":
-    #                     #    if len(var_dim) == 1:
-    #                     #        chunk_size = 256
-    #                     #    else:
-    #                     #        chunk_size = 1
-
-    #                     # Creating a list of complete variables to regrid based on CDL
-    #                     # and whether user chose to split scans into fore and aft
-    #                     if self.config.split_fore_aft:
-    #                         # print("True")
-    #                         fore = [key + "_fore" for key in group_vals.keys()]
-    #                         aft = [key + "_aft" for key in group_vals.keys()]
-    #                         regrid_vars = fore + aft
-    #                     else:
-    #                         regrid_vars = [key for key in group_vals.keys()]
-
-    #                     # Removing the _fore and _aft from the variable name
-    #                     # to get the metadata from CDL (it is almost the same for
-    #                     # both of them anyway). The idea is to compare actual
-    #                     # variable to the variable from the CDL above
-    #                     regrid_var = (
-    #                         var_name.replace("_fore", "")
-    #                         if "_fore" in var_name
-    #                         else var_name.replace("_aft", "")
-    #                         if "_aft" in var_name
-    #                         else var_name
-    #                     )
-    #                     # print(var_name, regrid_var)
-
-    #                     if (var_name in regrid_vars) and (
-    #                         "regridding_l1b_orphans" not in var_name
-    #                     ):
-    #                         var_type = self.get_netcdf_dtype(var_val.dtype)
-    #                         var_fill = nc.default_fillvals[var_type]
-
-    #                         self.logger.debug(
-    #                             f"{group_field}, {band_name}, {var_name}, {var_type}, {var_fill}, {var_dim}"
-    #                         )
-
-    #                         # Determine the appropriate slice based on variable shape
-    #                         slices = tuple(slice(None) for _ in var_shape)
-    #                         # print(slices, var_shape)
-    #                         # print(var_shape)
-    #                         # print(var_dim)
-
-    #                         # var_chunked = ncfile.createVariable(
-    #                         #     varname,          # Variable name as a string
-    #                         #     datatype,         # Data type (e.g., 'f4' for float32, 'i4' for int32)
-    #                         #     dimensions,       # Dimensions as a tuple (e.g., ('x', 'y'))
-    #                         #     chunksizes=None,  # Optional chunk sizes for each dimension (e.g., (100, 100))
-    #                         #     fill_value=None,  # Optional fill value for missing data
-    #                         #     zlib=False,       # Optional compression flag (True to enable compression)
-    #                         #     complevel=4,      # Optional compression level (1-9, higher = more compression)
-    #                         #     contiguous=False, # Optional flag to set storage as contiguous (True) or chunked (False)
-    #                         #     endian='native',  # Optional byte order ('native', 'little', 'big')
-    #                         #     least_significant_digit=None  # Optional precision control for float data
-    #                         # )
-    #                         var_data = band_group.createVariable(
-    #                             varname=var_name,
-    #                             datatype=var_type,  # "double",
-    #                             dimensions=var_dim,  # ('x'),
-    #                             fill_value=var_fill,  # group_vals[regrid_var]["_FillValue"]
-    #                             contiguous=False,
-    #                             chunksizes=chunk_size,
-    #                         )
-    #                         # Assign values to the variable
-    #                         var_data[slices] = var_val
-
-    #                         # Loop through the dictionary and set attributes for the variable
-    #                         for attr_name, attr_value in group_vals[regrid_var].items():
-    #                             # TODO: The _FillValue field is kind of obsolete, because we
-    #                             # define it above via fill_value parameter (but lets leave it here for now)
-    #                             if attr_name != "_FillValue" and attr_name != "comment":
-    #                                 # print(attr_name)
-    #                                 # Use setncattr to assign the attribute
-    #                                 var_data.setncattr(attr_name, attr_value)
-
-    #                             elif attr_name == "comment":
-    #                                 pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_\[fore\|aft\]"
-
-    #                                 if self.config.split_fore_aft:
-    #                                     substitution = (
-    #                                         f"{band_name}_BAND_fore"
-    #                                         if "_fore" in var_name
-    #                                         else f"{band_name}_BAND_aft"
-    #                                     )
-    #                                 else:
-    #                                     substitution = f"{band_name}_BAND"
-    #                                 # print(substitution)
-
-    #                                 # pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_" #\[fore\|aft\]"
-    #                                 # substitution = f"{band_name}_BAND_"
-    #                                 attr_value = re.sub(
-    #                                     pattern, substitution, attr_value
-    #                                 )
-    #                                 # var_data.setncattr(attr_name, attr_value)
-
-    #                                 # Checking whther there is any patter left of the following format
-    #                                 pattern = r"\[L\|C\|X\|KU\|KA\]_BAND"
-    #                                 substitution = f"{band_name}_BAND"
-    #                                 attr_value = re.sub(
-    #                                     pattern, substitution, attr_value
-    #                                 )
-
-    #                                 pattern = r"\[fore\|aft\]"
-    #                                 if self.config.split_fore_aft:
-    #                                     substitution = (
-    #                                         "fore" if "_fore" in var_name else "aft"
-    #                                     )
-    #                                 else:
-    #                                     # Just leave it the way it is
-    #                                     substitution = "[fore|aft]"
-    #                                 attr_value = re.sub(
-    #                                     pattern, substitution, attr_value
-    #                                 )
-
-    #                                 # Setting comment attribute
-    #                                 var_data.setncattr(attr_name, attr_value)
-
-    #                     elif (var_name in regrid_vars) and (
-    #                         "regridding_l1b_orphans" in var_name
-    #                     ):
-    #                         # elif ("regridding_l1b_orphans" in var_name):
-    #                         var_dim = self.determine_dimension_l1r(band_name, var_shape)
-    #                         var_type = self.get_netcdf_dtype(var_val.dtype)
-    #                         var_fill = nc.default_fillvals[var_type]
-
-    #                         self.logger.debug(
-    #                             f"{group_field}, {band_name}, {var_name}, {var_type}, {var_fill}, {var_dim}"
-    #                         )
-
-    #                         # Determine the appropriate slice based on variable shape
-    #                         slices = tuple(slice(None) for _ in var_shape)
-    #                         var_data = band_group.createVariable(
-    #                             varname=var_name,
-    #                             datatype=var_type,  # "double",
-    #                             dimensions=var_dim,  # ('x'),
-    #                             fill_value=var_fill,  # group_vals[regrid_var]["_FillValue"]
-    #                         )
-    #                         var_data[slices] = var_val
-    #                         # Loop through the dictionary and set attributes for the variable
-    #                         for attr_name, attr_value in group_vals[regrid_var].items():
-    #                             if attr_name != "_FillValue" and attr_name != "comment":
-    #                                 var_data.setncattr(attr_name, attr_value)
-    #                             elif attr_name == "comment":
-    #                                 pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_\[fore\|aft\]"
-
-    #                                 if self.config.split_fore_aft:
-    #                                     substitution = (
-    #                                         f"{band_name}_BAND_fore"
-    #                                         if "_fore" in var_name
-    #                                         else f"{band_name}_BAND_aft"
-    #                                     )
-    #                                 else:
-    #                                     substitution = f"{band_name}_BAND"
-    #                                 # print(substitution)
-
-    #                                 # pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_" #\[fore\|aft\]"
-    #                                 # substitution = f"{band_name}_BAND_"
-    #                                 attr_value = re.sub(
-    #                                     pattern, substitution, attr_value
-    #                                 )
-    #                                 # var_data.setncattr(attr_name, attr_value)
-
-    #                                 # Checking whther there is any patter left of the following format
-    #                                 pattern = r"\[L\|C\|X\|KU\|KA\]_BAND"
-    #                                 substitution = f"{band_name}_BAND"
-    #                                 attr_value = re.sub(
-    #                                     pattern, substitution, attr_value
-    #                                 )
-
-    #                                 pattern = r"\[fore\|aft\]"
-    #                                 if self.config.split_fore_aft:
-    #                                     substitution = (
-    #                                         "fore" if "_fore" in var_name else "aft"
-    #                                     )
-    #                                 else:
-    #                                     # Just leave it the way it is
-    #                                     substitution = "[fore|aft]"
-    #                                 attr_value = re.sub(
-    #                                     pattern, substitution, attr_value
-    #                                 )
-
-    #                                 # Setting comment attribute
-    #                                 var_data.setncattr(attr_name, attr_value)
-
     def get_netcdf_dtype(self, np_dtype: np.dtype) -> str:
         """
         Retrieve the correct netCDF-4 string literal based on numpy data type.
@@ -1917,8 +1521,49 @@ class ProductGenerator:
 
     def determine_dimension(self, var_shape: tuple, band_name: str) -> tuple:
         """
-        Generic method to determine the dimension.
+        Determines the dimensions and chunk sizes for a variable based on its shape and band name.
+
+        This method determines the appropriate dimensions and chunk sizes for a variable,
+        depending on the grid type (`L1C` or `L1R`) specified in the configuration.
+
+        Parameters
+        ----------
+        var_shape : tuple of int
+            The shape of the variable for which dimensions are being determined.
+        band_name : str
+            The name of the band to which the variable belongs. Used for determining dimensions in `L1R` grid type.
+
+        Returns
+        -------
+        var_dim : tuple of str
+            A tuple representing the variable's dimensions (e.g., `('time', 'y', 'x')` for `L1C` grid type).
+        chunk_size : tuple of int or None
+            A tuple representing the chunk sizes for the variable. For `L1R` grid type, chunk size is `None`.
+
+        Raises
+        ------
+        ValueError
+            If the `grid_type` specified in the configuration is neither `L1C` nor `L1R`.
+
+        Notes
+        -----
+        - For `L1C` grid type:
+            - Dimensions and chunk sizes are determined using `determine_dimension_l1c`.
+        - For `L1R` grid type:
+            - Dimensions are determined using `determine_dimension_l1r`, but chunk sizes are not applied.
+        - If an unsupported `grid_type` is provided, a `ValueError` is raised.
+
+        Examples
+        --------
+        >>> var_shape = (100, 200, 2)
+        >>> band_name = "K"
+        >>> var_dim, chunk_size = determine_dimension(var_shape, band_name)
+        >>> print(var_dim)
+        ('time', 'y', 'x')
+        >>> print(chunk_size)
+        (10, 256, 1)
         """
+
         if self.config.grid_type == "L1C":
             var_dim, chunk_size = self.determine_dimension_l1c(var_shape)
             return var_dim, chunk_size
@@ -1927,31 +1572,51 @@ class ProductGenerator:
             var_dim = self.determine_dimension_l1r(band_name, var_shape)
             return var_dim, None
         else:
-            raise ValueError("Incorrect grid_type supplied.")
+            raise ValueError(
+                f"Incorrect `grid_type = {self.config.grid_type}` supplied."
+            )
 
     def determine_dimension_l1r(self, band_name: str, var_shape: tuple) -> tuple:
         """
-        Determines the dimension names based on the shape of the variable.
+        Determines dimension names for L1R grid type based on the shape of the variable.
+
+        This method assigns appropriate dimension names for variables in the L1R grid type
+        based on their shape (1D, 2D, or 3D).
 
         Parameters
         ----------
-        var_shape : tuple
-            A tuple representing the shape of the variable (e.g., (10000,),
-            (10000, 10000), or (1, 111, 111)).
+        band_name : str
+            The name of the band associated with the variable (e.g., "K", "KA").
+        var_shape : tuple of int
+            The shape of the variable (e.g., `(10000,)`, `(10000, 10000)`, or `(1, 111, 111)`).
 
         Returns
         -------
-        tuple
-            A tuple containing the dimension names:
-            - ('n_feeds',) for 1D shapes (e.g., (10000,))
-            - ('n_samples', 'n_feeds') for 2D shapes (e.g., (10000, 10000))
-            - ('n_l1b_scans', 'n_samples', 'n_feeds') for 3D shapes (e.g., (1, 111, 111))
+        tuple of str
+            A tuple containing dimension names:
+            - For 1D variables: `("n_feeds_<band_name>_BAND",)`
+            - For 2D variables: `("n_samples_<band_name>_BAND", "n_feeds_<band_name>_BAND")`
+            - For 3D variables: `("n_l1b_scans", "n_samples_<band_name>_BAND", "n_feeds_<band_name>_BAND")`
 
-        Exceptions
-        ----------
+        Raises
+        ------
         ValueError
-            Raised if the shape of the variable has more than 3 dimensions
-            or an unsupported shape is provided.
+            If the shape of the variable has more than 3 dimensions or is unsupported.
+
+        Notes
+        -----
+        - Dimension names include placeholders like `<band_name>` that are dynamically filled
+          based on the input `band_name`.
+        - This method is specific to L1R grid type and assumes variables conform to expected shapes.
+
+        Examples
+        --------
+        >>> determine_dimension_l1r("K", (10000,))
+        ('n_feeds_K_BAND',)
+        >>> determine_dimension_l1r("KA", (10000, 10000))
+        ('n_samples_KA_BAND', 'n_feeds_KA_BAND')
+        >>> determine_dimension_l1r("K", (1, 111, 111))
+        ('n_l1b_scans', 'n_samples_K_BAND', 'n_feeds_K_BAND')
         """
 
         if len(var_shape) == 1:
@@ -1975,27 +1640,47 @@ class ProductGenerator:
 
     def determine_dimension_l1c(self, var_shape: tuple) -> tuple:
         """
-        Determines the dimension names based on the shape of the variable.
+        Determines dimension names and chunk sizes for L1C grid type based on the shape of the variable.
+
+        This method assigns appropriate dimension names and optionally defines chunk sizes
+        for variables in the L1C grid type based on their shape (1D, 2D, or 3D).
 
         Parameters
         ----------
-        var_shape : tuple
-            A tuple representing the shape of the variable (e.g., (10000,),
-            (10000, 10000), or (1, 111, 111)).
+        var_shape : tuple of int
+            The shape of the variable (e.g., `(10000,)`, `(10000, 10000)`, or `(1, 111, 111)`).
 
         Returns
         -------
         tuple
-            A tuple containing the dimension names:
-            - ('x',) for 1D shapes (e.g., (10000,))
-            - ('y', 'x') for 2D shapes (e.g., (10000, 10000))
-            - ('time', 'y', 'x') for 3D shapes (e.g., (1, 111, 111))
+            A tuple containing:
+            - A tuple of dimension names:
+                - For 1D variables: `("x",)`
+                - For 2D variables: `("y", "x")`
+                - For 3D variables: `("time", "y", "x")`
+            - A tuple of chunk sizes or `None`:
+                - For 1D variables: `(256,)`
+                - For 2D and 3D variables: `None`
 
-        Exceptions
-        ----------
+        Raises
+        ------
         ValueError
-            Raised if the shape of the variable has more than 3 dimensions
-            or an unsupported shape is provided.
+            If the shape of the variable has more than 3 dimensions or is unsupported.
+
+        Notes
+        -----
+        - The `chunk_size` is provided only for 1D variables. For 2D and 3D variables, no
+          chunking is applied (returns `None`).
+        - This method is specific to the L1C grid type and assumes variables conform to expected shapes.
+
+        Examples
+        --------
+        >>> determine_dimension_l1c((10000,))
+        (('x',), (256,))
+        >>> determine_dimension_l1c((10000, 10000))
+        (('y', 'x'), None)
+        >>> determine_dimension_l1c((1, 111, 111))
+        (('time', 'y', 'x'), None)
         """
 
         # Returns also chunk size
@@ -2046,8 +1731,42 @@ class ProductGenerator:
 
         return outfile
 
-    def get_processor_filename_in_simplified_fmt(self):
-        """Returns the preprocessor filename in a simplified format:"""
+    # TODO; Double check this one so docstring will be correctly representing the content
+    def get_processor_filename_in_simplified_fmt(self) -> pb.Path:
+        """
+        Generates the output filename for the processor in a simplified format.
+
+        This method constructs a filename based on the configuration parameters,
+        including input data type, grid type, regridding algorithm, grid resolution,
+        and timestamp. The filename is formatted for clarity and consistency.
+
+        Returns
+        -------
+        outfile : pathlib.Path
+            The absolute path to the generated output file in a simplified format.
+
+        Notes
+        -----
+        - The filename format includes:
+            `<input_data_type>_<grid_type>_<regridding_algorithm>_<grid_res>_<timestamp>.nc`
+        - If `grid_definition` is not provided in the configuration, the `grid_res` part
+          of the filename is omitted.
+        - The timestamp is taken from the configuration and formatted as `YYYYMMDDHHMMSS`.
+
+        Examples
+        --------
+        Assuming the configuration contains:
+        - `input_data_type = "CIMR"`
+        - `grid_type = "L1C"`
+        - `regridding_algorithm = "NN"`
+        - `grid_definition = "EASE2_12.5km"`
+        - `timestamp = "20241228090000"`
+
+        The resulting filename would be:
+        >>> generator.get_processor_filename_in_simplified_fmt()
+        PosixPath('/output_path/CIMR_L1C_NN_12.5km_20241228090000.nc')
+        """
+
         # --------------------------
         # Working this the filename
         if self.config.grid_definition is not None:
