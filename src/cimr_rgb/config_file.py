@@ -196,14 +196,18 @@ class ConfigFile:
             grid_type=self.grid_type,
         )
 
+        self.source_band = self.validate_source_band(
+            config_object=config_object,
+            source_band="InputData/source_band",
+            input_data_type=self.input_data_type,
+        )
+
         if self.grid_type == "L1C":
-            self.source_band = []
-        else:
-            self.source_band = self.validate_source_band(
-                config_object=config_object,
-                source_band="InputData/source_band",
-                input_data_type=self.input_data_type,
-            )
+            # source and target band must be exactly the same
+            if self.target_band != self.source_band:
+                raise ValueError(
+                    "Error: Source and Target bands must be the same for L1C data"
+                )
 
         if self.grid_type == "L1C":
             self.grid_definition = self.validate_grid_definition(
@@ -899,6 +903,14 @@ class ConfigFile:
                         )
                 return config_object.find(target_band).text.split()
 
+        if input_data_type == "SMAP":
+            valid_input = ["L"]
+            if config_object.find(target_band).text in valid_input:
+                return config_object.find(target_band).text.split()
+            raise ValueError(
+                f"Invalid target band for SMAP L1C remap. Valid target band is: {valid_input}"
+            )
+
     @staticmethod
     def validate_source_band(config_object, source_band, input_data_type):
         """
@@ -920,31 +932,23 @@ class ConfigFile:
         """
         if input_data_type == "AMSR2":
             valid_input = ["6", "7", "10", "18", "23", "36", "89a", "89b"]
-            if all(
-                item in valid_input
-                for item in config_object.find(source_band).text.split()
-            ):
-                return config_object.find(source_band).text.split()
+
+        if input_data_type == "SMAP":
+            valid_input = ["L"]
+
+        if input_data_type == "CIMR":
+            valid_input = ["L", "C", "X", "KA", "KU"]
+
+        if all(
+            item in valid_input
+            for item in config_object.find(source_band).text.split()
+        ):
+            return config_object.find(source_band).text.split()
+        else:
             raise ValueError(
                 f"Invalid Source Band, check configuration file. "
                 f"Valid source bands are: {valid_input}."
             )
-
-        if input_data_type == "SMAP":
-            pass
-
-        if input_data_type == "CIMR":
-            valid_input = ["L", "C", "X", "KA", "KU"]
-            if all(
-                item in valid_input
-                for item in config_object.find(source_band).text.split()
-            ):
-                return config_object.find(source_band).text.split()
-            else:
-                raise ValueError(
-                    f"Invalid Source Band, check configuration file. "
-                    f"Valid source bands are: {valid_input}."
-                )
 
     @staticmethod
     def validate_grid_definition(config_object, grid_definition):

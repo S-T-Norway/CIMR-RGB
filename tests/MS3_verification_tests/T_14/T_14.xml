@@ -5,7 +5,7 @@
       <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/AMSR2/GW1AM2_202308301033_051D_L1SGBTBR_2220220.h5</path>
       <antenna_patterns_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/antenna_patterns</antenna_patterns_path>
       <split_fore_aft>False</split_fore_aft>
-      <source_band />
+      <source_band>7 18 89b</source_band>
       <target_band>7 18 89b</target_band>
       <LMT>2200</LMT>
       <quality_control>True</quality_control>
