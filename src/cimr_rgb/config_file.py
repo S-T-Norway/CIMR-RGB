@@ -1285,12 +1285,12 @@ class ConfigFile:
 
     @staticmethod
     def validate_source_antenna_method(config_object, source_antenna_method):
-        valid_input = ["gaussian", "real", "gaussian_projected"]
+        valid_input = ["gaussian", "instrument", "gaussian_projected"]
 
         value = config_object.find(source_antenna_method).text
 
         if value is None or value.strip() == "":
-            return "real"
+            return "instrument"
         elif value in valid_input:
             return value
         else:
@@ -1301,12 +1301,12 @@ class ConfigFile:
 
     @staticmethod
     def validate_target_antenna_method(config_object, target_antenna_method):
-        valid_input = ["gaussian", "real", "gaussian_projected"]
+        valid_input = ["gaussian", "instrument", "gaussian_projected"]
 
         value = config_object.find(target_antenna_method).text
 
         if value is None or value.strip() == "":
-            return "real"
+            return "instrument"
         elif value in valid_input:
             return value
         else:

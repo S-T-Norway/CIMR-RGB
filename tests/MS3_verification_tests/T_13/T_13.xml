@@ -21,8 +21,8 @@
       <search_radius>18</search_radius>
       <max_neighbours>20</max_neighbours>
       <variables_to_regrid>bt_h</variables_to_regrid>
-      <source_antenna_method>real</source_antenna_method>
-      <target_antenna_method>real</target_antenna_method>
+      <source_antenna_method>instrument</source_antenna_method>
+      <target_antenna_method>instrument</target_antenna_method>
       <polarisation_method>scalar</polarisation_method>
       <source_antenna_threshold>0.5</source_antenna_threshold>
       <target_antenna_threshold>0.5</target_antenna_threshold>
