@@ -477,6 +477,11 @@ class ConfigFile:
                 MRF_projection_definition="ReGridderParams/MRF_projection_definition",
             )
 
+            self.antenna_pattern_uncertainty = self.validate_antenna_pattern_uncertainty(
+                config_object = config_object,
+                antenna_pattern_uncertainty = "ReGridderParams/antenna_pattern_uncertainty"
+            )
+
             if self.input_data_type == "SMAP":
                 self.antenna_tilt_angle = 144.54
 
@@ -939,11 +944,18 @@ class ConfigFile:
         if input_data_type == "CIMR":
             valid_input = ["L", "C", "X", "KA", "KU"]
 
+        try:
+            value = config_object.find(source_band).text.split()
+        except AttributeError as e:
+            raise ValueError(
+                f"Error: Source Band not found in configuration file. Check configuration file."
+            ) from e
+
         if all(
             item in valid_input
-            for item in config_object.find(source_band).text.split()
+            for item in value
         ):
-            return config_object.find(source_band).text.split()
+            return value
         else:
             raise ValueError(
                 f"Invalid Source Band, check configuration file. "
@@ -1808,3 +1820,35 @@ class ConfigFile:
                 f"Invalid `quality_control` value: {value}. Check Configuration File."
                 f" Valid inputs for `quality_control` parameter are: {valid_input}"
             )
+
+    @staticmethod
+    def validate_antenna_pattern_uncertainty(config_object, antenna_pattern_uncertainty):
+        """
+        Validates the antenna_pattern_uncertainty parameter from the configuration file.
+
+        Parameters:
+        - config_object: XML configuration object.
+          The root XML element containing the configuration.
+        - antenna_pattern_uncertainty: str value for antenna_pattern_uncertainty parameter (to be converted into float).
+
+        Returns:
+        - A float representing the antenna_pattern_uncertainty value. Defaults to 0 if the value is missing.
+
+        Raises:
+        - ValueError: If the value is not a valid float.
+        """
+
+        try:
+            value = config_object.find(antenna_pattern_uncertainty).text
+
+            if value is not None:
+                value = float(value)
+            else:
+                value = 0
+
+            return value
+
+        except ValueError as e:
+            raise ValueError(
+                "Invalid `antenna_pattern_uncertainty` value. It must be a valid float."
+            ) from e

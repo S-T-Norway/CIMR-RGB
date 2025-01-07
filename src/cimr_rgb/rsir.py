@@ -329,7 +329,10 @@ class rSIRInterp:
         weights_sq = weights ** 2
         nedt = nansum(weights_sq * extracted_values, axis=1) / (nansum(weights, axis=1) ** 2)
 
-        return nedt
+        # Add the uncertainty contribution from the antenna pattern
+        nedt_out = sqrt(nedt**2 + self.config.antenna_pattern_uncertainty**2)
+
+        return nedt_out
 
     def interp_variable_dict(self, **kwargs):
 

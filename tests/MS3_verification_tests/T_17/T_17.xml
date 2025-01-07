@@ -34,6 +34,7 @@
     <boresight_shift>True</boresight_shift>
     <rsir_iteration>15</rsir_iteration>
     <bg_smoothing>1</bg_smoothing>
+    <antenna_pattern_uncertainty>0</antenna_pattern_uncertainty>
     <regularization_parameter>0.001</regularization_parameter>
     <max_number_iteration>1000</max_number_iteration>
     <relative_tolerance>0.0001</relative_tolerance>
