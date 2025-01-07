@@ -538,7 +538,7 @@ def setup_paths():
     return rgb_data, nasa_data, config_path
 
 
-def test_subprocess_execution(setup_paths, run_subprocess):
+def test_T12_execution(setup_paths, run_subprocess):
     """
     Test the execution of the subprocess.
 
@@ -553,13 +553,12 @@ def test_subprocess_execution(setup_paths, run_subprocess):
     """
 
     _, _, config_path = setup_paths
-    # exit_code = run_python_subprocess(config_path)
     exit_code = run_subprocess(config_path)
 
     assert exit_code == 0, "Subprocess execution failed with a non-zero exit code."
 
 
-def test_smap_comparison(setup_paths):
+def test_T12_comparison(setup_paths):
     rgb_data, nasa_data, _ = setup_paths
     comparison = SMAP_comparison(rgb_data, nasa_data)
     results = comparison.calculate_differences()
@@ -570,16 +569,3 @@ def test_smap_comparison(setup_paths):
         )
         assert stats["mean_diff"] < 1.0, f"Mean difference for {key} is too high!"
         assert stats["percent_diff"] < 0.5, f"Percent difference for {key} is too high!"
-
-
-# if __name__ == "__main__":
-#     # IDS
-#     config_path = grasp_io.find_repo_root().joinpath(
-#         "tests/MS3_verification_tests/T_12/T_12_IDS.xml"
-#     )
-#     exit_code = run_python_subprocess(config_path=config_path)
-#     print(f"Subprocess exited with code: {exit_code}")
-
-#     # CIMR_comparison(ids_data_path, rsir_data_path)
-#     SMAP_comparison(rgb_data, nasa_data).map_compare()
-#     SMAP_comparison(rgb_data, nasa_data).scatter_compare()
