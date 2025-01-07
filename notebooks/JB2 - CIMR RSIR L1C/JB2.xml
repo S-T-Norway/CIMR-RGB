@@ -2,7 +2,8 @@
 <config>
   <InputData>
     <type>CIMR</type>
-    <path>../../dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
+    <path>
+      ../../dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
     <antenna_patterns_path>../../dpr/antenna_patterns</antenna_patterns_path>
     <split_fore_aft>False</split_fore_aft>
     <source_band>C</source_band>
@@ -12,7 +13,7 @@
   </InputData>
   <GridParams>
     <grid_type>L1C</grid_type>
-    <grid_definition>EASE2_G36km</grid_definition>
+    <grid_definition>EASE2_G9km</grid_definition>
     <projection_definition>G</projection_definition>
     <reduced_grid_inds></reduced_grid_inds>
   </GridParams>

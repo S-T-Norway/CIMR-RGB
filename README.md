@@ -97,6 +97,12 @@ $ pytest -v
 
 from within the root of the repo.
 
+[**Note**]: The test data set is available via by following [this
+link](https://drive.google.com/drive/folders/1Yo7If-nE-xMHwJSU3QL5HzSvp9Yzpj98?usp=sharing).
+Inside that folder you can find downloadable archive and the hash some to check
+archive's integrity. To run the test, unpack the archive inside the root and
+run the test from the root of the repo.
+
 ## Tutorials
 
 Python notebooks with explanations are available inside the `notebooks` directory in the root of the repo.
