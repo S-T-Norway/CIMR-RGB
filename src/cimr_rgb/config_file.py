@@ -196,14 +196,18 @@ class ConfigFile:
             grid_type=self.grid_type,
         )
 
+        self.source_band = self.validate_source_band(
+            config_object=config_object,
+            source_band="InputData/source_band",
+            input_data_type=self.input_data_type,
+        )
+
         if self.grid_type == "L1C":
-            self.source_band = []
-        else:
-            self.source_band = self.validate_source_band(
-                config_object=config_object,
-                source_band="InputData/source_band",
-                input_data_type=self.input_data_type,
-            )
+            # source and target band must be exactly the same
+            if self.target_band != self.source_band:
+                raise ValueError(
+                    "Error: Source and Target bands must be the same for L1C data"
+                )
 
         if self.grid_type == "L1C":
             self.grid_definition = self.validate_grid_definition(
@@ -471,6 +475,11 @@ class ConfigFile:
             self.MRF_projection_definition = self.validate_MRF_projection_definition(
                 config_object=config_object,
                 MRF_projection_definition="ReGridderParams/MRF_projection_definition",
+            )
+
+            self.antenna_pattern_uncertainty = self.validate_antenna_pattern_uncertainty(
+                config_object = config_object,
+                antenna_pattern_uncertainty = "ReGridderParams/antenna_pattern_uncertainty"
             )
 
             if self.input_data_type == "SMAP":
@@ -899,6 +908,14 @@ class ConfigFile:
                         )
                 return config_object.find(target_band).text.split()
 
+        if input_data_type == "SMAP":
+            valid_input = ["L"]
+            if config_object.find(target_band).text in valid_input:
+                return config_object.find(target_band).text.split()
+            raise ValueError(
+                f"Invalid target band for SMAP L1C remap. Valid target band is: {valid_input}"
+            )
+
     @staticmethod
     def validate_source_band(config_object, source_band, input_data_type):
         """
@@ -920,31 +937,30 @@ class ConfigFile:
         """
         if input_data_type == "AMSR2":
             valid_input = ["6", "7", "10", "18", "23", "36", "89a", "89b"]
-            if all(
-                item in valid_input
-                for item in config_object.find(source_band).text.split()
-            ):
-                return config_object.find(source_band).text.split()
+
+        if input_data_type == "SMAP":
+            valid_input = ["L"]
+
+        if input_data_type == "CIMR":
+            valid_input = ["L", "C", "X", "KA", "KU"]
+
+        try:
+            value = config_object.find(source_band).text.split()
+        except AttributeError as e:
+            raise ValueError(
+                f"Error: Source Band not found in configuration file. Check configuration file."
+            ) from e
+
+        if all(
+            item in valid_input
+            for item in value
+        ):
+            return value
+        else:
             raise ValueError(
                 f"Invalid Source Band, check configuration file. "
                 f"Valid source bands are: {valid_input}."
             )
-
-        if input_data_type == "SMAP":
-            pass
-
-        if input_data_type == "CIMR":
-            valid_input = ["L", "C", "X", "KA", "KU"]
-            if all(
-                item in valid_input
-                for item in config_object.find(source_band).text.split()
-            ):
-                return config_object.find(source_band).text.split()
-            else:
-                raise ValueError(
-                    f"Invalid Source Band, check configuration file. "
-                    f"Valid source bands are: {valid_input}."
-                )
 
     @staticmethod
     def validate_grid_definition(config_object, grid_definition):
@@ -1281,12 +1297,12 @@ class ConfigFile:
 
     @staticmethod
     def validate_source_antenna_method(config_object, source_antenna_method):
-        valid_input = ["gaussian", "real", "gaussian_projected"]
+        valid_input = ["gaussian", "instrument", "gaussian_projected"]
 
         value = config_object.find(source_antenna_method).text
 
         if value is None or value.strip() == "":
-            return "real"
+            return "instrument"
         elif value in valid_input:
             return value
         else:
@@ -1297,12 +1313,12 @@ class ConfigFile:
 
     @staticmethod
     def validate_target_antenna_method(config_object, target_antenna_method):
-        valid_input = ["gaussian", "real", "gaussian_projected"]
+        valid_input = ["gaussian", "instrument", "gaussian_projected"]
 
         value = config_object.find(target_antenna_method).text
 
         if value is None or value.strip() == "":
-            return "real"
+            return "instrument"
         elif value in valid_input:
             return value
         else:
@@ -1804,3 +1820,35 @@ class ConfigFile:
                 f"Invalid `quality_control` value: {value}. Check Configuration File."
                 f" Valid inputs for `quality_control` parameter are: {valid_input}"
             )
+
+    @staticmethod
+    def validate_antenna_pattern_uncertainty(config_object, antenna_pattern_uncertainty):
+        """
+        Validates the antenna_pattern_uncertainty parameter from the configuration file.
+
+        Parameters:
+        - config_object: XML configuration object.
+          The root XML element containing the configuration.
+        - antenna_pattern_uncertainty: str value for antenna_pattern_uncertainty parameter (to be converted into float).
+
+        Returns:
+        - A float representing the antenna_pattern_uncertainty value. Defaults to 0 if the value is missing.
+
+        Raises:
+        - ValueError: If the value is not a valid float.
+        """
+
+        try:
+            value = config_object.find(antenna_pattern_uncertainty).text
+
+            if value is not None:
+                value = float(value)
+            else:
+                value = 0
+
+            return value
+
+        except ValueError as e:
+            raise ValueError(
+                "Invalid `antenna_pattern_uncertainty` value. It must be a valid float."
+            ) from e

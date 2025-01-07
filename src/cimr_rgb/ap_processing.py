@@ -25,7 +25,7 @@ class AntennaPattern:
         self.antenna_threshold = antenna_threshold
         self.gaussian_params = gaussian_params
 
-        if self.antenna_method == 'real':
+        if self.antenna_method == 'instrument':
 
             ap_dict, self.fraction_below_threshold = self.load_antenna_patterns()
 
@@ -260,7 +260,7 @@ class AntennaPattern:
 
         for horn in ap_dict:
             
-            if self.antenna_method == 'real':
+            if self.antenna_method == 'instrument':
                 Gnorm = ap_dict[horn]['Gnorm']
                 ind_max_theta_non_zero = argmax(average(Gnorm, axis=0) <= 0.)
                 if ind_max_theta_non_zero==0:

@@ -19,6 +19,8 @@ from numpy import (
     einsum,
     concatenate,
     array,
+    isnan,
+    diag
 )
 from numpy.linalg import inv
 from tqdm import tqdm
@@ -368,10 +370,20 @@ class BGInterp:
         mask = indexes == fill_value
         vars = full(indexes.shape, nan)
         vars[~mask] = nedt[indexes[~mask]]
-        vars_scaled = vars[:, :, newaxis] * eye(weights.shape[1])
-        nedt = einsum("ij,ijk,ik->i", weights, vars_scaled, weights)
 
-        return nedt
+        # NEDT is calultated as a**T @ E @ a
+        nedt_out = full(indexes.shape[0], nan)
+        valid_mask = ~isnan(vars)
+        valid_vars = where(valid_mask, vars, 0)  # Replace NaN with 0 for valid rows
+        valid_weights = where(valid_mask, weights, 0)
+
+        # Compute the weighted quadratic form for all rows
+        nedt_out = sum(valid_weights ** 2 * valid_vars, axis=1)
+
+        # Add the contribution from the antenna pattern
+        nedt_out = sqrt(nedt_out**2 + self.config.antenna_pattern_uncertainty**2)
+
+        return nedt_out
 
     def interp_variable_dict(self, **kwargs):
         if self.config.grid_type == "L1C":
@@ -421,16 +433,16 @@ class BGInterp:
                 variable_dict_out[variable] = self.get_nedt(
                     weights, samples_dict, variable_dict[variable]
                 )
+            else:
+                # Apply weights to the variable you want to regrid
+                fill_value = len(variable_dict[variable])
 
-            # Apply weights to the variable you want to regrid
-            fill_value = len(variable_dict[variable])
-
-            # Combining BG with samples
-            indexes = samples_dict["indexes"]
-            mask = indexes == fill_value
-            vars = full(indexes.shape, nan)
-            vars[~mask] = variable_dict[variable][indexes[~mask]]
-            vars_out = nansum(weights * vars, axis=1)
-            variable_dict_out[variable] = vars_out
+                # Combining BG with samples
+                indexes = samples_dict["indexes"]
+                mask = indexes == fill_value
+                vars = full(indexes.shape, nan)
+                vars[~mask] = variable_dict[variable][indexes[~mask]]
+                vars_out = nansum(weights * vars, axis=1)
+                variable_dict_out[variable] = vars_out
 
         return variable_dict_out

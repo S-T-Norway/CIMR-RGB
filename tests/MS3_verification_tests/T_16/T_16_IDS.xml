@@ -5,7 +5,7 @@
     <path>./dpr/L1B/SMAP/SMAP_L1B_TB_47185_D_20231201T212120_R18290_001.h5</path>
     <antenna_patterns_path>./dpr/antenna_patterns</antenna_patterns_path>
     <split_fore_aft>True</split_fore_aft>
-    <source_band>C</source_band>
+    <source_band>L</source_band>
     <target_band>L</target_band>
     <LMT>2200</LMT>
     <quality_control>True</quality_control>
@@ -20,9 +20,9 @@
     <regridding_algorithm>IDS</regridding_algorithm>
     <search_radius>18</search_radius>
     <max_neighbours>20</max_neighbours>
-    <variables_to_regrid></variables_to_regrid>
-    <source_antenna_method>real</source_antenna_method>
-    <target_antenna_method>real</target_antenna_method>
+    <variables_to_regrid>bt_h</variables_to_regrid>
+    <source_antenna_method>instrument</source_antenna_method>
+    <target_antenna_method>instrument</target_antenna_method>
     <polarisation_method>scalar</polarisation_method>
     <source_antenna_threshold>0.5</source_antenna_threshold>
     <target_antenna_threshold>0.5</target_antenna_threshold>
@@ -34,6 +34,7 @@
     <boresight_shift>True</boresight_shift>
     <rsir_iteration>15</rsir_iteration>
     <bg_smoothing>1</bg_smoothing>
+    <antenna_pattern_uncertainty>0</antenna_pattern_uncertainty>
   </ReGridderParams>
   <OutputData>
     <save_to_disk>True</save_to_disk>
