@@ -1376,6 +1376,10 @@ class ProductGenerator:
                             #     endian='native',  # Optional byte order ('native', 'little', 'big')
                             #     least_significant_digit=None  # Optional precision control for float data
                             # )
+
+                            # TODO: This part is intentional because chunk_size does not really work yet
+                            chunk_size = None
+
                             if chunk_size is None:
                                 var_data = band_group.createVariable(
                                     varname=var_name,
@@ -1779,17 +1783,17 @@ class ProductGenerator:
         # l1c_utc_time = datetime.datetime.now()
 
         # Format the date and time as "YYYYMMDDHHMMSS"
-        l1c_utc_time = (
-            self.config.timestamp
-        )  # self.config.file_time_signature #l1c_utc_time.strftime("%Y%m%d%H%M%S")
-        # print(l1c_utc_time)
-        # exit()
+        if self.config.suffix is None or self.config.suffix.strip() == "":
+            suffix = self.config.timestamp
+        else:
+            suffix = self.config.suffix
 
         if self.config.grid_definition is not None:
-            outfile = f"{self.config.input_data_type}_{self.config.grid_type}_{self.config.regridding_algorithm}_{grid_res}_{l1c_utc_time}.nc"
+            outfile = f"{self.config.input_data_type}_{self.config.grid_type}_{self.config.regridding_algorithm}_{grid_res}_{suffix}.nc"
         else:
-            outfile = f"{self.config.input_data_type}_{self.config.grid_type}_{self.config.regridding_algorithm}_{l1c_utc_time}.nc"
+            outfile = f"{self.config.input_data_type}_{self.config.grid_type}_{self.config.regridding_algorithm}_{suffix}.nc"
 
         outfile = pb.Path(f"{self.config.output_path}/{outfile}").resolve()
         # --------------------------
+
         return outfile
