@@ -24,7 +24,7 @@
     "datapath1": "output/MS3_verification_tests/T_15/SMAP_L1C_RSIR_25km_test.nc",
     "datapath2": "output/MS3_verification_tests/T_15/SMAP_L1C_IDS_25km_test.nc",
     "config_paths": {
-      "DIB": "tests/system/configs/T_15_RSIR.xml",
+      "RSIR": "tests/system/configs/T_15_RSIR.xml",
       "IDS": "tests/system/configs/T_15_IDS.xml"
     }
   },

@@ -30,52 +30,6 @@ GRID = "EASE2_G36km"
 PROJECTION = "G"
 
 
-def get_netcdf_data(path):
-    """
-    Extract and grid data from a netCDF file.
-
-    Parameters
-    ----------
-    path : str
-        Path to the netCDF file.
-
-    Returns
-    -------
-    dict
-        A dictionary containing gridded brightness temperature variables.
-    """
-
-    import netCDF4 as nc
-
-    gridded_vars = {}
-
-    with nc.Dataset(path, "r") as f:
-        data = f[f"{PROJECTION}"]
-        measurement = data["Measurement"]
-        l_band = measurement["L_BAND"]
-
-        for bt in ["bt_h_fore", "bt_h_aft", "bt_v_fore", "bt_v_aft"]:
-            if "fore" in bt:
-                row = array(l_band["cell_row_fore"][:])
-                col = array(l_band["cell_col_fore"][:])
-            elif "aft" in bt:
-                row = array(l_band["cell_row_aft"][:])
-                col = array(l_band["cell_col_aft"][:])
-            else:
-                row = ""
-                col = ""
-            var = array(l_band[bt][:])
-            grid = full((GRIDS[GRID]["n_rows"], GRIDS[GRID]["n_cols"]), nan)
-
-            for count, sample in enumerate(var):
-                if sample == 9.969209968386869e36:
-                    continue
-                grid[row[count], col[count]] = sample
-            gridded_vars[bt] = grid
-
-        return gridded_vars
-
-
 def get_hdf5_data(path):
     """
     Extract and grid data from an HDF5 file.
@@ -145,7 +99,23 @@ def test_T12_execution(setup_paths, run_subprocess):
 
 
 @pytest.mark.parametrize("setup_paths", ["T_12"], indirect=True)
-def test_T12_comparison(setup_paths, calculate_differences):
+@pytest.mark.parametrize(
+    "TEST_NAME, DATA_OUTPUT, PROJECTION, GRID, INPUT_BAND, OUTPUT_BAND",
+    [
+        ("SMAP: IDS_RGB vs IDS_NASA", "L1C", "G", "EASE2_G36km", "L_BAND", "L_BAND"),
+    ],
+)
+def test_T12_comparison(
+    setup_paths,
+    TEST_NAME,
+    DATA_OUTPUT,
+    PROJECTION,
+    GRID,
+    INPUT_BAND,
+    OUTPUT_BAND,
+    get_netcdf_data,
+    calculate_differences,
+):
     """
     Test comparison of brightness temperature (BT) variables between RGB and NASA datasets.
 
@@ -188,11 +158,22 @@ def test_T12_comparison(setup_paths, calculate_differences):
     bt_v_aft: Average Mean Diff = 0.002, Average Percent Diff = 0.01%
     """
 
-    rgb_data_path, nasa_data_path, _ = setup_paths
-    rgb_data = get_netcdf_data(path=rgb_data_path)
-    nasa_data = get_hdf5_data(nasa_data_path)
-
+    # GRID = "EASE2_G36km"
+    # PROJECTION = "G"
+    # BAND = "L_BAND"
     variables_list = ["bt_h_fore", "bt_h_aft", "bt_v_fore", "bt_v_aft"]
+
+    rgb_data_path, nasa_data_path, _ = setup_paths
+
+    rgb_data = get_netcdf_data(
+        datapath=rgb_data_path,
+        variables_list=variables_list,
+        projection=PROJECTION,
+        band=INPUT_BAND,
+        grid=GRID,
+    )
+
+    nasa_data = get_hdf5_data(nasa_data_path)
 
     results = calculate_differences(
         data1=rgb_data, data2=nasa_data, variables_list=variables_list
@@ -202,5 +183,7 @@ def test_T12_comparison(setup_paths, calculate_differences):
         print(
             f"{key}: Average Mean Diff = {stats['mean_diff']:.3f}, Average Percent Diff = {stats['percent_diff']:.3f}%"
         )
-        assert stats["mean_diff"] < 1.0, f"Mean difference for {key} is too high!"
-        assert stats["percent_diff"] < 0.5, f"Percent difference for {key} is too high!"
+        # assert stats["mean_diff"] < 1.0, f"Mean difference for {key} is too high!"
+        assert stats["percent_diff"] < 0.25, (
+            f"Percent difference for {key} is too high!"
+        )

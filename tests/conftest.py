@@ -319,3 +319,65 @@ def calculate_differences():
         return results
 
     return _calculate
+
+
+@pytest.fixture
+def get_netcdf_data():
+    def _get_data(datapath, variables_list, projection, band, grid):
+        import netCDF4 as nc
+
+        PROJECTION = projection
+        BAND = band
+        GRID = grid
+
+        gridded_vars = {}
+
+        with nc.Dataset(datapath, "r") as f:
+            data = f[f"{PROJECTION}"]
+            measurement = data["Measurement"]
+            band_data = measurement[BAND]
+
+            # Whether it is L1R or L1C (BAND_TARGET is inside L1R)
+            if "BAND_TARGET" in PROJECTION:
+                for bt in variables_list:
+                    bt_h = band_data[bt][:]
+                    gridded_vars[bt] = bt_h
+            else:
+                for bt in variables_list:
+                    if "fore" in bt:
+                        cell_row = np.array(band_data["cell_row_fore"][:])
+                        cell_col = np.array(band_data["cell_col_fore"][:])
+                    elif "aft" in bt:
+                        cell_row = np.array(band_data["cell_row_aft"][:])
+                        cell_col = np.array(band_data["cell_col_aft"][:])
+                    else:
+                        cell_row = np.array(band_data["cell_row"][:])
+                        cell_col = np.array(band_data["cell_col"][:])
+
+                    var = np.array(band_data[bt][:])
+                    grid = np.full(
+                        (GRIDS[GRID]["n_rows"], GRIDS[GRID]["n_cols"]), np.nan
+                    )
+
+                    # Here, different tests had different sample conditions, so
+                    # need to check whether it is very relevant if I mix all these
+                    # conditions here.
+                    for count, sample in enumerate(var):
+                        if sample == 9.969209968386869e36:
+                            continue
+                        if sample == 0.0:
+                            print("a sample was zero")
+                            continue
+                        # This part is from LW (T17)
+                        if cell_row[count] == -9223372036854775806:
+                            continue
+                        if cell_col[count] == -9223372036854775806:
+                            continue
+
+                        grid[int(cell_row[count]), int(cell_col[count])] = sample
+
+                    gridded_vars[bt] = grid
+
+            return gridded_vars
+
+    return _get_data
