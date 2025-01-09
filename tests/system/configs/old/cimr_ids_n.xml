@@ -47,7 +47,7 @@
     <creator_email>brilenkov@stcorp.no</creator_email> <!-- email is not an optional parameter -->
     <creator_url>https://www.stcorp.no/</creator_url>
     <creator_institution>Science and Technology AS</creator_institution>
-    <timestamp></timestamp>
+    <suffix />
     <timestamp_fmt>%Y-%m-%d_%H-%M-%S</timestamp_fmt>
   </OutputData>
   <LoggingParams>
