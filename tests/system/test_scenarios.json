@@ -1,0 +1,71 @@
+{
+  "T_12": {
+    "datapath1": "output/MS3_verification_tests/T_12/SMAP_L1C_IDS_36km_test.nc",
+    "datapath2": "dpr/L1C/SMAP/NASA/SMAP_L1C_TB_47185_D_20231201T212059_R19240_002.h5",
+    "config_paths": ["tests/system/configs/T_12_IDS.xml"]
+  },
+  "T_13": {
+    "datapath1": "output/MS3_verification_tests/T_13/CIMR_L1C_NN_9km_test.nc",
+    "datapath2": "output/MS3_verification_tests/T_13/CIMR_L1C_IDS_9km_test.nc",
+    "config_paths": {
+      "NN": "tests/system/configs/T_13_NN.xml",
+      "IDS": "tests/system/configs/T_13_IDS.xml"
+    }
+  },
+  "T_14": {
+    "datapath1": "output/MS3_verification_tests/T_14/AMSR2_L1C_DIB_9km_test.nc",
+    "datapath2": "output/MS3_verification_tests/T_14/AMSR2_L1C_IDS_9km_test.nc",
+    "config_paths": {
+      "DIB": "tests/system/configs/T_14_DIB.xml",
+      "IDS": "tests/system/configs/T_14_IDS.xml"
+    }
+  },
+  "T_15": {
+    "datapath1": "output/MS3_verification_tests/T_15/SMAP_L1C_RSIR_25km_test.nc",
+    "datapath2": "output/MS3_verification_tests/T_15/SMAP_L1C_IDS_25km_test.nc",
+    "config_paths": {
+      "RSIR": "tests/system/configs/T_15_RSIR.xml",
+      "IDS": "tests/system/configs/T_15_IDS.xml"
+    }
+  },
+  "T_16": {
+    "datapath1": "output/MS3_verification_tests/T_16/SMAP_L1C_BG_25km_test.nc",
+    "datapath2": "output/MS3_verification_tests/T_16/SMAP_L1C_IDS_25km_test.nc",
+    "config_paths": {
+      "BG": "tests/system/configs/T_16_BG.xml",
+      "IDS": "tests/system/configs/T_16_IDS.xml"
+    }
+  },
+  "T_17": {
+    "datapath1": "output/MS3_verification_tests/T_17/CIMR_L1C_LW_9km_test.nc",
+    "datapath2": "output/MS3_verification_tests/T_17/CIMR_L1C_IDS_9km_test.nc",
+    "config_paths": {
+      "LW": "tests/system/configs/T_17_LW.xml",
+      "IDS": "tests/system/configs/T_17_IDS.xml"
+    }
+  },
+  "T_19": {
+    "datapath1": "output/MS3_verification_tests/T_19/CIMR_L1R_BG_test.nc",
+    "datapath2": "output/MS3_verification_tests/T_19/CIMR_L1R_IDS_test.nc",
+    "config_paths": {
+      "BG": "tests/system/configs/T_19_BG.xml",
+      "IDS": "tests/system/configs/T_19_IDS.xml"
+    }
+  },
+  "T_21": {
+    "datapath1": "output/MS3_verification_tests/T_21/CIMR_L1R_RSIR_test.nc",
+    "datapath2": "output/MS3_verification_tests/T_21/CIMR_L1R_IDS_test.nc",
+    "config_paths": {
+      "RSIR": "tests/system/configs/T_21_RSIR.xml",
+      "IDS": "tests/system/configs/T_21_IDS.xml"
+    }
+  },
+  "T_31": {
+    "datapath1": "output/MS3_verification_tests/T_31/AMSR2_L1R_DIB_test.nc",
+    "datapath2": "output/MS3_verification_tests/T_31/AMSR2_L1R_IDS_test.nc",
+    "config_paths": {
+      "DIB": "tests/system/configs/T_31_DIB.xml",
+      "IDS": "tests/system/configs/T_31_IDS.xml"
+    }
+  }
+}
