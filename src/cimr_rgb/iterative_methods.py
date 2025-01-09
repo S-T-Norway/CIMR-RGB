@@ -25,23 +25,23 @@ def landweber(A, Y, lambda_param=1e-4, alpha=None, n_iter=1000, rtol=1e-5):
 
     X = np.ones(A.shape[1])*1e-20
     At = A.T
-    
+
     if alpha is None:
         alpha = 1./np.linalg.norm(np.dot(A.T,A))
 
     count = 0
     for i in tqdm(range(n_iter)):
-        count += 1
         residual = Y - A @ X
         regularization_term = lambda_param * X
-        X_new = X + alpha * (At @ residual - regularization_term)
-        rel_error = np.linalg.norm(X_new - X) / np.linalg.norm(X)
+        rel_error = np.linalg.norm(residual) / np.linalg.norm(Y)
         if rel_error < rtol:
-            print(f"Converged in {i+1} iterations with relative error: {rel_error}")
-            return X_new, count
-        X = X_new
+            print(f"Converged in {i+1} iterations with residual {np.linalg.norm(residual)} and relative error {rel_error}")
+            return X, count
+        else:
+            X = X + alpha * (At @ residual - regularization_term)
+            count += 1
 
-    print(f"Reached maximum iterations without full convergence with error {rel_error}")
+    print(f"Reached maximum iterations without full convergence: residual {np.linalg.norm(residual)} and relative error {rel_error}")
     return X, count
 
 
@@ -85,35 +85,34 @@ def conjugate_gradient_ne(A, Y, lambda_param=1e-4, n_iter=1000, rtol=1e-5):
     - X: numpy array, the estimated solution.
     """
 
-    AtA = A.T @ A + lambda_param * np.eye(A.shape[1])
-    AtY = A.T @ Y
+    AtA  = A.T @ A
+    AtAl = AtA + lambda_param * np.eye(A.shape[1])
+    AtY  = A.T @ Y
 
     X = np.ones(AtA.shape[1])*1e-20  # Initial guess
-    r = AtY - AtA @ X                # Residual
-    p = r.copy()                     # Initial search direction
-    rs_old = np.dot(r, r)
+    r = AtY - AtAl @ X
+    p = np.copy(r)
+    rnorm_old = np.dot(r, r)
 
     count = 0
     for i in tqdm(range(n_iter)):
-        count += 1
-        Ap = AtA @ p
-        alpha = rs_old / np.dot(p, Ap)
-        X_new = X + alpha * p
-        r -= alpha * Ap
-        rs_new = np.dot(r, r)
-
-        rel_error = np.linalg.norm(X_new - X) / np.linalg.norm(X)
+        rel_error = np.sqrt(rnorm_old) / np.linalg.norm(AtY)
         if rel_error < rtol:
-            print(f"Converged in {i+1} iterations with relative error: {rel_error}")
-            return X_new, count
+            print(f"Converged in {i+1} iterations with residual {np.sqrt(rnorm_old)} and relative error {rel_error}")
+            return X, count
+        else:
+            AtAlp = AtAl @ p
+            a   = rnorm_old / np.dot(p, AtAlp)
+            X  += a * p
+            r  -= a * AtAlp
+            rnorm_new = np.dot(r, r)
+            p   = r + rnorm_new / rnorm_old * p
+            rnorm_old = rnorm_new
+            count +=1
 
-        p = r + (rs_new / rs_old) * p
-        rs_old = rs_new
-        X = X_new
-
-    print(f"Reached maximum iterations without full convergence, relative error: {rel_error}")
+    print(f"Reached maximum iterations without full convergence: residual {np.sqrt(rnorm_old)} and relative error {rel_error}")
     return X, count
-0
+
 
 def conjugate_gradient_ne_nedt(A, varY, n_iter):
 
