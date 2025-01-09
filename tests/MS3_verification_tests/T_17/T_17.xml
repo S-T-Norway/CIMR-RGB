@@ -2,7 +2,8 @@
 <config>
   <InputData>
     <type>CIMR</type>
-    <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
+    <path>
+      /home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
     <antenna_patterns_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/antenna_patterns</antenna_patterns_path>
     <split_fore_aft>False</split_fore_aft>
     <source_band>L</source_band>
@@ -49,7 +50,7 @@
     <creator_email>test@email.com</creator_email>
     <creator_url>insert your url</creator_url>
     <creator_institution>insert your institution</creator_institution>
-    <timestamp />
+    <suffix>test</suffix>
     <timestamp_fmt>%Y-%m-%d_%H-%M-%S</timestamp_fmt>
   </OutputData>
   <LoggingParams>

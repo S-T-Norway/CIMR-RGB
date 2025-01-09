@@ -313,6 +313,7 @@ def calculate_differences():
             mean_diff = np.nanmean(diff)
             percent_diff = (mean_diff / np.nanmean(data2[key])) * 100
             results[key] = {
+                "diff": diff,
                 "mean_diff": mean_diff,
                 "percent_diff": percent_diff,
             }
