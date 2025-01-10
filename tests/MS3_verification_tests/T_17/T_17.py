@@ -5,6 +5,8 @@ import sys
 import os
 
 import matplotlib
+import pathlib as pb
+import subprocess as sbps
 tkagg = matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 plt.ion()
@@ -12,13 +14,18 @@ plt.ion()
 sys.path.append('/home/beywood/ST/CIMR_RGB/CIMR-RGB/src/cimr_rgb')
 from grid_generator import GRIDS
 from numpy import array, full, nan, nanmean, polyfit, isnan, isinf
+import cimr_grasp.grasp_io as grasp_io
 
 
+repo_root = grasp_io.find_repo_root()
 # Add RGB remapped IDS netCDF here
-ids_data_path = '/home/beywood/Desktop/MS3/CIMR-RGB/tests/MS3_verification_tests/T_17/CIMR_L1C_IDS_9km_2024-12-11_13-57-50.nc'
-# Add the RGB remapped LW netCDF here
-lw_data_path = '/home/beywood/Desktop/MS3/CIMR-RGB/tests/MS3_verification_tests/T_17/CIMR_L1C_LW_9km_2024-12-11_15-40-13.nc'
-
+ids_data_path = pb.Path(repo_root).joinpath(
+    "output/MS3_verification_tests/T_17/CIMR_L1C_IDS_9km_test.nc"
+)  # ""
+# Add the RGB remapped BG netCDF here
+lw_data_path = pb.Path(repo_root).joinpath(
+    "output/MS3_verification_tests/T_17/CIMR_L1C_LW_9km_test.nc"
+)
 GRID = 'EASE2_G9km'
 PROJECTION = 'G'
 BAND = 'L_BAND'
@@ -41,8 +48,8 @@ class CIMR_comparison:
             row = array(band['cell_row'][:])
             col = array(band['cell_col'][:])
 
-            print(f"cell row  {row.min(), row.max()}")
-            print(f"cell col {col.min(), col.max()}")
+            # print(f"cell row  {row.min(), row.max()}")
+            # print(f"cell col {col.min(), col.max()}")
 
 
             grid = full((GRIDS[GRID]['n_rows'], GRIDS[GRID]['n_cols']), nan)
@@ -51,7 +58,6 @@ class CIMR_comparison:
                 if sample == 9.969209968386869e36:
                     continue
                 if sample == 0.:
-                    print("a sample was zero")
                     continue
                 if row[count] == -9223372036854775806:
                     continue
@@ -148,6 +154,63 @@ class CIMR_comparison:
 
         plt.show()
 
-data = CIMR_comparison(ids_data_path, lw_data_path)
-CIMR_comparison(ids_data_path, lw_data_path).map_compare()
-CIMR_comparison(ids_data_path, lw_data_path).scatter_compare()
+def run_python_subprocess(config_path):
+    """
+    Runs a Python script as a subprocess, displaying output in real-time.
+
+    Parameters:
+    ----------
+    script_path : str
+        Path to the Python script to be executed.
+    *args : str
+        Additional arguments to pass to the script.
+
+    Returns:
+    ----------
+    int
+        Exit code of the subprocess.
+    """
+    try:
+        # Construct the command
+        # command = [sys.executable, script_path] + list(args)
+        command = [
+            "python",
+            "-m",
+            "cimr_rgb",
+            str(config_path),
+        ]  # Adjust command if needed
+
+        # Run the subprocess and allow real-time output
+        result = sbps.run(
+            command,
+            stdout=sys.stdout,  # Redirect stdout to the parent process's stdout
+            stderr=sys.stderr,  # Redirect stderr to the parent process's stderr
+        )
+
+        # Return the exit code
+        return result.returncode
+    except Exception as e:
+        print(f"Error occurred: {e}", file=sys.stderr)
+        return -1
+
+if __name__ == "__main__":
+    # IDS
+    config_path = grasp_io.find_repo_root().joinpath(
+        "/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/T_17/T_17_IDS.xml"
+    )
+    exit_code = run_python_subprocess(config_path=config_path)
+    print(f"Subprocess exited with code: {exit_code}")
+
+    # # LW
+    config_path = grasp_io.find_repo_root().joinpath(
+        "/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/T_17/T_17_LW.xml"
+    )
+    exit_code = run_python_subprocess(config_path=config_path)
+    print(f"Subprocess exited with code: {exit_code}")
+
+    CIMR_comparison(ids_data_path, lw_data_path).map_compare()
+    CIMR_comparison(ids_data_path, lw_data_path).scatter_compare()
+
+# data = CIMR_comparison(ids_data_path, lw_data_path)
+# CIMR_comparison(ids_data_path, lw_data_path).map_compare()
+# CIMR_comparison(ids_data_path, lw_data_path).scatter_compare()

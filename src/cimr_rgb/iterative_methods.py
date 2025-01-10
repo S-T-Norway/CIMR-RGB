@@ -1,10 +1,16 @@
-from numpy import concatenate, logical_and, zeros, zeros_like, linalg, meshgrid, atleast_1d, minimum, maximum, dot, arange, sum, full
+from numpy import concatenate, logical_and, zeros, zeros_like, linalg, meshgrid, atleast_1d, minimum, maximum, dot, arange, sum
 import numpy as np
 import matplotlib.pyplot as plt
 from .grid_generator import GridGenerator
 from .ap_processing import AntennaPattern, GaussianAntennaPattern, make_integration_grid
 from tqdm import tqdm
 from scipy.interpolate import RegularGridInterpolator
+
+# Testing
+import matplotlib
+tkagg = matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+plt.ion()
 
 
 def landweber(A, Y, lambda_param=1e-4, alpha=None, n_iter=1000, rtol=1e-5):
@@ -31,7 +37,7 @@ def landweber(A, Y, lambda_param=1e-4, alpha=None, n_iter=1000, rtol=1e-5):
         alpha = 1./np.linalg.norm(np.dot(A.T,A))
 
     count = 0
-    for i in tqdm(range(n_iter)):
+    for i in range(n_iter):
         residual = Y - A @ X
         regularization_term = lambda_param * X
         rel_error = np.linalg.norm(residual) / np.linalg.norm(Y)
@@ -96,7 +102,7 @@ def conjugate_gradient_ne(A, Y, lambda_param=1e-4, n_iter=1000, rtol=1e-5):
     rnorm_old = np.dot(r, r)
 
     count = 0
-    for i in tqdm(range(n_iter)):
+    for i in range(n_iter):
         rel_error = np.sqrt(rnorm_old) / np.linalg.norm(AtY)
         if rel_error < rtol:
             print(f"Converged in {i+1} iterations with residual {np.sqrt(rnorm_old)} and relative error {rel_error}")
@@ -126,6 +132,7 @@ class MIIinterp:
 
     def __init__(self, config, band, inversion_method):
 
+        # Add this to config file instead
         assert config.grid_type == 'L1C', "Matrix inversion interpolation methods are L1c, please change grid_type to L1c"
 
         self.config = config
@@ -149,9 +156,15 @@ class MIIinterp:
 
         output_grid = GridGenerator(self.config, self.config.projection_definition, self.config.grid_definition)
 
-        #define output variable dictionary
+        # Temporary solution to not regrid variables you dont want to regrid
+
+
+        #define output variable dictionary, we also only need to create one array of zeros
         variable_dict_out = {}
         for variable in variable_dict:
+            # Temporary solution to ignore variables we dont need
+            if variable not in self.config.variables_to_regrid:
+                continue
             variable_dict_out[variable] = np.zeros(target_grid[0].shape)
 
         if self.config.source_antenna_method == 'gaussian':
@@ -196,17 +209,18 @@ class MIIinterp:
                 else:
                     j2 = jmax-jmin
 
-                #lon and lat of corner cell centers in the chunk
-                chunkx1, chunky1 = output_grid.rowcol_to_xy(jmin + j1, imin + i1)   # 1 --- 2
-                chunkx2, chunky2 = output_grid.rowcol_to_xy(jmin + j1, imin + i2)   # |     |
-                chunkx3, chunky3 = output_grid.rowcol_to_xy(jmin + j2, imin + i1)   # |     |
-                chunkx4, chunky4 = output_grid.rowcol_to_xy(jmin + j2, imin + i2)   # 3 --- 4
+                #lon and lat of chunk corners
+                # CHECKING
+                # Firstly, check the input x and ys are correct.
+                # Secondly, don't  we already have this information in the target grid?
 
-                chunklon1, chunklat1 = output_grid.xy_to_lonlat(chunkx1, chunky1)
-                chunklon2, chunklat2 = output_grid.xy_to_lonlat(chunkx2, chunky2)
-                chunklon3, chunklat3 = output_grid.xy_to_lonlat(chunkx3, chunky3)
-                chunklon4, chunklat4 = output_grid.xy_to_lonlat(chunkx4, chunky4)
-                
+                #------------------------------------------------------#
+                # WE MIGHT NEED TO ADD ON HERE HALF OF THE RESOLUTION
+                chunklon1, chunklat1 = output_grid.rowcol_to_lonlat(jmin + j1, imin + i1)   # 1 --- 2
+                chunklon2, chunklat2 = output_grid.rowcol_to_lonlat(jmin + j1, imin + i2)   # |     |
+                chunklon3, chunklat3 = output_grid.rowcol_to_lonlat(jmin + j2, imin + i1)   # |     |
+                chunklon4, chunklat4 = output_grid.rowcol_to_lonlat(jmin + j2, imin + i2)   # 3 --- 4
+
                 #create an integration grid (slightly larger than the chunks)
                 int_dom_lons, int_dom_lats = make_integration_grid(
                     int_projection_definition=self.config.MRF_projection_definition,
@@ -229,9 +243,9 @@ class MIIinterp:
                 inty1 += integration_grid.resolution/2.
                 inty2 += integration_grid.resolution/2.
                 inty3 -= integration_grid.resolution/2.
-                inty4 -= integration_grid.resolution/2.         
+                inty4 -= integration_grid.resolution/2.
 
-                if (intx1 < intx2): #global grid with no data across internatioal date line, north and south polar grids
+                if (intx1 < intx2): #global grid with no data across international date line, north and south polar grids
                     mask = ((xsample >= intx1) * (xsample <= intx2) * 
                             (ysample >= inty3) * (ysample <= inty1) )
                 else: #global grid with data across international date line 
@@ -281,23 +295,27 @@ class MIIinterp:
                             lat_l1b = variable_dict['latitude'][mask][isample]
                             )
 
-                        fraction_above_threshold = 1.- self.source_ap.fraction_below_threshold[int(variable_dict['feed_horn_number'][mask][isample])]
+                        # fraction_above_threshold = 1.- self.source_ap.fraction_below_threshold[int(variable_dict['feed_horn_number'][mask][isample])]
+
+                    # projected_pattern /= (fraction_above_threshold*sum(projected_pattern))
 
                     if projected_pattern.any():
-                        projected_pattern /= (fraction_above_threshold*sum(projected_pattern))
+                        projected_pattern /= sum(projected_pattern)
 
                     A[irow] = projected_pattern.flatten()
 
                     irow += 1
 
-                var_to_regrid = []
-                for var in self.config.variables_to_regrid:
-                    if 'nedt' in var and 'bt'+var[-2:] not in self.config.variables_to_regrid:
-                        var_to_regrid.append('bt'+var[-2:])
-                    if 'nedt' not in var:
-                        var_to_regrid.append(var)
+                # var_to_regrid = []
+                # for var in self.config.variables_to_regrid:
+                #     if 'nedt' in var and 'bt'+var[-2:] not in self.config.variables_to_regrid:
+                #         var_to_regrid.append('bt'+var[-2:])
+                #     if 'nedt' not in var:
+                #         var_to_regrid.append(var)
 
-                for variable in var_to_regrid:
+                for variable in variable_dict:
+                    if variable not in self.config.variables_to_regrid:
+                        continue
 
                     Y = variable_dict[variable][mask]
 
@@ -322,25 +340,27 @@ class MIIinterp:
                         Xinterp = Finterp((chunklats, chunklons)).T
                         variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = Xinterp
 
-                    nedt_var = 'nedt'+variable[-2:]
-                    if 'bt' in variable and nedt_var in self.config.variables_to_regrid:
-                        if self.inversion_method == 'CG':
-                            Xnedt = conjugate_gradient_ne_nedt(A, variable_dict[nedt_var][mask], n_iter)
-                        elif self.inversion_method == 'LW':
-                            Xnedt = landweber_nedt(A, variable_dict[nedt_var][mask],
-                                                                   alpha = None,
-                                                                   lambda_param = self.config.regularization_parameter, 
-                                                                   n_iter       = n_iter
-                            )
-                        Finterp = RegularGridInterpolator((int_dom_lats[:, 0], int_dom_lons[0]), Xnedt.reshape(int_dom_lons.shape), bounds_error=False, fill_value=0.)
-                        Rows, Cols = np.meshgrid(np.arange(jmin+j1, jmin+j2), np.arange(imin+i1, imin+i2))
-                        chunklons, chunklats = output_grid.rowcol_to_lonlat(Rows, Cols)
-                        Xinterp = Finterp((chunklats, chunklons)).T
-                        variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = Xinterp
+                    # nedt_var = 'nedt'+variable[-2:]
+                    # if 'bt' in variable and nedt_var in self.config.variables_to_regrid:
+                    #     if self.inversion_method == 'CG':
+                    #         Xnedt = conjugate_gradient_ne_nedt(A, variable_dict[nedt_var][mask], n_iter)
+                    #     elif self.inversion_method == 'LW':
+                    #         Xnedt = landweber_nedt(A, variable_dict[nedt_var][mask],
+                    #                                                alpha = None,
+                    #                                                lambda_param = self.config.regularization_parameter,
+                    #                                                n_iter       = n_iter
+                    #         )
+                    #     Finterp = RegularGridInterpolator((int_dom_lats[:, 0], int_dom_lons[0]), Xnedt.reshape(int_dom_lons.shape), bounds_error=False, fill_value=0.)
+                    #     Rows, Cols = np.meshgrid(np.arange(jmin+j1, jmin+j2), np.arange(imin+i1, imin+i2))
+                    #     chunklons, chunklats = output_grid.rowcol_to_lonlat(Rows, Cols)
+                    #     Xinterp = Finterp((chunklats, chunklons)).T
+                    #     variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = Xinterp
 
         # JOSEPH: check that the variables are reshaped correctly. right now  variable_dict_out[var] is a 2D array with the shape of the output grid
         for variable in variable_dict_out:
-            variable_dict_out[variable] = variable_dict_out[variable][jmin:jmax, imin:imax].flatten()
+            # variable_dict_out[variable] = variable_dict_out[variable][jmin:jmax, imin:imax].flatten()
+            variable_flattened = variable_dict_out[variable].flatten('C')
+            variable_dict_out[variable] = variable_flattened[samples_dict['grid_1d_index']]
 
         return variable_dict_out
 
@@ -365,5 +385,8 @@ class MIIinterp:
         variable_dict={key.removesuffix(f'{scan_direction}'): value for key, value in variable_dict.items()}
 
         variable_dict_out = self.apply_inversion(variable_dict, samples_dict, target_grid)
+
+        # Temporary solution to add the fore/aft prefix
+        variable_dict_out = {f"{key}{scan_direction}": value for key, value in variable_dict_out.items()}
 
         return variable_dict_out

@@ -2,10 +2,9 @@
 <config>
   <InputData>
     <type>CIMR</type>
-    <path>
-      ./dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
-    <antenna_patterns_path>./dpr/antenna_patterns</antenna_patterns_path>
-    <split_fore_aft>False</split_fore_aft>
+    <path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
+    <antenna_patterns_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/antenna_patterns</antenna_patterns_path>
+    <split_fore_aft>True</split_fore_aft>
     <source_band>L</source_band>
     <target_band>L</target_band>
     <LMT>2200</LMT>
@@ -15,13 +14,13 @@
     <grid_type>L1C</grid_type>
     <grid_definition>EASE2_G9km</grid_definition>
     <projection_definition>G</projection_definition>
-    <reduced_grid_inds>550 570 900 920</reduced_grid_inds>
+    <reduced_grid_inds></reduced_grid_inds> # 540 560 880 900 # Land 355 375 820 845 # dont work send to Davide 365 405 820 880
   </GridParams>
   <ReGridderParams>
-    <regridding_algorithm>LW</regridding_algorithm>
+    <regridding_algorithm>IDS</regridding_algorithm>
     <search_radius>18</search_radius>
     <max_neighbours>20</max_neighbours>
-    <variables_to_regrid>bt_h nedt_h</variables_to_regrid>
+    <variables_to_regrid>bt_h</variables_to_regrid>
     <source_antenna_method>instrument</source_antenna_method>
     <target_antenna_method>instrument</target_antenna_method>
     <polarisation_method>scalar</polarisation_method>
@@ -42,7 +41,7 @@
   </ReGridderParams>
   <OutputData>
     <save_to_disk>True</save_to_disk>
-    <output_path>./output/MS3_verification_tests/T_17</output_path>
+    <output_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/output/MS3_verification_tests/T_17</output_path>
     <version>1.0.0</version>
     <creator_name>insert your name</creator_name>
     <!-- email is not an optional parameter, format
