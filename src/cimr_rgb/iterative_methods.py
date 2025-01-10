@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from .grid_generator import GridGenerator
 from .ap_processing import AntennaPattern, GaussianAntennaPattern, make_integration_grid
 from tqdm import tqdm
+from scipy.interpolate import RegularGridInterpolator
 
 
 def landweber(A, Y, lambda_param=1e-4, alpha=None, n_iter=1000, rtol=1e-5):
@@ -162,7 +163,7 @@ class MIIinterp:
         target_lon = target_grid[0].flatten('C')[samples_dict['grid_1d_index']]
         target_lat = target_grid[1].flatten('C')[samples_dict['grid_1d_index']]    
 
-        #sample coordinates in the integration grid (useful later for masking coordinates in a chunk)
+        #sample coordinates in the integration grid projection (useful later for masking coordinates in a chunk)
         integration_grid =  GridGenerator(self.config, self.config.MRF_projection_definition, self.config.MRF_grid_definition)
         xsample, ysample = integration_grid.lonlat_to_xy(variable_dict['longitude'], variable_dict['latitude'])
 
@@ -172,7 +173,7 @@ class MIIinterp:
         jmin, jmax = rows_output.min(), rows_output.max()
 
         #TODO: choose optimal max_chunk_size depending on available memory
-        max_chunk_size = 100
+        max_chunk_size = int(100 / (output_grid.resolution/integration_grid.resolution))
         nchunkx = (imax - imin) // max_chunk_size #number of "full" chunks (so it can be zero)
         nchunky = (jmax - jmin) // max_chunk_size
 
@@ -195,7 +196,7 @@ class MIIinterp:
                 else:
                     j2 = jmax-jmin
 
-                #lon and lat of chunk corners
+                #lon and lat of corner cell centers in the chunk
                 chunkx1, chunky1 = output_grid.rowcol_to_xy(jmin + j1, imin + i1)   # 1 --- 2
                 chunkx2, chunky2 = output_grid.rowcol_to_xy(jmin + j1, imin + i2)   # |     |
                 chunkx3, chunky3 = output_grid.rowcol_to_xy(jmin + j2, imin + i1)   # |     |
@@ -215,17 +216,20 @@ class MIIinterp:
                     ap_radii = Rpattern
                 )
 
-                #mask samples within the integration grid
+                #find integration grid corners
                 intx1, inty1 = integration_grid.lonlat_to_xy(int_dom_lons[0,   0], int_dom_lats[0,   0])   # 1 --- 2
                 intx2, inty2 = integration_grid.lonlat_to_xy(int_dom_lons[0,  -1], int_dom_lats[0,  -1])   # |     |
                 intx3, inty3 = integration_grid.lonlat_to_xy(int_dom_lons[-1,  0], int_dom_lats[-1,  0])   # |     |
                 intx4, inty4 = integration_grid.lonlat_to_xy(int_dom_lons[-1, -1], int_dom_lats[-1, -1])   # 3 --- 4
 
-                #count number of cells in the integration grid but outside the chunk
-                n_cell_sx = np.sum(int_dom_lons[0]<chunklon1)   #hack: np.sum counts the number of values in a boolean array
-                n_cell_dx = np.sum(int_dom_lons[0]>chunklon2)
-                n_cell_dn = np.sum(int_dom_lats[:, 0]<chunklat3)
-                n_cell_up = np.sum(int_dom_lats[:, 0]>chunklat1)                  
+                intx1 -= integration_grid.resolution/2.
+                intx2 += integration_grid.resolution/2.
+                intx3 -= integration_grid.resolution/2.
+                intx4 += integration_grid.resolution/2.
+                inty1 += integration_grid.resolution/2.
+                inty2 += integration_grid.resolution/2.
+                inty3 -= integration_grid.resolution/2.
+                inty4 -= integration_grid.resolution/2.         
 
                 if (intx1 < intx2): #global grid with no data across internatioal date line, north and south polar grids
                     mask = ((xsample >= intx1) * (xsample <= intx2) * 
@@ -311,13 +315,12 @@ class MIIinterp:
                                        rtol         = self.config.relative_tolerance
                         )
 
-                    isx = n_cell_sx
-                    idx = int_dom_lons.shape[1] - n_cell_dx 
-                    jup = n_cell_up
-                    jdn = int_dom_lons.shape[0] - n_cell_dn
-
                     if variable in self.config.variables_to_regrid:
-                        variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = X1.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
+                        Finterp = RegularGridInterpolator((int_dom_lats[:, 0], int_dom_lons[0]), X1.reshape(int_dom_lons.shape), bounds_error=False, fill_value=0.)
+                        Rows, Cols = np.meshgrid(np.arange(jmin+j1, jmin+j2), np.arange(imin+i1, imin+i2))
+                        chunklons, chunklats = output_grid.rowcol_to_lonlat(Rows, Cols)
+                        Xinterp = Finterp((chunklats, chunklons)).T
+                        variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = Xinterp
 
                     nedt_var = 'nedt'+variable[-2:]
                     if 'bt' in variable and nedt_var in self.config.variables_to_regrid:
@@ -329,7 +332,11 @@ class MIIinterp:
                                                                    lambda_param = self.config.regularization_parameter, 
                                                                    n_iter       = n_iter
                             )
-                        variable_dict_out[nedt_var][jmin+j1:jmin+j2, imin+i1:imin+i2] = Xnedt.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
+                        Finterp = RegularGridInterpolator((int_dom_lats[:, 0], int_dom_lons[0]), Xnedt.reshape(int_dom_lons.shape), bounds_error=False, fill_value=0.)
+                        Rows, Cols = np.meshgrid(np.arange(jmin+j1, jmin+j2), np.arange(imin+i1, imin+i2))
+                        chunklons, chunklats = output_grid.rowcol_to_lonlat(Rows, Cols)
+                        Xinterp = Finterp((chunklats, chunklons)).T
+                        variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = Xinterp
 
         # JOSEPH: check that the variables are reshaped correctly. right now  variable_dict_out[var] is a 2D array with the shape of the output grid
         for variable in variable_dict_out:
