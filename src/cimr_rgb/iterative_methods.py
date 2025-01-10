@@ -1,4 +1,4 @@
-from numpy import concatenate, logical_and, zeros, zeros_like, linalg, meshgrid, atleast_1d, minimum, maximum, dot, arange, sum
+from numpy import concatenate, logical_and, zeros, zeros_like, linalg, meshgrid, atleast_1d, minimum, maximum, dot, arange, sum, full
 import numpy as np
 import matplotlib.pyplot as plt
 from .grid_generator import GridGenerator
@@ -279,7 +279,8 @@ class MIIinterp:
 
                         fraction_above_threshold = 1.- self.source_ap.fraction_below_threshold[int(variable_dict['feed_horn_number'][mask][isample])]
 
-                    projected_pattern /= (fraction_above_threshold*sum(projected_pattern))
+                    if projected_pattern.any():
+                        projected_pattern /= (fraction_above_threshold*sum(projected_pattern))
 
                     A[irow] = projected_pattern.flatten()
 
@@ -353,6 +354,7 @@ class MIIinterp:
             scan_direction = ""
         if f"attitude{scan_direction}" not in variable_dict:
             variable_dict[f'attitude{scan_direction}'] = full(variable_dict[f"longitude{scan_direction}"].shape, None)
+
         variable_dict={key.removesuffix(f'{scan_direction}'): value for key, value in variable_dict.items()}
 
         variable_dict_out = self.apply_inversion(variable_dict, samples_dict, target_grid)
