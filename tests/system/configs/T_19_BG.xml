@@ -8,7 +8,6 @@
     <split_fore_aft>False</split_fore_aft>
     <source_band>L</source_band>
     <target_band>C</target_band>
-    <LMT>2200</LMT>
     <quality_control>True</quality_control>
   </InputData>
   <GridParams>

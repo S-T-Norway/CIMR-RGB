@@ -330,7 +330,7 @@ class ConfigFile:
 
         # AMSR2 specific parameters
         if self.input_data_type == "AMSR2":
-            self.LMT = 2200
+            # self.LMT = 2200
             self.key_mappings = {
                 # 'input': (co_reg_key, bt_key)
                 "6": (0, "Brightness Temperature (6.9GHz,"),
