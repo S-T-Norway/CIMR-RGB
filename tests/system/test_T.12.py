@@ -178,11 +178,12 @@ def test_T12_comparison(
     )
 
     # Plotting comparison
-    repo_root = grasp_io.find_repo_root()
-    img_path = repo_root.joinpath(
-        "output/MS3_verification_tests/T_12/T_12_difference2.png"
-    )
-    map_compare(data1=rgb_data, data2=nasa_data, filename=img_path, difference=results)
+    # repo_root = grasp_io.find_repo_root()
+    # img_path = repo_root.joinpath(
+    #     "output/MS3_verification_tests/T_12/T_12_difference2.png"
+    # )
+    map_compare(data1=rgb_data, data2=nasa_data)
+    scatter_compare(data1=rgb_data, data2=nasa_data)
 
     for key, stats in results.items():
         print(
@@ -194,7 +195,16 @@ def test_T12_comparison(
         )
 
 
-def map_compare(data1, data2, filename, difference, rows=2, cols=3, figsize=(20, 20)):
+def map_compare_new(
+    data1,
+    data2,
+    variables,
+    filenames,
+    difference,
+    rows=2,
+    cols=3,
+    figsize=(20, 20),
+):
     #
     #
     #
@@ -205,28 +215,67 @@ def map_compare(data1, data2, filename, difference, rows=2, cols=3, figsize=(20,
     fig, axs = plt.subplots(rows, cols, figsize=figsize, constrained_layout=True)
 
     # The number of rows is equal to aft fore
-    # for row in range(rows):
-    #     for col in range(cols):
-    #         im00 = axs[row, col].imshow(data1["bt_h_fore"][:, 550:], cmap=cmap)
-    #         axs[row, col].set_title("RGB Remap (bt_h_fore)")
-    #         om01 = axs[row, col].imshow(data2["bt_h_fore"][:, 550:], cmap=cmap)
-    #         axs[row, col].set_title("NASA Remap (bt_h_fore)")
+    for variable in variables:
+        for row in range(rows):
+            # for col in range(cols):
+            im00 = axs[row, 0].imshow(data1[variable][:, 550:], cmap=cmap)
+            axs[row, 0].set_title(f"RGB Remap ({variable})")
+            om01 = axs[row, 1].imshow(data2[variable][:, 550:], cmap=cmap)
+            axs[row, 1].set_title(f"NASA Remap ({variable})")
+            #
+            im02 = axs[0, 2].imshow(
+                difference[variable]["diff"][:, 550:],
+                cmap=cmap,
+            )
+            axs[row, 2].set_title(f"Difference ({variable})")
+            fig.colorbar(im02, ax=axs[0, 2])
+    #
+    axs[0, 2].text(
+        50,
+        50,
+        r"$\mu = \frac{{1}}{{n}} \sum_{{i=1}}^{{n}} | \mathrm{{RGB}}_i - \mathrm{{NASA}}_i |$",
+        fontsize=14,
+        color="black",
+    )
+
+    axs[0, 2].text(
+        50,
+        100,
+        rf"$\mu_{{fore}} =  {difference['bt_h_fore']['mean_diff']:.2f} K, \ \text{{or}} \ {difference['bt_h_fore']['percent_diff']:.2f}\%$",
+        fontsize=14,
+        color="black",
+    )
+
+    axs[1, 2].text(
+        50,
+        50,
+        r"$\mu = \frac{{1}}{{n}} \sum_{{i=1}}^{{n}} | \mathrm{{RGB}}_i - \mathrm{{NASA}}_i |$",
+        fontsize=14,
+        color="black",
+    )
+    axs[1, 2].text(
+        50,
+        100,
+        rf"$\mu_{{aft}} =  {difference['bt_h_aft']['mean_diff']:.2f} K, \ \text{{or}} \ {difference['bt_h_aft']['percent_diff']:.2f}\%$",
+        fontsize=14,
+        color="black",
+    )
 
     # fore
-    im00 = axs[0, 0].imshow(data1["bt_h_fore"][:, 550:], cmap=cmap)
-    axs[0, 0].set_title("RGB Remap (bt_h_fore)")
+    # im00 = axs[0, 0].imshow(data1["bt_h_fore"][:, 550:], cmap=cmap)
+    # axs[0, 0].set_title("RGB Remap (bt_h_fore)")
 
-    om01 = axs[0, 1].imshow(data2["bt_h_fore"][:, 550:], cmap=cmap)
-    axs[0, 1].set_title("NASA Remap (bt_h_fore)")
+    # om01 = axs[0, 1].imshow(data2["bt_h_fore"][:, 550:], cmap=cmap)
+    # axs[0, 1].set_title("NASA Remap (bt_h_fore)")
 
     # bt_h_fore_diff = abs(data1["bt_h_fore"] - data2["bt_h_fore"])
 
     # print(difference["bt_h_fore"]["mean_diff"])
-    im02 = axs[0, 2].imshow(
-        difference["bt_h_fore"]["diff"][:, 550:],
-        cmap=cmap,
-    )
-    axs[0, 2].set_title("Difference (bt_h_fore)")
+    # im02 = axs[0, 2].imshow(
+    #     difference["bt_h_fore"]["diff"][:, 550:],
+    #     cmap=cmap,
+    # )
+    # axs[0, 2].set_title("Difference (bt_h_fore)")
 
     # difference["bt_h_fore"]["percent_diff"]
 
@@ -235,18 +284,18 @@ def map_compare(data1, data2, filename, difference, rows=2, cols=3, figsize=(20,
     # ----------------------
 
     # aft
-    im10 = axs[1, 0].imshow(data1["bt_h_aft"][:, 550:], cmap=cmap)
-    axs[1, 0].set_title("RGB Remap (bt_h_aft)")
+    # im10 = axs[1, 0].imshow(data1["bt_h_aft"][:, 550:], cmap=cmap)
+    # axs[1, 0].set_title("RGB Remap (bt_h_aft)")
 
-    im11 = axs[1, 1].imshow(data2["bt_h_aft"][:, 550:], cmap=cmap)
-    axs[1, 1].set_title("NASA Remap (bt_h_aft)")
+    # im11 = axs[1, 1].imshow(data2["bt_h_aft"][:, 550:], cmap=cmap)
+    # axs[1, 1].set_title("NASA Remap (bt_h_aft)")
 
-    im12 = axs[1, 2].imshow(difference["bt_h_aft"]["diff"][:, 550:], cmap=cmap)
-    axs[1, 2].set_title("Difference (bt_h_aft)")
+    # im12 = axs[1, 2].imshow(difference["bt_h_aft"]["diff"][:, 550:], cmap=cmap)
+    # axs[1, 2].set_title("Difference (bt_h_aft)")
 
-    #
-    fig.colorbar(im02, ax=axs[0, 2])
-    fig.colorbar(im12, ax=axs[1, 2])
+    # #
+    # fig.colorbar(im02, ax=axs[0, 2])
+    # fig.colorbar(im12, ax=axs[1, 2])
 
     # Add Statistics
     # Calculate the average relative difference
@@ -267,7 +316,7 @@ def map_compare(data1, data2, filename, difference, rows=2, cols=3, figsize=(20,
     axs[0, 2].text(
         50,
         50,
-        rf"$\mu = \frac{{1}}{{n}} \sum_{{i=1}}^{{n}} | \mathrm{{RGB}}_i - \mathrm{{NASA}}_i |$",
+        r"$\mu = \frac{{1}}{{n}} \sum_{{i=1}}^{{n}} | \mathrm{{RGB}}_i - \mathrm{{NASA}}_i |$",
         fontsize=14,
         color="black",
     )
@@ -283,7 +332,7 @@ def map_compare(data1, data2, filename, difference, rows=2, cols=3, figsize=(20,
     axs[1, 2].text(
         50,
         50,
-        rf"$\mu = \frac{{1}}{{n}} \sum_{{i=1}}^{{n}} | \mathrm{{RGB}}_i - \mathrm{{NASA}}_i |$",
+        r"$\mu = \frac{{1}}{{n}} \sum_{{i=1}}^{{n}} | \mathrm{{RGB}}_i - \mathrm{{NASA}}_i |$",
         fontsize=14,
         color="black",
     )
@@ -299,8 +348,8 @@ def map_compare(data1, data2, filename, difference, rows=2, cols=3, figsize=(20,
     # )  # ""
     # plt.savefig(img_path, dpi=300)
     # plt.show()
-    plt.savefig(filename, dpi=300)
-    plt.show()
+    plt.savefig(filenames[0], dpi=300)
+    # plt.show()
 
     # ----------------------
     # bt_v
@@ -314,179 +363,212 @@ def map_compare(data1, data2, filename, difference, rows=2, cols=3, figsize=(20,
 
     #
 
-    # im10 = axs[1, 0].imshow(data1["bt_h_aft"][:, 550:], cmap=cmap)
-    # axs[1, 0].set_title("RGB Remap (bt_h_aft)")
-    # im11 = axs[1, 1].imshow(data2["bt_h_aft"][:, 550:], cmap=cmap)
-    # axs[1, 1].set_title("NASA Remap (bt_h_aft)")
 
-    # #
-    # bt_h_aft_diff = abs(data1["bt_h_aft"] - data2["bt_h_aft"])
-    # im12 = axs[1, 2].imshow(bt_h_aft_diff[:, 550:], cmap=cmap)
-    # axs[1, 2].set_title("Difference (bt_h_aft)")
-    # fig.colorbar(im02, ax=axs[0, 2])
-    # fig.colorbar(im12, ax=axs[1, 2])
-
-    # # Add Statistics
-    # # Calculate the average relative difference
-    # fore_mean_diff = np.nanmean(bt_h_fore_diff)
-    # aft_mean_diff = np.nanmean(bt_h_aft_diff)
-    # print(f"Average relative difference for bt_h_fore: {fore_mean_diff}")
-    # print(f"Average relative difference for bt_h_aft: {aft_mean_diff}")
-
-    # # Calculate percentage Differences
-    # fore_percent_diff = (fore_mean_diff / np.nanmean(data2["bt_h_fore"])) * 100
-    # aft_percent_diff = (aft_mean_diff / np.nanmean(data2["bt_h_aft"])) * 100
-    # print(f"Average percentage difference for bt_h_fore: {fore_percent_diff}")
-    # print(f"Average percentage difference for bt_h_aft: {aft_percent_diff}")
-
-    #
-
-    # repo_root = grasp_io.find_repo_root()
-    # img_path = repo_root.joinpath(
-    #     "output/MS3_verification_tests/T_12/T_12_difference2.png"
-    # )  # ""
-    # plt.savefig(img_path, dpi=300)
-
-    #
-
-    #
-
-    #
-
-    # im00 = axs[0, 0].imshow(self.rgb_data["bt_h_fore"][:, 550:], cmap=cmap)
-    # axs[0, 0].set_title("RGB Remap (bt_h_fore)")
-    # om01 = axs[0, 1].imshow(self.nasa_data["bt_h_fore"][:, 550:], cmap=cmap)
-    # axs[0, 1].set_title("NASA Remap (bt_h_fore)")
-    # bt_h_fore_diff = abs(self.rgb_data["bt_h_fore"] - self.nasa_data["bt_h_fore"])
-    # im02 = axs[0, 2].imshow(bt_h_fore_diff[:, 550:], cmap=cmap)
-    # axs[0, 2].set_title("Difference (bt_h_fore)")
-    # # aft
-    # im10 = axs[1, 0].imshow(self.rgb_data["bt_h_aft"][:, 550:], cmap=cmap)
-    # axs[1, 0].set_title("RGB Remap (bt_h_aft)")
-    # im11 = axs[1, 1].imshow(self.nasa_data["bt_h_aft"][:, 550:], cmap=cmap)
-    # axs[1, 1].set_title("NASA Remap (bt_h_aft)")
-    # bt_h_aft_diff = abs(self.rgb_data["bt_h_aft"] - self.nasa_data["bt_h_aft"])
-    # im12 = axs[1, 2].imshow(bt_h_aft_diff[:, 550:], cmap=cmap)
-    # axs[1, 2].set_title("Difference (bt_h_aft)")
-    # fig.colorbar(im02, ax=axs[0, 2])
-    # fig.colorbar(im12, ax=axs[1, 2])
-
-    #
-
-    #
-
-    #
-
-    #
-
-    #
+def map_compare(data1, data2):
+    cmap = "viridis"
+    # bt_h plt
+    fig, axs = plt.subplots(2, 3, figsize=(20, 20), constrained_layout=True)
+    im00 = axs[0, 0].imshow(data1["bt_h_fore"][:, 550:], cmap=cmap)
+    axs[0, 0].set_title("RGB Remap (bt_h_fore)")
+    om01 = axs[0, 1].imshow(data2["bt_h_fore"][:, 550:], cmap=cmap)
+    axs[0, 1].set_title("NASA Remap (bt_h_fore)")
+    bt_h_fore_diff = abs(data1["bt_h_fore"] - data2["bt_h_fore"])
+    im02 = axs[0, 2].imshow(bt_h_fore_diff[:, 550:], cmap=cmap)
+    axs[0, 2].set_title("Difference (bt_h_fore)")
+    # aft
+    im10 = axs[1, 0].imshow(data1["bt_h_aft"][:, 550:], cmap=cmap)
+    axs[1, 0].set_title("RGB Remap (bt_h_aft)")
+    im11 = axs[1, 1].imshow(data2["bt_h_aft"][:, 550:], cmap=cmap)
+    axs[1, 1].set_title("NASA Remap (bt_h_aft)")
+    bt_h_aft_diff = abs(data1["bt_h_aft"] - data2["bt_h_aft"])
+    im12 = axs[1, 2].imshow(bt_h_aft_diff[:, 550:], cmap=cmap)
+    axs[1, 2].set_title("Difference (bt_h_aft)")
+    fig.colorbar(im02, ax=axs[0, 2])
+    fig.colorbar(im12, ax=axs[1, 2])
 
     # Add Statistics
     # Calculate the average relative difference
-    # fore_mean_diff = nanmean(bt_h_fore_diff)
-    # aft_mean_diff = nanmean(bt_h_aft_diff)
-    # print(f"Average relative difference for bt_h_fore: {fore_mean_diff}")
-    # print(f"Average relative difference for bt_h_aft: {aft_mean_diff}")
+    fore_mean_diff = np.nanmean(bt_h_fore_diff)
+    aft_mean_diff = np.nanmean(bt_h_aft_diff)
+    print(f"Average relative difference for bt_h_fore: {fore_mean_diff}")
+    print(f"Average relative difference for bt_h_aft: {aft_mean_diff}")
 
-    # # Calculate percentage Differences
-    # fore_percent_diff = (fore_mean_diff / nanmean(self.nasa_data["bt_h_fore"])) * 100
-    # aft_percent_diff = (aft_mean_diff / nanmean(self.nasa_data["bt_h_aft"])) * 100
-    # print(f"Average percentage difference for bt_h_fore: {fore_percent_diff}")
-    # print(f"Average percentage difference for bt_h_aft: {aft_percent_diff}")
+    # Calculate percentage Differences
+    fore_percent_diff = (fore_mean_diff / np.nanmean(data2["bt_h_fore"])) * 100
+    aft_percent_diff = (aft_mean_diff / np.nanmean(data2["bt_h_aft"])) * 100
+    print(f"Average percentage difference for bt_h_fore: {fore_percent_diff}")
+    print(f"Average percentage difference for bt_h_aft: {aft_percent_diff}")
 
-    # # Add statistics to the plot
-    # # axs[0,2].text(50,50, f"mean(abs(bt_diff)) = {fore_mean_diff}K")
-    # # axs[0,2].text(50, 50, f"mean(abs(bt_diff)) = {aft_mean_diff}K")
-    # axs[0, 2].text(
-    #     50,
-    #     50,
-    #     rf"$\mu = \frac{{1}}{{n}} \sum_{{i=1}}^{{n}} | \mathrm{{RGB}}_i - \mathrm{{NASA}}_i |$",
-    #     fontsize=14,
-    #     color="black",
-    # )
+    # Add statistics to the plot
+    # axs[0,2].text(50,50, f"mean(abs(bt_diff)) = {fore_mean_diff}K")
+    # axs[0,2].text(50, 50, f"mean(abs(bt_diff)) = {aft_mean_diff}K")
+    axs[0, 2].text(
+        50,
+        50,
+        rf"$\mu = \frac{{1}}{{n}} \sum_{{i=1}}^{{n}} | \mathrm{{RGB}}_i - \mathrm{{NASA}}_i |$",
+        fontsize=14,
+        color="black",
+    )
 
-    # axs[0, 2].text(
-    #     50,
-    #     100,
-    #     rf"$\mu_{{fore}} =  {fore_mean_diff:.2f} K, \ \text{{or}} \ {fore_percent_diff:.2f}\%$",
-    #     fontsize=14,
-    #     color="black",
-    # )
+    axs[0, 2].text(
+        50,
+        100,
+        rf"$\mu_{{fore}} =  {fore_mean_diff:.2f} K, \ \text{{or}} \ {fore_percent_diff:.2f}\%$",
+        fontsize=14,
+        color="black",
+    )
 
-    # axs[1, 2].text(
-    #     50,
-    #     50,
-    #     rf"$\mu_{{aft}} =  {aft_mean_diff:.2f} K, \ \text{{or}} \ {aft_percent_diff:.2f}\%$",
-    #     fontsize=14,
-    #     color="black",
-    # )
-    # img_path = repo_root.joinpath(
-    #     "output/MS3_verification_tests/T_12/T_12_difference1.png"
-    # )  # ""
-    # plt.savefig(img_path, dpi=300)
+    axs[1, 2].text(
+        50,
+        50,
+        rf"$\mu_{{aft}} =  {aft_mean_diff:.2f} K, \ \text{{or}} \ {aft_percent_diff:.2f}\%$",
+        fontsize=14,
+        color="black",
+    )
+    repo_root = grasp_io.find_repo_root()
+    img_path = repo_root.joinpath(
+        "output/MS3_verification_tests/T_12/T_12_difference1.png"
+    )  # ""
+    plt.savefig(img_path, dpi=300)
     # plt.show()
 
-    # # bt_v plt
-    # fig, axs = plt.subplots(2, 3, figsize=(20, 20), constrained_layout=True)
-    # im00 = axs[0, 0].imshow(self.rgb_data["bt_v_fore"][:, 550:], cmap=cmap)
-    # axs[0, 0].set_title("RGB Remap (bt_v_fore)")
-    # om01 = axs[0, 1].imshow(self.nasa_data["bt_v_fore"][:, 550:], cmap=cmap)
-    # axs[0, 1].set_title("NASA Remap (bt_v_fore)")
-    # bt_v_fore_diff = abs(self.rgb_data["bt_v_fore"] - self.nasa_data["bt_v_fore"])
-    # im02 = axs[0, 2].imshow(bt_v_fore_diff[:, 550:], cmap=cmap)
-    # axs[0, 2].set_title("Difference (bt_v_fore)")
-    # # aft
-    # im10 = axs[1, 0].imshow(self.rgb_data["bt_v_aft"][:, 550:], cmap=cmap)
-    # axs[1, 0].set_title("RGB Remap (bt_v_aft)")
-    # im11 = axs[1, 1].imshow(self.nasa_data["bt_v_aft"][:, 550:], cmap=cmap)
-    # axs[1, 1].set_title("NASA Remap (bt_v_aft)")
-    # bt_v_aft_diff = abs(self.rgb_data["bt_v_aft"] - self.nasa_data["bt_v_aft"])
-    # im12 = axs[1, 2].imshow(bt_v_aft_diff[:, 550:], cmap=cmap)
-    # axs[1, 2].set_title("Difference (bt_v_aft)")
-    # fig.colorbar(im02, ax=axs[0, 2])
-    # fig.colorbar(im12, ax=axs[1, 2])
+    # bt_v plt
+    fig, axs = plt.subplots(2, 3, figsize=(20, 20), constrained_layout=True)
+    im00 = axs[0, 0].imshow(data1["bt_v_fore"][:, 550:], cmap=cmap)
+    axs[0, 0].set_title("RGB Remap (bt_v_fore)")
+    om01 = axs[0, 1].imshow(data2["bt_v_fore"][:, 550:], cmap=cmap)
+    axs[0, 1].set_title("NASA Remap (bt_v_fore)")
+    bt_v_fore_diff = abs(data1["bt_v_fore"] - data2["bt_v_fore"])
+    im02 = axs[0, 2].imshow(bt_v_fore_diff[:, 550:], cmap=cmap)
+    axs[0, 2].set_title("Difference (bt_v_fore)")
+    # aft
+    im10 = axs[1, 0].imshow(data1["bt_v_aft"][:, 550:], cmap=cmap)
+    axs[1, 0].set_title("RGB Remap (bt_v_aft)")
+    im11 = axs[1, 1].imshow(data2["bt_v_aft"][:, 550:], cmap=cmap)
+    axs[1, 1].set_title("NASA Remap (bt_v_aft)")
+    bt_v_aft_diff = abs(data1["bt_v_aft"] - data2["bt_v_aft"])
+    im12 = axs[1, 2].imshow(bt_v_aft_diff[:, 550:], cmap=cmap)
+    axs[1, 2].set_title("Difference (bt_v_aft)")
+    fig.colorbar(im02, ax=axs[0, 2])
+    fig.colorbar(im12, ax=axs[1, 2])
 
-    # # Add Statistics
-    # # Calculate the average relative difference
-    # fore_mean_diff = nanmean(bt_v_fore_diff)
-    # aft_mean_diff = nanmean(bt_h_aft_diff)
-    # print(f"Average relative difference for bt_v_fore: {fore_mean_diff}")
-    # print(f"Average relative difference for bt_v_aft: {aft_mean_diff}")
+    # Add Statistics
+    # Calculate the average relative difference
+    fore_mean_diff = np.nanmean(bt_v_fore_diff)
+    aft_mean_diff = np.nanmean(bt_h_aft_diff)
+    print(f"Average relative difference for bt_v_fore: {fore_mean_diff}")
+    print(f"Average relative difference for bt_v_aft: {aft_mean_diff}")
 
-    # # Calculate percentage Differences
-    # fore_percent_diff = (fore_mean_diff / nanmean(self.nasa_data["bt_v_fore"])) * 100
-    # aft_percent_diff = (aft_mean_diff / nanmean(self.nasa_data["bt_v_aft"])) * 100
-    # print(f"Average percentage difference for bt_v_fore: {fore_percent_diff}")
-    # print(f"Average percentage difference for bt_v_aft: {aft_percent_diff}")
+    # Calculate percentage Differences
+    fore_percent_diff = (fore_mean_diff / np.nanmean(data2["bt_v_fore"])) * 100
+    aft_percent_diff = (aft_mean_diff / np.nanmean(data2["bt_v_aft"])) * 100
+    print(f"Average percentage difference for bt_v_fore: {fore_percent_diff}")
+    print(f"Average percentage difference for bt_v_aft: {aft_percent_diff}")
 
-    # # Add statistics to the plot
-    # # axs[0,2].text(50,50, f"mean(abs(bt_diff)) = {fore_mean_diff}K")
-    # # axs[0,2].text(50, 50, f"mean(abs(bt_diff)) = {aft_mean_diff}K")
-    # axs[0, 2].text(
-    #     50,
-    #     50,
-    #     rf"$\mu = \frac{{1}}{{n}} \sum_{{i=1}}^{{n}} | \mathrm{{RGB}}_i - \mathrm{{NASA}}_i |$",
-    #     fontsize=14,
-    #     color="black",
-    # )
+    # Add statistics to the plot
+    # axs[0,2].text(50,50, f"mean(abs(bt_diff)) = {fore_mean_diff}K")
+    # axs[0,2].text(50, 50, f"mean(abs(bt_diff)) = {aft_mean_diff}K")
+    axs[0, 2].text(
+        50,
+        50,
+        rf"$\mu = \frac{{1}}{{n}} \sum_{{i=1}}^{{n}} | \mathrm{{RGB}}_i - \mathrm{{NASA}}_i |$",
+        fontsize=14,
+        color="black",
+    )
 
-    # axs[0, 2].text(
-    #     50,
-    #     100,
-    #     rf"$\mu_{{fore}} =  {fore_mean_diff:.2f} K, \ \text{{or}} \ {fore_percent_diff:.2f}\%$",
-    #     fontsize=14,
-    #     color="black",
-    # )
+    axs[0, 2].text(
+        50,
+        100,
+        rf"$\mu_{{fore}} =  {fore_mean_diff:.2f} K, \ \text{{or}} \ {fore_percent_diff:.2f}\%$",
+        fontsize=14,
+        color="black",
+    )
 
-    # axs[1, 2].text(
-    #     50,
-    #     50,
-    #     rf"$\mu_{{aft}} =  {aft_mean_diff:.2f} K, \ \text{{or}} \ {aft_percent_diff:.2f}\%$",
-    #     fontsize=14,
-    #     color="black",
-    # )
-    # img_path = repo_root.joinpath(
-    #     "output/MS3_verification_tests/T_12/T_12_difference2.png"
-    # )  # ""
-    # plt.savefig(img_path, dpi=300)
+    axs[1, 2].text(
+        50,
+        50,
+        rf"$\mu_{{aft}} =  {aft_mean_diff:.2f} K, \ \text{{or}} \ {aft_percent_diff:.2f}\%$",
+        fontsize=14,
+        color="black",
+    )
+    repo_root = grasp_io.find_repo_root()
+    img_path = repo_root.joinpath(
+        "output/MS3_verification_tests/T_12/T_12_difference2.png"
+    )  # ""
+    plt.savefig(img_path, dpi=300)
+    # plt.show()
+
+
+def scatter_stats(x, y):
+    mask = ~np.isnan(x) & ~np.isnan(y) & ~np.isinf(x) & ~np.isinf(y)
+    x = x[mask]
+    y = y[mask]
+    m, b = np.polyfit(x, y, 1)
+    y_fit = m * x + b
+
+    # Calculate R^2
+    ss_res = sum((y - y_fit) ** 2)
+    ss_tot = sum((y - y.mean()) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+
+    return x, y, m, b, y_fit, r_squared
+
+
+def scatter_compare(data1, data2):
+    x = data1["bt_h_fore"].flatten()
+    y = data2["bt_h_fore"].flatten()
+    x_h_fore, y_h_fore, m_h_fore, b_h_fore, y_fit_h_fore, r_squared = scatter_stats(
+        x, y
+    )
+
+    x = data1["bt_h_aft"].flatten()
+    y = data2["bt_h_aft"].flatten()
+    x_h_aft, y_h_aft, m_h_aft, b_h_aft, y_fit_h_aft, r_squared = scatter_stats(x, y)
+
+    x = data1["bt_v_fore"].flatten()
+    y = data2["bt_v_fore"].flatten()
+    x_v_fore, y_v_fore, m_v_fore, b_v_fore, y_fit_v_fore, r_squared = scatter_stats(
+        x, y
+    )
+
+    x = data1["bt_v_aft"].flatten()
+    y = data2["bt_v_aft"].flatten()
+
+    x_v_aft, y_v_aft, m_v_aft, b_v_aft, y_fit_v_aft, r_squared = scatter_stats(x, y)
+
+    fig, axs = plt.subplots(2, 2, figsize=(20, 20))
+    axs[0, 0].scatter(x_h_fore, y_h_fore)
+    axs[0, 0].plot(x_h_fore, y_fit_h_fore, color="red")
+    axs[0, 0].legend(title=f"$R^2 = {r_squared:.3f}$")
+    axs[0, 0].set_title("bt_h_fore")
+    axs[0, 0].set_xlabel("RGB BT [K]")
+    axs[0, 0].set_ylabel("NASA BT [K]")
+
+    axs[0, 1].scatter(x_h_aft, y_h_aft)
+    axs[0, 1].plot(x_h_aft, y_fit_h_aft, color="red")
+    axs[0, 1].legend(title=f"$R^2 = {r_squared:.3f}$")
+    axs[0, 1].set_title("bt_h_aft")
+    axs[0, 1].set_xlabel("RGB BT [K]")
+    axs[0, 1].set_ylabel("NASA BT [K]")
+
+    axs[1, 0].scatter(x_v_fore, y_v_fore)
+    axs[1, 0].plot(x_v_fore, y_fit_v_fore, color="red")
+    axs[1, 0].legend(title=f"$R^2 = {r_squared:.3f}$")
+    axs[1, 0].set_title("bt_v_fore")
+    axs[1, 0].set_xlabel("RGB BT [K]")
+    axs[1, 0].set_ylabel("NASA BT [K]")
+
+    axs[1, 1].scatter(x_v_aft, y_v_aft)
+    axs[1, 1].plot(x_v_aft, y_fit_v_aft, color="red")
+    axs[1, 1].legend(title=f"$R^2 = {r_squared:.3f}$")
+    axs[1, 1].set_title("bt_v_aft")
+    axs[1, 1].set_xlabel("RGB BT [K]")
+    axs[1, 1].set_ylabel("NASA BT [K]")
+
+    repo_root = grasp_io.find_repo_root()
+    img_path = repo_root.joinpath(
+        "output/MS3_verification_tests/T_12/T_12_scatter.png"
+    )  # ""
+    plt.savefig(img_path, dpi=300)
+
     # plt.show()

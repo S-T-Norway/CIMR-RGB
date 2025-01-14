@@ -367,7 +367,7 @@ def get_netcdf_data():
                         if sample == 9.969209968386869e36:
                             continue
                         if sample == 0.0:
-                            print("a sample was zero")
+                            # print("a sample was zero")
                             continue
                         # This part is from LW (T17)
                         if cell_row[count] == -9223372036854775806:
