@@ -184,8 +184,6 @@ class MIIinterp:
         nchunkx = (imax - imin) // max_chunk_size #number of "full" chunks (so it can be zero)
         nchunky = (jmax - jmin) // max_chunk_size
 
-        print(nchunkx, nchunky)
-
         #loop over chunks
         for i in range(nchunkx+1): #i = column index
 
@@ -340,13 +338,14 @@ class MIIinterp:
                             jdn = int_dom_lons.shape[0] - n_cell_dn
                             variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = X1.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
                         else:
-                            assert False, "code not working yet with MRF resolution smaller than output grid resolution"
                             Rows, Cols = np.meshgrid(np.arange(jmin+j1, jmin+j2), np.arange(imin+i1, imin+i2))
                             chunklons, chunklats = output_grid.rowcol_to_lonlat(Rows, Cols)
-                            int_points = np.column_stack((int_dom_lats[:, 0], int_dom_lons[0]))
-                            out_points = np.column_stack((chunklats[:, 0], chunklons[0]))
+                            chunklons = chunklons[:,:,0]
+                            chunklats = chunklats[:,:,0]
+                            int_points = np.column_stack((int_dom_lats.flatten(), int_dom_lons.flatten()))
+                            out_points = np.column_stack((chunklats.flatten(), chunklons.flatten()))
                             Xinterp = griddata(int_points, X1, out_points, method='linear', fill_value=0.)
-                            variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = Xinterp.reshape(chunklons.shape)
+                            variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = Xinterp.reshape(chunklons.shape).T
 
                     # nedt_var = 'nedt'+variable[-2:]
                     # if 'bt' in variable and nedt_var in self.config.variables_to_regrid:
