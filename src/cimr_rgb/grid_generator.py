@@ -936,28 +936,12 @@ class GridGenerator:
         return row, col
 
     def rowcol_to_xy(self, row, col):
-        _, _, res = self.generate_grid_xy(return_resolution=True)
-
-        n_cols = self.n_cols
-        n_rows = self.n_rows
-        r0 = (n_cols - 1) / 2
-        s0 = (n_rows - 1) / 2
-        x = res * (col - r0)
-        y = res * (s0 - row)
-
-        return x, y
+        x, y, res = self.generate_grid_xy(return_resolution=True)
+        return x[col], y[row]
 
     def rowcol_to_lonlat(self, row, col):
-        _, _, res = self.generate_grid_xy(return_resolution=True)
-
-        n_cols = self.n_cols
-        n_rows = self.n_rows
-        r0 = (n_cols - 1) / 2
-        s0 = (n_rows - 1) / 2
-        x = res * (col - r0)
-        y = res * (s0 - row)
-
-        return self.xy_to_lonlat(x, y)
+        x, y, res = self.generate_grid_xy(return_resolution=True)
+        return self.xy_to_lonlat(x[col], y[row])
 
     def get_grid_area(self):
         if self.grid_area is None:

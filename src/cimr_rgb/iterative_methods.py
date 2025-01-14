@@ -1,16 +1,11 @@
-from numpy import concatenate, logical_and, zeros, zeros_like, linalg, meshgrid, atleast_1d, minimum, maximum, dot, arange, sum
+from numpy import concatenate, logical_and, zeros, zeros_like, linalg, meshgrid, atleast_1d, minimum, maximum, dot, arange, sum, full
 import numpy as np
 import matplotlib.pyplot as plt
 from .grid_generator import GridGenerator
 from .ap_processing import AntennaPattern, GaussianAntennaPattern, make_integration_grid
 from tqdm import tqdm
 from scipy.interpolate import RegularGridInterpolator
-
-# Testing
-import matplotlib
-tkagg = matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-plt.ion()
+from scipy.interpolate import griddata
 
 
 def landweber(A, Y, lambda_param=1e-4, alpha=None, n_iter=1000, rtol=1e-5):
@@ -172,26 +167,27 @@ class MIIinterp:
         else:
             Rpattern = max(self.source_ap.max_ap_radius.values())
 
-        #longitude and latitude of reduced grid
-        target_lon = target_grid[0].flatten('C')[samples_dict['grid_1d_index']]
-        target_lat = target_grid[1].flatten('C')[samples_dict['grid_1d_index']]    
-
         #sample coordinates in the integration grid projection (useful later for masking coordinates in a chunk)
         integration_grid =  GridGenerator(self.config, self.config.MRF_projection_definition, self.config.MRF_grid_definition)
         xsample, ysample = integration_grid.lonlat_to_xy(variable_dict['longitude'], variable_dict['latitude'])
 
-        #rows and columns of reduced grid into the total output grid
-        rows_output, cols_output = np.unravel_index(samples_dict['grid_1d_index'], (output_grid.n_rows, output_grid.n_cols))
-        imin, imax = cols_output.min(), cols_output.max()
-        jmin, jmax = rows_output.min(), rows_output.max()
+        if self.config.reduced_grid_inds:
+            jmin, jmax, imin, imax = self.config.reduced_grid_inds
+        else:
+            imin = 0
+            jmin = 0
+            imax = output_grid.n_cols
+            jmax = output_grid.n_rows
 
         #TODO: choose optimal max_chunk_size depending on available memory
         max_chunk_size = int(100 / (output_grid.resolution/integration_grid.resolution))
         nchunkx = (imax - imin) // max_chunk_size #number of "full" chunks (so it can be zero)
         nchunky = (jmax - jmin) // max_chunk_size
 
+        print(nchunkx, nchunky)
+
         #loop over chunks
-        for i in range(nchunkx+1):
+        for i in range(nchunkx+1): #i = column index
 
             i1 = max_chunk_size * i
             if i < nchunkx:
@@ -199,9 +195,7 @@ class MIIinterp:
             else:
                 i2 = imax-imin
 
-            for j in range(nchunky+1):
-
-                print(f"Working on chunk {2*i+j+1}/{(nchunkx+1)*(nchunkx+1)}")
+            for j in range(nchunky+1): #j row index
                 
                 j1 = max_chunk_size * j
                 if j < nchunky:
@@ -214,12 +208,10 @@ class MIIinterp:
                 # Firstly, check the input x and ys are correct.
                 # Secondly, don't  we already have this information in the target grid?
 
-                #------------------------------------------------------#
-                # WE MIGHT NEED TO ADD ON HERE HALF OF THE RESOLUTION
-                chunklon1, chunklat1 = output_grid.rowcol_to_lonlat(jmin + j1, imin + i1)   # 1 --- 2
-                chunklon2, chunklat2 = output_grid.rowcol_to_lonlat(jmin + j1, imin + i2)   # |     |
-                chunklon3, chunklat3 = output_grid.rowcol_to_lonlat(jmin + j2, imin + i1)   # |     |
-                chunklon4, chunklat4 = output_grid.rowcol_to_lonlat(jmin + j2, imin + i2)   # 3 --- 4
+                chunklon1, chunklat1 = output_grid.rowcol_to_lonlat(jmin + j1, imin + i1)     # 1 --- 2
+                chunklon2, chunklat2 = output_grid.rowcol_to_lonlat(jmin + j1, imin + i2-1)   # |     |
+                chunklon3, chunklat3 = output_grid.rowcol_to_lonlat(jmin + j2-1, imin + i1)   # |     |
+                chunklon4, chunklat4 = output_grid.rowcol_to_lonlat(jmin + j2-1, imin + i2-1) # 3 --- 4
 
                 #create an integration grid (slightly larger than the chunks)
                 int_dom_lons, int_dom_lats = make_integration_grid(
@@ -245,6 +237,11 @@ class MIIinterp:
                 inty3 -= integration_grid.resolution/2.
                 inty4 -= integration_grid.resolution/2.
 
+                n_cell_sx = np.sum(int_dom_lons[0]<chunklon1)   #hack: np.sum counts the number of values in a boolean array
+                n_cell_dx = np.sum(int_dom_lons[0]>chunklon2)
+                n_cell_dn = np.sum(int_dom_lats[:, 0]<chunklat3)
+                n_cell_up = np.sum(int_dom_lats[:, 0]>chunklat1)
+
                 if (intx1 < intx2): #global grid with no data across international date line, north and south polar grids
                     mask = ((xsample >= intx1) * (xsample <= intx2) * 
                             (ysample >= inty3) * (ysample <= inty1) )
@@ -255,8 +252,10 @@ class MIIinterp:
                                          (xsample <= intx2) * (xsample >= xeasemin) )
                     mask = mask * (ysample >= inty3) * (ysample <= inty1)
 
-                if not mask.max():
-                    print('loop to next chunk')
+                if mask.max():
+                    print(f"Working on chunk {i*(nchunky+1)+j+1}/{(nchunkx+1)*(nchunky+1)}")
+                else:
+                    print(f"Working on chunk {i*(nchunky+1)+j+1}/{(nchunkx+1)*(nchunky+1)}, no samples here")
                     continue
 
                 # AX = Y
@@ -334,11 +333,20 @@ class MIIinterp:
                         )
 
                     if variable in self.config.variables_to_regrid:
-                        Finterp = RegularGridInterpolator((int_dom_lats[:, 0], int_dom_lons[0]), X1.reshape(int_dom_lons.shape), bounds_error=False, fill_value=0.)
-                        Rows, Cols = np.meshgrid(np.arange(jmin+j1, jmin+j2), np.arange(imin+i1, imin+i2))
-                        chunklons, chunklats = output_grid.rowcol_to_lonlat(Rows, Cols)
-                        Xinterp = Finterp((chunklats, chunklons)).T
-                        variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = Xinterp
+                        if  integration_grid.resolution == output_grid.resolution: 
+                            isx = n_cell_sx
+                            idx = int_dom_lons.shape[1] - n_cell_dx 
+                            jup = n_cell_up
+                            jdn = int_dom_lons.shape[0] - n_cell_dn
+                            variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = X1.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
+                        else:
+                            assert False, "code not working yet with MRF resolution smaller than output grid resolution"
+                            Rows, Cols = np.meshgrid(np.arange(jmin+j1, jmin+j2), np.arange(imin+i1, imin+i2))
+                            chunklons, chunklats = output_grid.rowcol_to_lonlat(Rows, Cols)
+                            int_points = np.column_stack((int_dom_lats[:, 0], int_dom_lons[0]))
+                            out_points = np.column_stack((chunklats[:, 0], chunklons[0]))
+                            Xinterp = griddata(int_points, X1, out_points, method='linear', fill_value=0.)
+                            variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = Xinterp.reshape(chunklons.shape)
 
                     # nedt_var = 'nedt'+variable[-2:]
                     # if 'bt' in variable and nedt_var in self.config.variables_to_regrid:
