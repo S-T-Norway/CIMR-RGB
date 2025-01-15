@@ -20,11 +20,11 @@ import cimr_grasp.grasp_io as grasp_io
 repo_root = grasp_io.find_repo_root()
 # Add RGB remapped IDS netCDF here
 ids_data_path = pb.Path(repo_root).joinpath(
-    "output/MS3_verification_tests/T_17/CIMR_L1C_IDS_9km_test.nc"
+    "/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/T_17/SMAP_L1C_IDS_9km_test.nc"
 )  # ""
 # Add the RGB remapped BG netCDF here
 lw_data_path = pb.Path(repo_root).joinpath(
-    "output/MS3_verification_tests/T_17/CIMR_L1C_LW_9km_test.nc"
+    "/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/MS3_verification_tests/T_17/SMAP_L1C_CG_9km_test.nc"
 )
 GRID = 'EASE2_G9km'
 PROJECTION = 'G'
@@ -44,9 +44,9 @@ class CIMR_comparison:
             data = f[f"{PROJECTION}"]
             measurement = data['Measurement']
             band = measurement[BAND]
-            var = array(band['bt_h'][:])
-            row = array(band['cell_row'][:])
-            col = array(band['cell_col'][:])
+            var = array(band['bt_h_fore'][:])
+            row = array(band['cell_row_fore'][:])
+            col = array(band['cell_col_fore'][:])
 
             # print(f"cell row  {row.min(), row.max()}")
             # print(f"cell col {col.min(), col.max()}")
@@ -64,49 +64,50 @@ class CIMR_comparison:
                 if col[count] == -9223372036854775806:
                     continue
                 grid[int(row[count]), int(col[count])] = sample
-            gridded_vars['bt_h'] = grid
+            gridded_vars['bt_h_fore'] = grid
             return gridded_vars
 
     def map_compare(self):
 
         cmap = 'viridis'
-        # bt_h plt
+        # bt_h_fore plt
         fig, axs = plt.subplots(1, 3, constrained_layout=True)
-        im00 = axs[0].imshow(self.lw_data['bt_h'], cmap=cmap)
-        axs[0].set_title('LW Remap (bt_h)')
-        im01 = axs[1].imshow(self.ids_data['bt_h'], cmap=cmap)
-        axs[1].set_title('IDS Remap (bt_h)')
-        bt_h_fore_diff = abs(self.lw_data['bt_h'] - self.ids_data['bt_h'])
-        im02 = axs[2].imshow(bt_h_fore_diff, cmap=cmap)
-        axs[2].set_title('Difference (bt_h)')
+        im00 = axs[0].imshow(self.lw_data['bt_h_fore'][1390:1450, 3070:3160], cmap=cmap)
+        axs[0].set_title('LW Remap (bt_h_fore)')
+        im01 = axs[1].imshow(self.ids_data['bt_h_fore'][1390:1450, 3070:3160], cmap=cmap)
+        axs[1].set_title('IDS Remap (bt_h_fore)')
+        bt_h_fore_fore_diff = (self.lw_data['bt_h_fore'] - self.ids_data['bt_h_fore'])
+        im02 = axs[2].imshow(bt_h_fore_fore_diff[1390:1450, 3070:3160], cmap=cmap)
+        axs[2].set_title('Difference (bt_h_fore)')
         # aft
-
-        fig.colorbar(im02, ax=axs[2])
-
+        bt_h_fore_fore_diff = abs(self.lw_data['bt_h_fore'] - self.ids_data['bt_h_fore'])
+        cbar = fig.colorbar(im02, ax=axs[2])
+        cbar.set_label('Relative Difference (LW - IDS) [K]', rotation=270,
+                       labelpad=20, fontsize=14)  # Labelpad adjusts the distance of the label from the colorbar
 
         # Add Statistics
         # Calculate the average relative difference
-        fore_mean_diff = nanmean(bt_h_fore_diff)
+        fore_mean_diff = nanmean(bt_h_fore_fore_diff)
 
-        print(f"Average relative difference for bt_h: {fore_mean_diff}")
+        print(f"Average relative difference for bt_h_fore: {fore_mean_diff}")
 
 
         # Calculate percentage Differences
-        fore_percent_diff = (fore_mean_diff / nanmean(self.ids_data['bt_h'])) * 100
+        fore_percent_diff = (fore_mean_diff / nanmean(self.ids_data['bt_h_fore'])) * 100
 
-        print(f"Average percentage difference for bt_h: {fore_percent_diff}")
+        print(f"Average percentage difference for bt_h_fore: {fore_percent_diff}")
 
 
         # Add statistics to the plot
         # axs[0,2].text(100,300, f"mean(abs(bt_diff)) = {fore_mean_diff}K")
         # axs[0,2].text(100, 300, f"mean(abs(bt_diff)) = {aft_mean_diff}K")
-        axs[2].text(100, 420,
-                fr"$\mu = \frac{{1}}{{n}} \sum_{{i=1}}^{{n}} | \mathrm{{IDS}}_i - \mathrm{{LW}}_i |$",
-                fontsize=14, color="black")
-
-        axs[2].text(100, 470,
-                fr"$\mu_{{fore}} =  {fore_mean_diff:.2f} K, \ \text{{or}} \ {fore_percent_diff:.2f}\%$",
-                fontsize=14, color="black")
+        # axs[2].text(100, 420,
+        #         fr"$\mu = \frac{{1}}{{n}} \sum_{{i=1}}^{{n}} | \mathrm{{IDS}}_i - \mathrm{{LW}}_i |$",
+        #         fontsize=14, color="black")
+        #
+        # axs[2].text(100, 470,
+        #         fr"$\mu_{{fore}} =  {fore_mean_diff:.2f} K, \ \text{{or}} \ {fore_percent_diff:.2f}\%$",
+        #         fontsize=14, color="black")
 
 
         plt.show()
@@ -128,12 +129,12 @@ class CIMR_comparison:
 
 
     def scatter_compare(self):
-        x = self.lw_data['bt_h'].flatten()
-        y = self.ids_data['bt_h'].flatten()
+        x = self.lw_data['bt_h_fore'].flatten()
+        y = self.ids_data['bt_h_fore'].flatten()
         x_h_fore, y_h_fore, m_h_fore, b_h_fore, y_fit_h_fore, r_squared = self.scatter_stats(x, y)
 
-        # x = self.lw_data['bt_h_aft'].flatten()
-        # y = self.ids_data['bt_h_aft'].flatten()
+        # x = self.lw_data['bt_h_fore_aft'].flatten()
+        # y = self.ids_data['bt_h_fore_aft'].flatten()
         # x_h_aft, y_h_aft, m_h_aft, b_h_aft, y_fit_h_aft, r_squared = self.scatter_stats(x, y)
 
 
@@ -141,14 +142,14 @@ class CIMR_comparison:
         axs.scatter(x_h_fore, y_h_fore)
         axs.plot(x_h_fore, y_fit_h_fore, color='red')
         axs.legend(title=f"$R^2 = {r_squared:.3f}$")
-        axs.set_title('bt_h_fore')
+        axs.set_title('bt_h_fore_fore')
         axs.set_xlabel('LW BT [K]')
         axs.set_ylabel('IDS BT [K]')
 
         # axs[1].scatter(x_h_aft, y_h_aft)
         # axs[1].plot(x_h_aft, y_fit_h_aft, color='red')
         # axs[1].legend(title=f"$R^2 = {r_squared:.3f}$")
-        # axs[1].set_title('bt_h_aft')
+        # axs[1].set_title('bt_h_fore_aft')
         # axs[1].set_xlabel('LW BT [K]')
         # axs[1].set_ylabel('IDS BT [K]')
 

@@ -1,4 +1,4 @@
-from numpy import concatenate, logical_and, zeros, zeros_like, linalg, meshgrid, atleast_1d, minimum, maximum, dot, arange, sum, full
+from numpy import concatenate,array,where, logical_and, zeros, zeros_like, linalg, meshgrid, atleast_1d, minimum, maximum, dot, arange, sum, full
 import numpy as np
 import matplotlib.pyplot as plt
 from .grid_generator import GridGenerator
@@ -37,13 +37,13 @@ def landweber(A, Y, lambda_param=1e-4, alpha=None, n_iter=1000, rtol=1e-5):
         regularization_term = lambda_param * X
         rel_error = np.linalg.norm(residual) / np.linalg.norm(Y)
         if rel_error < rtol:
-            print(f"Converged in {i+1} iterations with residual {np.linalg.norm(residual)} and relative error {rel_error}")
+            # print(f"Converged in {i+1} iterations with residual {np.linalg.norm(residual)} and relative error {rel_error}")
             return X, count
         else:
             X = X + alpha * (At @ residual - regularization_term)
             count += 1
 
-    print(f"Reached maximum iterations without full convergence: residual {np.linalg.norm(residual)} and relative error {rel_error}")
+    # print(f"Reached maximum iterations without full convergence: residual {np.linalg.norm(residual)} and relative error {rel_error}")
     return X, count
 
 
@@ -59,12 +59,12 @@ def landweber_nedt(A, varY, lambda_param, alpha, n_iter):
 
     if len(varY.shape)==1:
         varX = np.zeros(xlen)
-        for i in tqdm(range(n_iter)):
+        for i in range(n_iter):
             varX = np.sum(A * (varY[:, None] * A), axis=0) + np.sum(B * (varX[:, None] * B), axis=0)
 
     else:
         varX = np.zeros((xlen,xlen))
-        for i in tqdm(range(n_iter)):
+        for i in range(n_iter):
             varX = alpha**2 * At @ (varY @ A) + B @ (varX @ B.T)
         varX = np.diagonal(varX)
     
@@ -100,7 +100,7 @@ def conjugate_gradient_ne(A, Y, lambda_param=1e-4, n_iter=1000, rtol=1e-5):
     for i in range(n_iter):
         rel_error = np.sqrt(rnorm_old) / np.linalg.norm(AtY)
         if rel_error < rtol:
-            print(f"Converged in {i+1} iterations with residual {np.sqrt(rnorm_old)} and relative error {rel_error}")
+            # print(f"Converged in {i+1} iterations with residual {np.sqrt(rnorm_old)} and relative error {rel_error}")
             return X, count
         else:
             AtAlp = AtAl @ p
@@ -112,7 +112,7 @@ def conjugate_gradient_ne(A, Y, lambda_param=1e-4, n_iter=1000, rtol=1e-5):
             rnorm_old = rnorm_new
             count +=1
 
-    print(f"Reached maximum iterations without full convergence: residual {np.sqrt(rnorm_old)} and relative error {rel_error}")
+    # print(f"Reached maximum iterations without full convergence: residual {np.sqrt(rnorm_old)} and relative error {rel_error}")
     return X, count
 
 
@@ -331,9 +331,9 @@ class MIIinterp:
                         )
 
                     if variable in self.config.variables_to_regrid:
-                        if  integration_grid.resolution == output_grid.resolution: 
+                        if  integration_grid.resolution == output_grid.resolution:
                             isx = n_cell_sx
-                            idx = int_dom_lons.shape[1] - n_cell_dx 
+                            idx = int_dom_lons.shape[1] - n_cell_dx
                             jup = n_cell_up
                             jdn = int_dom_lons.shape[0] - n_cell_dn
                             variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = X1.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
@@ -370,6 +370,80 @@ class MIIinterp:
             variable_dict_out[variable] = variable_flattened[samples_dict['grid_1d_index']]
 
         return variable_dict_out
+
+    def apply_inversion_attempt_2(self, variable_dict, samples_dict, target_grid):
+        indexes = samples_dict['indexes']
+        fill_value = len(variable_dict[f"longitude"])
+
+        T_out = []
+        for target_cell in tqdm(range(indexes.shape[0])):
+            target_lon, target_lat = (target_grid[0].flatten('C')[samples_dict['grid_1d_index'][target_cell]],
+                                                    target_grid[1].flatten('C')[samples_dict['grid_1d_index'][target_cell]])
+
+
+            # Get antenna patterns
+            samples = indexes[target_cell, :]
+            input_samples = samples[samples != fill_value]
+            if len(input_samples)<1:
+                continue
+
+            pattern_lons = array(variable_dict['longitude'][input_samples])
+            pattern_lats = array(variable_dict['latitude'][input_samples])
+            pattern_lons = concatenate((pattern_lons, [target_lon]))
+            pattern_lats = concatenate((pattern_lats, [target_lat]))
+            Rpattern = max(self.source_ap.max_ap_radius.values())
+
+            # Create integration grid
+            int_dom_lons, int_dom_lats = make_integration_grid(
+                int_projection_definition=self.config.MRF_projection_definition,
+                int_grid_definition=self.config.MRF_grid_definition,
+                longitude=pattern_lons,
+                latitude =pattern_lats,
+                ap_radii = Rpattern
+            )
+            # make source antenna patterns shape input_samples x int_dom_lons.flatten()
+            A = zeros((len(input_samples), len(int_dom_lons.flatten())))
+            irow=0
+            for sample in input_samples:
+                projected_pattern = self.source_ap.antenna_pattern_to_earth(
+                    int_dom_lons=int_dom_lons,
+                    int_dom_lats=int_dom_lats,
+                    x_pos=variable_dict['x_position'][sample],
+                    y_pos=variable_dict['y_position'][sample],
+                    z_pos=variable_dict['z_position'][sample],
+                    x_vel=variable_dict['x_velocity'][sample],
+                    y_vel=variable_dict['y_velocity'][sample],
+                    z_vel=variable_dict['z_velocity'][sample],
+                    processing_scan_angle=variable_dict['processing_scan_angle'][sample],
+                    feed_horn_number=variable_dict['feed_horn_number'][sample],
+                    attitude=variable_dict['attitude'][sample],
+                    lon_l1b=variable_dict['longitude'][sample],
+                    lat_l1b=variable_dict['latitude'][sample]
+                )
+                projected_pattern /= sum(projected_pattern)
+                A[irow] = projected_pattern.flatten()
+
+            Y = variable_dict['bt_h'][input_samples]
+
+            if self.inversion_method == 'CG':
+                X1, n_iter = conjugate_gradient_ne(A, Y,
+                                                   lambda_param=self.config.regularization_parameter,
+                                                   n_iter=self.config.max_number_iteration,
+                                                   rtol=self.config.relative_tolerance
+                                                   )
+
+            elif self.inversion_method == 'LW':
+                X1, n_iter = landweber(A, Y,
+                                       lambda_param=self.config.regularization_parameter,
+                                       n_iter=self.config.max_number_iteration,
+                                       rtol=self.config.relative_tolerance
+                                       )
+
+            t_out = X1.flatten()[where(( int_dom_lons.flatten() == target_lon) & (int_dom_lats.flatten() == target_lat))[0]]
+            # print(t_out)
+            T_out.append(t_out)
+
+        return array(T_out)
 
 
     def interp_variable_dict(self, **kwargs):
