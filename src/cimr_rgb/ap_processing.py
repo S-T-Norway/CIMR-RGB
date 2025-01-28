@@ -47,12 +47,11 @@ class AntennaPattern:
 
         return
 
-    @staticmethod
-    def extract_gain_dict(file_path, antenna_threshold, theta_max=40):
+
+    def extract_gain_dict(self, file_path, antenna_threshold):
 
         import h5py
 
-        theta_max = deg2rad(theta_max)
         ap_dict = {}
 
         with h5py.File(file_path, 'r') as f:
@@ -86,8 +85,7 @@ class AntennaPattern:
             mask = np.logical_or(mask, ap_dict['Gnorm'] < threshold_power)
             fraction_below_threshold = np.sum(ap_dict['Gnorm'][mask]) / np.sum(ap_dict['Gnorm'])
 
-        if theta_max is not None:
-            mask = logical_or(mask, ap_dict['theta'] > theta_max)
+        mask = logical_or(mask, ap_dict['theta'] > deg2rad(self.config.max_theta_antenna_patterns))
 
         ap_dict['Ghco'][mask] = 0.
         ap_dict['Ghcx'][mask] = 0.
@@ -508,6 +506,7 @@ class GaussianAntennaPattern:
     def estimate_max_ap_radius(self, sigmax, sigmay):  
         sigma_max = np.maximum(sigmax, sigmay)
         return np.sqrt(-2. * sigma_max**2 * np.log(self.antenna_threshold))
+
 
 @staticmethod
 def haversine_distance(lon1, lat1, lon2, lat2):
