@@ -1155,6 +1155,13 @@ class ProductGenerator:
         return glob_dims_dict
 
     def populate_global_dimensions_smap(self, glob_dims_dict):
+        if self.config.grid_type == "L1C":
+            glob_dims_dict["time"] = 1
+        else:
+            raise ValueError(
+                f"Incorrect `grid_type = {self.config.grid_type}` supplied."
+            )
+
         return glob_dims_dict
 
     def generate_new_product(self, data_dict: dict):
