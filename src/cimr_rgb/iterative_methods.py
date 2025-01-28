@@ -151,17 +151,6 @@ class MIIinterp:
 
         output_grid = GridGenerator(self.config, self.config.projection_definition, self.config.grid_definition)
 
-        # Temporary solution to not regrid variables you dont want to regrid
-
-
-        #define output variable dictionary, we also only need to create one array of zeros
-        variable_dict_out = {}
-        for variable in variable_dict:
-            # Temporary solution to ignore variables we dont need
-            if variable not in self.config.variables_to_regrid:
-                continue
-            variable_dict_out[variable] = np.zeros(target_grid[0].shape)
-
         if self.config.source_antenna_method == 'gaussian':
             Rpattern = self.source_ap.estimate_max_ap_radius(self.config.source_gaussian_params[0], self.config.source_gaussian_params[1])
         else:
@@ -171,16 +160,34 @@ class MIIinterp:
         integration_grid =  GridGenerator(self.config, self.config.MRF_projection_definition, self.config.MRF_grid_definition)
         xsample, ysample = integration_grid.lonlat_to_xy(variable_dict['longitude'], variable_dict['latitude'])
 
-        if self.config.reduced_grid_inds:
-            jmin, jmax, imin, imax = self.config.reduced_grid_inds
-        else:
-            imin = 0
-            jmin = 0
-            imax = output_grid.n_cols
-            jmax = output_grid.n_rows
+        resolution_ratio = output_grid.resolution / integration_grid.resolution
 
-        #TODO: choose optimal max_chunk_size depending on available memory
-        max_chunk_size = int(100 / (output_grid.resolution/integration_grid.resolution))
+        #corner indexes in the output grid
+        if self.config.reduced_grid_inds:
+            j0min, j0max, i0min, i0max = self.config.reduced_grid_inds
+        else:
+            i0min = 0
+            j0min = 0
+            i0max = output_grid.n_cols
+            j0max = output_grid.n_rows
+
+        #corner indexes in the integration grid 
+        imin = int(np.floor(i0min*resolution_ratio))
+        jmin = int(np.floor(j0min*resolution_ratio))
+        imax = int(np.ceil(i0max*resolution_ratio))
+        jmax = int(np.ceil(j0max*resolution_ratio))
+
+        # Temporary solution to not regrid variables you dont want to regrid
+        variable_dict_out = {}
+        variable_dict_int = {}
+        for variable in variable_dict:
+            if variable not in self.config.variables_to_regrid:
+                continue
+            variable_dict_out[variable] = np.zeros((output_grid.n_rows, output_grid.n_cols))
+            variable_dict_int[variable] = np.zeros((integration_grid.n_rows, integration_grid.n_cols))
+
+        #TODO: set max_chunk_size as a parameter
+        max_chunk_size = 50
         nchunkx = (imax - imin) // max_chunk_size #number of "full" chunks (so it can be zero)
         nchunky = (jmax - jmin) // max_chunk_size
 
@@ -206,10 +213,10 @@ class MIIinterp:
                 # Firstly, check the input x and ys are correct.
                 # Secondly, don't  we already have this information in the target grid?
 
-                chunklon1, chunklat1 = output_grid.rowcol_to_lonlat(jmin + j1, imin + i1)     # 1 --- 2
-                chunklon2, chunklat2 = output_grid.rowcol_to_lonlat(jmin + j1, imin + i2-1)   # |     |
-                chunklon3, chunklat3 = output_grid.rowcol_to_lonlat(jmin + j2-1, imin + i1)   # |     |
-                chunklon4, chunklat4 = output_grid.rowcol_to_lonlat(jmin + j2-1, imin + i2-1) # 3 --- 4
+                chunklon1, chunklat1 = integration_grid.rowcol_to_lonlat(jmin + j1, imin + i1)     # 1 --- 2
+                chunklon2, chunklat2 = integration_grid.rowcol_to_lonlat(jmin + j1, imin + i2-1)   # |     |
+                chunklon3, chunklat3 = integration_grid.rowcol_to_lonlat(jmin + j2-1, imin + i1)   # |     |
+                chunklon4, chunklat4 = integration_grid.rowcol_to_lonlat(jmin + j2-1, imin + i2-1) # 3 --- 4
 
                 #create an integration grid (slightly larger than the chunks)
                 int_dom_lons, int_dom_lats = make_integration_grid(
@@ -217,7 +224,7 @@ class MIIinterp:
                     int_grid_definition=self.config.MRF_grid_definition,
                     longitude=[chunklon1, chunklon2, chunklon3, chunklon4],
                     latitude =[chunklat1, chunklat2, chunklat3, chunklat4],
-                    ap_radii = Rpattern
+                    ap_radii = 1.2*Rpattern
                 )
 
                 #find integration grid corners
@@ -331,22 +338,12 @@ class MIIinterp:
                         )
 
                     if variable in self.config.variables_to_regrid:
-                        if  integration_grid.resolution == output_grid.resolution:
-                            isx = n_cell_sx
-                            idx = int_dom_lons.shape[1] - n_cell_dx
-                            jup = n_cell_up
-                            jdn = int_dom_lons.shape[0] - n_cell_dn
-                            variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = X1.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
-                        else:
-                            Rows, Cols = np.meshgrid(np.arange(jmin+j1, jmin+j2), np.arange(imin+i1, imin+i2))
-                            chunklons, chunklats = output_grid.rowcol_to_lonlat(Rows, Cols)
-                            chunklons = chunklons[:,:,0]
-                            chunklats = chunklats[:,:,0]
-                            int_points = np.column_stack((int_dom_lats.flatten(), int_dom_lons.flatten()))
-                            out_points = np.column_stack((chunklats.flatten(), chunklons.flatten()))
-                            Xinterp = griddata(int_points, X1, out_points, method='linear', fill_value=0.)
-                            variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = Xinterp.reshape(chunklons.shape).T
-
+                        isx = n_cell_sx
+                        idx = int_dom_lons.shape[1] - n_cell_dx 
+                        jup = n_cell_up
+                        jdn = int_dom_lons.shape[0] - n_cell_dn
+                        variable_dict_int[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = X1.reshape(int_dom_lons.shape)[jup:jdn, isx:idx]
+                        
                     # nedt_var = 'nedt'+variable[-2:]
                     # if 'bt' in variable and nedt_var in self.config.variables_to_regrid:
                     #     if self.inversion_method == 'CG':
@@ -363,11 +360,18 @@ class MIIinterp:
                     #     Xinterp = Finterp((chunklats, chunklons)).T
                     #     variable_dict_out[variable][jmin+j1:jmin+j2, imin+i1:imin+i2] = Xinterp
 
-        # JOSEPH: check that the variables are reshaped correctly. right now  variable_dict_out[var] is a 2D array with the shape of the output grid
         for variable in variable_dict_out:
-            # variable_dict_out[variable] = variable_dict_out[variable][jmin:jmax, imin:imax].flatten()
-            variable_flattened = variable_dict_out[variable].flatten('C')
-            variable_dict_out[variable] = variable_flattened[samples_dict['grid_1d_index']]
+
+            if resolution_ratio == 1.:
+                variable_dict_out[variable] = variable_dict_int[variable]
+            else:
+                xint, yint = integration_grid.generate_grid_xy()
+                xout, yout = output_grid.generate_grid_xy()
+                xout, yout = np.meshgrid(xout.flatten(), yout.flatten())
+                Finterp = RegularGridInterpolator((yint.flatten(), xint.flatten()), variable_dict_int[variable], bounds_error=False, fill_value=0.)    
+                variable_dict_out[variable] = Finterp((yout, xout))
+
+            variable_dict_out[variable] = variable_dict_out[variable].flatten('C')[samples_dict['grid_1d_index']]
 
         return variable_dict_out
 
