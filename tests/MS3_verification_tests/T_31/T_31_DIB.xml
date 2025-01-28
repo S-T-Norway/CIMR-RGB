@@ -7,7 +7,6 @@
     <split_fore_aft>False</split_fore_aft>
     <source_band>10 23 89a</source_band>
     <target_band>6</target_band>
-    <LMT>2200</LMT>
     <quality_control>True</quality_control>
   </InputData>
   <GridParams>
@@ -46,7 +45,7 @@
     <creator_email>test@email.com</creator_email>
     <creator_url>insert your url</creator_url>
     <creator_institution>insert your institution</creator_institution>
-    <timestamp>test</timestamp>
+    <suffix>test</suffix>
     <timestamp_fmt>%Y-%m-%d_%H-%M-%S</timestamp_fmt>
   </OutputData>
   <LoggingParams>
