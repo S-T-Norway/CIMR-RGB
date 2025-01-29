@@ -133,6 +133,7 @@ class AntennaPattern:
     def gaussian_antenna_patterns(self, ap_dict):
 
         if self.antenna_threshold is None:
+            # Specify this as default in config and/or docs
             ant_th = 0.001
         else:
             ant_th = self.antenna_threshold
@@ -237,7 +238,7 @@ class AntennaPattern:
         tilt_angle = np.deg2rad(self.config.antenna_tilt_angle)
 
         if self.config.input_data_type == "SMAP":
-            tilt_angle = pi - tilt_angle # remove this if tilt_angle redefined already in data injestion
+            tilt_angle = pi - tilt_angle
 
         satellite_altitude = self.config.max_altitude
 
