@@ -994,6 +994,7 @@ class ConfigFile:
         """
 
         valid_input = [
+            "EASE2_G3km",
             "EASE2_G9km",
             "EASE2_N9km",
             "EASE2_S9km",
