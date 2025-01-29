@@ -727,35 +727,77 @@ class ConfigFile:
 
     @staticmethod
     def validate_input_data_type(config_object, input_data_type):
-        """
-        Validates the input data type and returns the value if valid
+        r"""
+        Validate the `input_data_type` parameter by checking its existence in the XML
+        configuration and ensuring it matches a predefined set of valid values.
 
         Parameters
         ----------
-        config_object: xml.etree.ElementTree.Element
-            Root element of the configuration file
-        input_data_type: str
-            Path to the input data type in the configuration file
+        config_object : xml.etree.ElementTree.Element
+            The root element of the XML configuration file.
+        input_data_type : str
+            The XML tag name corresponding to the input data type.
 
         Returns
         -------
         str
-            Validated input data type
+            The validated input data type in uppercase format.
+
+        Raises
+        ------
+        AttributeError
+            If the XML tag `input_data_type` is missing or incorrectly specified.
+        ValueError
+            If the extracted `input_data_type` is not in the predefined valid set.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = <config><InputData><type>AMSR2</type></InputData></config>
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_input_data_type(config_object, "inputType")
+        'AMSR2'
+
+        >>> xml_data = <config><InputData><type>INVALID</type></InputData></config>
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_input_data_type(config_object, "inputType")
+        Traceback (most recent call last):
+            ...
+        ValueError: Invalid input data type. Valid input data types are: ['AMSR2', 'SMAP', 'CIMR'].
+
+        >>> xml_data = <config><inputData>AMSR2</inputData></config>
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_input_data_type(config_object, "inputType")
+        Traceback (most recent call last):
+            ...
+        AttributeError: Missing or incorrect XML tag: '<inputData>' not found in the configuration file.
         """
 
         valid_input = ["AMSR2", "SMAP", "CIMR"]
 
-        if config_object.find(input_data_type).text in valid_input:
-            return config_object.find(input_data_type).text
+        # Checking if `<InputData><type>` parameter is present in the config file
+        try:
+            input_data_type = str(
+                config_object.find(input_data_type).text.strip()
+            ).upper()
+        except AttributeError:
+            raise AttributeError(
+                f"Missing or incorrect XML tag: '{input_data_type}' not found in the configuration file."
+            )
+
+        if input_data_type in valid_input:
+            return input_data_type
 
         raise ValueError(
-            f"Invalid input data type. Valid input data types are: {valid_input}"
+            f"Invalid input data type. Valid input data types are: {valid_input}."
         )
 
+    # TODO: Add proper docstring in scipy/numpy format
     @staticmethod
     def validate_input_data_path(config_object, input_data_path):
         """
         Validates the input data path and returns the value if valid
+
         Parameters
         ----------
         config_object: xml.etree.ElementTree.Element
@@ -769,23 +811,31 @@ class ConfigFile:
             Validated input data path
         """
 
+        valid_extensions = [".h5", ".hdf5", ".nc"]
+
         input_data_path = (config_object.find(input_data_path).text).strip()
         input_data_path = grasp_io.resolve_config_path(path_string=input_data_path)
-        print(input_data_path)
 
         if input_data_path.exists():
-            return input_data_path
+            if input_data_path.suffix in valid_extensions:
+                return input_data_path
+            else:
+                raise ValueError(
+                    f"File\n {input_data_path} is of invalid type. Valid file types are: {valid_extensions}."
+                )
         else:
             raise FileNotFoundError(
                 f"File\n {input_data_path}\n not found. Check file location."
             )
 
+    # TODO: Add proper docstring in scipy/numpy format
     @staticmethod
     def validate_input_antenna_patterns_path(
         config_object, antenna_patterns_path, input_data_type
     ):
         """
         Validates the input data path and returns the value if valid
+
         Parameters
         ----------
         config_object: xml.etree.ElementTree.Element
@@ -801,7 +851,7 @@ class ConfigFile:
 
         antenna_patterns_path = pb.Path(
             config_object.find(antenna_patterns_path).text.strip()
-        )  # .resolve()
+        )
         antenna_patterns_path = grasp_io.resolve_config_path(
             path_string=antenna_patterns_path
         )
@@ -815,7 +865,7 @@ class ConfigFile:
                     )
                 except AttributeError as e:
                     raise ValueError(
-                        f"Error: SMAP Antenna Pattern not found in dpr"
+                        "Error: SMAP Antenna Pattern not found in dpr"
                     ) from e
             elif input_data_type == "CIMR":
                 try:
@@ -859,14 +909,23 @@ class ConfigFile:
         else:
             valid_input = ["L1C", "L1R"]
 
-        if config_object.find(grid_type).text in valid_input:
-            return config_object.find(grid_type).text
+        # Checking if `<GridParams><grid_type>` parameter is present in the config file
+        try:
+            grid_type = str(config_object.find(grid_type).text.strip()).upper()
+        except AttributeError:
+            raise AttributeError(
+                f"Missing or incorrect XML tag: '{grid_type}' not found in the configuration file."
+            )
+
+        if grid_type in valid_input:
+            return grid_type
 
         raise ValueError(
             f"Invalid Grid Type. Check Configuration File. Valid grid types are:"
-            f" {valid_input} for {input_data_type} data."
+            f" {valid_input} for GridParams/grid_type data."
         )
 
+    # TODO:
     @staticmethod
     def validate_target_band(config_object, target_band, input_data_type, grid_type):
         """
@@ -930,6 +989,7 @@ class ConfigFile:
                 f"Invalid target band for SMAP L1C remap. Valid target band is: {valid_input}"
             )
 
+    # TODO:
     @staticmethod
     def validate_source_band(config_object, source_band, input_data_type):
         """
@@ -962,7 +1022,7 @@ class ConfigFile:
             value = config_object.find(source_band).text.split()
         except AttributeError as e:
             raise ValueError(
-                f"Error: Source Band not found in configuration file. Check configuration file."
+                "Error: Source Band not found in configuration file. Check configuration file."
             ) from e
 
         if all(item in valid_input for item in value):
@@ -975,22 +1035,61 @@ class ConfigFile:
 
     @staticmethod
     def validate_grid_definition(config_object, grid_definition):
-        """
-        Validates the grid definition and returns the value if valid
+        r"""
+        Validate the grid definition parameter from the XML configuration.
+
+        This method checks if the provided grid definition exists in the XML
+        configuration and validates it against a predefined set of acceptable
+        grid definitions.
 
         Parameters
         ----------
-        config_object: xml.etree.ElementTree.Element
-            Root element of the configuration file
-        grid_type: str
-            User selected Grid Type in the configuration file
-        grid_definition: str
-            Path to the grid definition in the configuration file
+        config_object : xml.etree.ElementTree.Element
+            The root element of the XML configuration file.
+        grid_definition : str
+            The XML tag path corresponding to the grid definition.
 
         Returns
         -------
         str
-            Validated grid definition
+            The validated grid definition if it is found and matches one of the
+            predefined valid values.
+
+        Raises
+        ------
+        AttributeError
+            If the required XML tag for `grid_definition` is missing or incorrectly
+            specified in the configuration file.
+        ValueError
+            If the extracted grid definition is not in the list of valid grid definitions.
+
+        Notes
+        -----
+        - Grid definitions are case-sensitive.
+        - The function searches for the `<GridParams><grid_definition>` tag in the
+          XML file and validates its value against predefined grid types.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><GridParams><grid_definition>EASE2_G9km</grid_definition></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_grid_definition(config_object, "GridParams/grid_definition")
+        'EASE2_G9km'
+
+        >>> xml_data = '''<config><GridParams><grid_definition>INVALID_GRID</grid_definition></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_grid_definition(config_object, "GridParams/grid_definition")
+        Traceback (most recent call last):
+            ...
+        ValueError: Invalid Grid Definition, check configuration file. Valid grid definitions are: ['EASE2_G9km', 'EASE2_N9km', 'EASE2_S9km', 'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km', 'STEREO_N25km', 'STEREO_S25km', 'STEREO_N6.25km', 'STEREO_N12.5km', 'STEREO_S6.25km', 'STEREO_S12.5km', 'STEREO_S25km', 'MERC_G25km', 'MERC_G12.5km', 'MERC_G6.25km']
+
+        >>> xml_data = '''<config><GridParams><otherTag>EASE2_G9km</otherTag></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_grid_definition(config_object, "GridParams/grid_definition")
+        Traceback (most recent call last):
+            ...
+        AttributeError: Missing or incorrect XML tag: 'GridParams/grid_definition' not found in the configuration file.
         """
 
         valid_input = [
@@ -1012,34 +1111,95 @@ class ConfigFile:
             "MERC_G6.25km",
         ]
 
-        if config_object.find(grid_definition).text in valid_input:
-            return config_object.find(grid_definition).text
+        # Checking if `<GridParams><grid_definition>` parameter is present in the config file
+        #
+        # Note: grid_definition is case sensitive
+        try:
+            grid_definition = config_object.find(grid_definition).text.strip()
+        except AttributeError:
+            raise AttributeError(
+                f"Missing or incorrect XML tag: '{grid_definition}' not found in the configuration file."
+            )
+
+        if grid_definition in valid_input:
+            return grid_definition
+
         raise ValueError(
             f"Invalid Grid Definition, check configuration file. "
             f"Valid grid definitions are: {valid_input}"
         )
 
-    # TODO: Check the docstring, seems to have an incorrect description
     @staticmethod
     def validate_projection_definition(
         config_object, grid_definition, projection_definition
     ):
-        """
-        Validates the projection definition and returns the value if valid
+        r"""
+        Validate the projection definition parameter from the XML configuration.
+
+        This method verifies if the projection definition exists in the XML
+        configuration and ensures it matches the expected projection type based on
+        the selected grid definition.
 
         Parameters
         ----------
-        config_object: xml.etree.ElementTree.Element
-            Root element of the configuration file
-        grid_definition: str
-            User selected Grid Definition in the configuration file
-        projection_definition: str
-            Path to the projection definition in the configuration file
+        config_object : xml.etree.ElementTree.Element
+            The root element of the XML configuration file.
+        grid_definition : str
+            The user-selected grid definition that determines the expected projection types.
+        projection_definition : str
+            The XML tag path corresponding to the projection definition.
 
         Returns
         -------
-        str
-            Validated projection definition
+        str or None
+            The validated projection definition if it is found and matches one of the
+            predefined valid values for the given `grid_definition`, or `None` if
+            `grid_definition` is not provided.
+
+        Raises
+        ------
+        AttributeError
+            If the required XML tag for `projection_definition` is missing or incorrectly
+            specified in the configuration file.
+        ValueError
+            If the extracted projection definition is not valid for the given `grid_definition`.
+
+        Notes
+        -----
+        - The valid projection definitions depend on the `grid_definition`:
+
+          - `EASE2_*` grids: `["G", "N", "S"]`
+          - `STEREO_*` grids: `["PS_N", "PS_S"]`
+          - `MERC_*` grids: `["MERC_G"]`
+
+        - The function searches for the `<GridParams><projection_definition>` tag in the
+          XML file and validates its value accordingly.
+        - Projection definitions are case-insensitive and converted to uppercase.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><GridParams><projection_definition>G</projection_definition></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_projection_definition(config_object, "EASE2_G9km", "GridParams/projection_definition")
+        'G'
+
+        >>> xml_data = '''<config><GridParams><projection_definition>INVALID</projection_definition></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_projection_definition(config_object, "EASE2_G9km", "GridParams/projection_definition")
+        Traceback (most recent call last):
+            ...
+        ValueError: Grid Definition `EASE2_G9km` received invalid projection definition: `INVALID`; check configuration file. Valid projection definitions are: `['G', 'N', 'S']`
+
+        >>> xml_data = '''<config><GridParams><otherTag>PS_N</otherTag></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_projection_definition(config_object, "STEREO_N25km", "GridParams/projection_definition")
+        Traceback (most recent call last):
+            ...
+        AttributeError: Missing or incorrect XML tag: 'GridParams/projection_definition' not found in the configuration file.
+
+        >>> ConfigFile.validate_projection_definition(config_object, None, "GridParams/projection_definition")
+        None
         """
 
         if grid_definition:
@@ -1052,9 +1212,22 @@ class ConfigFile:
             elif "MERC" in grid_definition:
                 valid_input = ["MERC_G"]
 
-            proj_val = config_object.find(projection_definition).text
+            else:
+                valid_input = []
+
+            # Checking if `<GridParams><projection_definition>` parameter is present in the config file
+            try:
+                proj_val = str(
+                    config_object.find(projection_definition).text.strip()
+                ).upper()
+            except AttributeError:
+                raise AttributeError(
+                    f"Missing or incorrect XML tag: '{projection_definition}' not found in the configuration file."
+                )
+
             if proj_val in valid_input:
-                return proj_val  # config_object.find(projection_definition).text
+                return proj_val
+
             raise ValueError(
                 f"Grid Definiton `{grid_definition}` received invalid projection definition: `{proj_val}`; "
                 f"check configuration file."
@@ -1065,24 +1238,78 @@ class ConfigFile:
 
     @staticmethod
     def validate_regridding_algorithm(config_object, regridding_algorithm):
-        """
-        Validates the regridding algorithm and returns the value if valid
+        r"""
+        Validate the regridding algorithm parameter from the XML configuration.
+
+        This method verifies if the regridding algorithm exists in the XML configuration
+        and ensures it matches a predefined set of acceptable regridding algorithms.
 
         Parameters
         ----------
-        config_object: xml.etree.ElementTree.Element
-            Root element of the configuration file
-        regridding_algorithm: str
-            Path to the regridding algorithm in the configuration file
+        config_object : xml.etree.ElementTree.Element
+            The root element of the XML configuration file.
+        regridding_algorithm : str
+            The XML tag path corresponding to the regridding algorithm.
 
         Returns
         -------
         str
-            Validated regridding algorithm
+            The validated regridding algorithm if it is found and matches one of the
+            predefined valid values.
+
+        Raises
+        ------
+        AttributeError
+            If the required XML tag for `regridding_algorithm` is missing or incorrectly
+            specified in the configuration file.
+        ValueError
+            If the extracted regridding algorithm is not in the list of valid algorithms.
+
+        Notes
+        -----
+        - The function searches for the `<ReGridderParams><regridding_algorithm>` tag in the
+          XML file and validates its value against predefined regridding methods.
+        - Valid regridding algorithms include:
+          `['NN', 'DIB', 'IDS', 'BG', 'RSIR', 'LW', 'CG']`
+        - Algorithm names are case-insensitive and converted to uppercase.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><regridding_algorithm>NN</regridding_algorithm></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_regridding_algorithm(config_object, "ReGridderParams/regridding_algorithm")
+        'NN'
+
+        >>> xml_data = '''<config><ReGridderParams><regridding_algorithm>INVALID</regridding_algorithm></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_regridding_algorithm(config_object, "ReGridderParams/regridding_algorithm")
+        Traceback (most recent call last):
+            ...
+        ValueError: Invalid regridding algorithm. Check Configuration File. Valid regridding algorithms are: ['NN', 'DIB', 'IDS', 'BG', 'RSIR', 'LW', 'CG']
+
+        >>> xml_data = '''<config><ReGridderParams><otherTag>NN</otherTag></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_regridding_algorithm(config_object, "ReGridderParams/regridding_algorithm")
+        Traceback (most recent call last):
+            ...
+        AttributeError: Missing or incorrect XML tag: 'ReGridderParams/regridding_algorithm' not found in the configuration file.
         """
+
         valid_input = ["NN", "DIB", "IDS", "BG", "RSIR", "LW", "CG"]
-        if config_object.find(regridding_algorithm).text in valid_input:
-            return config_object.find(regridding_algorithm).text
+
+        try:
+            regridding_algorithm = str(
+                config_object.find(regridding_algorithm).text.strip()
+            ).upper()
+        except AttributeError:
+            raise AttributeError(
+                f"Missing or incorrect XML tag: '{regridding_algorithm}' not found in the configuration file."
+            )
+
+        if regridding_algorithm in valid_input:
+            return regridding_algorithm
+
         raise ValueError(
             f"Invalid regridding algorithm. Check Configuration File."
             f" Valid regridding algorithms are: {valid_input}"

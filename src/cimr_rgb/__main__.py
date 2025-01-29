@@ -330,7 +330,7 @@ def get_rgb_configuration(
             str,
             "Value for ReGridderParams/bg_smoothing parameter.",
         ],
-        "ReGridderParams/antenna_patterns_uncertainty": [
+        "ReGridderParams/antenna_pattern_uncertainty": [
             "aps",
             "antenna-patterns-uncertainty",
             str,
