@@ -1,11 +1,10 @@
 import pathlib as pb
-
-# from xml.etree.ElementTree import Element, SubElement, ElementTree
 import xml.etree.ElementTree as ET
 import itertools as it
 
 import numpy as np
 import pytest
+from unittest.mock import MagicMock
 
 from cimr_rgb.config_file import ConfigFile
 from cimr_rgb.grid_generator import GRIDS
@@ -541,585 +540,660 @@ def test_validate_regridding_algorithm(
         assert result == expected_output
 
 
-# # def test_validate_split_fore_aft():
+@pytest.mark.parametrize(
+    "input_data_type_value, split_fore_aft_value, expected_output, expect_exception",
+    [
+        # Expected to Pass
+        ("SMAP", "True", True, False),
+        ("CIMR", " false ", False, False),
+        ("AMSR2", "TRUE", False, False),
+        ("AMSR2", " ", False, False),
+        ("AMSR2", "true false ", False, False),
+        ("AMSR2", "random string ", False, False),
+        ("Another Satellite", "True", True, False),
+        # Expected to Fail
+        ("SMAP", ["True"], "True", True),
+        ("SMAP", ["True", "False"], "True", True),
+        ("SMAP", " ", None, True),
+        ("SMAP", None, None, True),
+        ("CIMR", "True False", "True", True),
+        ("CIMR", " ", None, True),
+        ("CIMR", None, None, True),
+    ],
+)
+def test_validate_split_fore_aft(
+    input_data_type_value, split_fore_aft_value, expected_output, expect_exception
+):
+    r"""
+    Pytest unit test for the `validate_split_fore_aft` method.
 
-# #     root        = Element("config")
-# #     input_data  = SubElement(root, "InputData")
-# #     input_type  = SubElement(input_data, "type")
-# #     split_data  = SubElement(input_data, "split_fore_aft")
-# #     #regridder_params = SubElement(root, "ReGridderParams")
-# #     #regridding_algo = SubElement(regridder_params, "regridding_algorithm")
-# #     #proj_def    = SubElement(regridder_params, "projection_definition")
-# #
-# #     # Expected to pass
-# #     # AMSR2 is False by default, so the empty string or any other input is valid
-# #     valid_input = {"CIMR": ['True', 'False'], "AMSR2": ["fAlse", "true", ""], "SMAP": ['False', 'True']}
+    This test function checks the validation of the `split_fore_aft` parameter
+    in the XML configuration. It ensures that valid values are correctly parsed
+    and invalid values raise appropriate exceptions. The test uses
+    `pytest.mark.parametrize` to cover multiple test cases efficiently.
 
-# #     for instrument, bool_vals in valid_input.items():
+    Parameters
+    ----------
+    input_data_type_value : str
+        The input data type used to determine valid values for `split_fore_aft`.
+    split_fore_aft_value : str or list or None
+        The value extracted from the XML configuration for `split_fore_aft`.
+    expected_output : bool or None
+        The expected validated `split_fore_aft` value if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected during validation.
 
-# #         for def_name in def_names:
-# #             grid_def.text = def_name
+    Raises
+    ------
+    ValueError
+        If `split_fore_aft_value` contains an invalid value or multiple values.
+    AttributeError
+        If the required XML tag is missing or incorrectly specified.
 
-# #             for proj_name in proj_def_valid_input[def_range]:
+    Notes
+    -----
+    - Uses `pytest.raises` to assert expected exceptions.
+    - Employs parameterized testing for efficiency.
+    - Tests various valid and invalid cases, including trimming whitespace and handling lists
+    """
 
-# #                 #for proj_name in proj_names:
-# #                 proj_def.text = proj_name
+    config_xml = f"""<config><InputData><split_fore_aft>{split_fore_aft_value}</split_fore_aft></InputData></config>"""
+    config_object = ET.ElementTree(ET.fromstring(config_xml)).getroot()
 
-# #             assert ConfigFile.validate_split_fore_aft(
-# #                 config_object   = root,
-# #                 split_fore_aft  = 'InputData/split_fore_aft',
-# #                 input_data_type = input_type.text
-# #             )
-
-
-# #    if input_data_type == 'AMSR2':
-# #        return False
-# #    valid_input = ['True', 'False']
-# #    if config_object.find(split_fore_aft).text in valid_input:
-# #        if config_object.find(split_fore_aft).text == 'True':
-# #            return True
-# #        else:
-# #            return False
-# #    raise ValueError(
-# #        f"Invalid split fore aft. Check Configuration File."
-# #        f" Valid split fore aft are: {valid_input}"
-# #    )
-
-
-# # @pytest.mark.parametrize(
-# #     "split_value, input_data_type, expected",
-# #     [
-# #         ('True', 'SomeType', True),    # Valid True case
-# #         ('False', 'SomeType', False), # Valid False case
-# #         ('True', 'AMSR2', False),     # Special case for AMSR2
-# #         ('InvalidValue', 'SomeType', pytest.raises(ValueError)), # Invalid case
-# #     ],
-# # )
-# # def test_validate_split_fore_aft(split_value, input_data_type, expected):
-# #     # Arrange
-# #     config_object = Element("config")
-# #     input_data = SubElement(config_object, "InputData")
-# #     split_data = SubElement(input_data, "split_fore_aft")
-# #     split_data.text = split_value
-
-# #     # Act & Assert
-# #     if isinstance(expected, pytest.raises):
-# #         with expected:  # Handle exceptions for invalid cases
-# #             ConfigFile.validate_split_fore_aft(
-# #                 config_object=config_object,
-# #                 split_fore_aft='InputData/split_fore_aft',
-# #                 input_data_type=input_data_type,
-# #             )
-# #     else:
-# #         result = ConfigFile.validate_split_fore_aft(
-# #             config_object=config_object,
-# #             split_fore_aft='InputData/split_fore_aft',
-# #             input_data_type=input_data_type,
-# #         )
-# #         assert result == expected
-
-
-# # TODO: Rewrite the original method because it seems to pass even
-# #       when neither of acceptable instruments are called
-# @pytest.mark.parametrize(
-#     "split_value, input_data_type, expected, expect_exception",
-#     [
-#         # Expected to pass
-#         ("True", "SMAP", True, False),  # Valid True case
-#         ("False", "CIMR", False, False),  # Valid False case
-#         ("True", "AMSR2", False, False),  # Special case for AMSR2
-#         ("False", "AMSR2", False, False),  # Special case for AMSR2
-#         ("", "AMSR2", False, False),  # Special case for AMSR2
-#         # Expected to fail
-#         ("InvalidValue", "InputData", None, True),  # Invalid case
-#         ("False", "SomeType", None, True),  # Valid False case
-#     ],
-# )
-# def test_validate_split_fore_aft(
-#     split_value, input_data_type, expected, expect_exception
-# ):
-#     # Arrange
-#     config_object = Element("config")
-#     input_data = SubElement(config_object, "InputData")
-#     split_data = SubElement(input_data, "split_fore_aft")
-#     split_data.text = split_value
-
-#     # Expected to fail
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(
-#             ValueError, match="Invalid split fore aft. Check Configuration File."
-#         ):
-#             ConfigFile.validate_split_fore_aft(
-#                 config_object=config_object,
-#                 split_fore_aft="InputData/split_fore_aft",
-#                 input_data_type=input_data_type,
-#             )
-#     # Expected to pass
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_split_fore_aft(
-#             config_object=config_object,
-#             split_fore_aft="InputData/split_fore_aft",
-#             input_data_type=input_data_type,
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
-
-#     # <ReGridderParams>
-#     #  <regridding_algorithm>IDS</regridding_algorithm>
-#     #  <search_radius>18</search_radius>
-#     #  <max_neighbours>20</max_neighbours>
-#     #  <variables_to_regrid></variables_to_regrid>
-#     #  <source_antenna_method>gaussian</source_antenna_method>
-#     #  <target_antenna_method>real</target_antenna_method>
-#     #  <polarisation_method>scalar</polarisation_method>
-#     #  <source_antenna_threshold>0.5</source_antenna_threshold>
-#     #  <target_antenna_threshold>0.5</target_antenna_threshold>
-#     #  <MRF_grid_definition>EASE2_G3km</MRF_grid_definition>
-#     #  <MRF_projection_definition>G</MRF_projection_definition>
-#     #  <source_gaussian_params>100000 100000</source_gaussian_params>
-#     #  <target_gaussian_params>100000 100000</target_gaussian_params>
-#     #  <boresight_shift>True</boresight_shift>
-#     #  <rsir_iteration>15</rsir_iteration>
-#     #  <bg_smoothing>1</bg_smoothing>
-#     # </ReGridderParams>
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises((ValueError, AttributeError)):
+            ConfigFile.validate_split_fore_aft(
+                config_object=config_object,
+                split_fore_aft="InputData/split_fore_aft",
+                input_data_type=input_data_type_value,
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_split_fore_aft(
+            config_object=config_object,
+            split_fore_aft="InputData/split_fore_aft",
+            input_data_type=input_data_type_value,
+        )
+        assert result == expected_output
 
 
-# @pytest.mark.parametrize(
-#     "save_to_disk_value, expected, expect_exception",
-#     [
-#         ("True", True, False),  # Valid True case
-#         ("False", False, False),  # Valid False case
-#         ("InvalidValue", None, True),  # Invalid case
-#         ("", None, True),  # Empty string, invalid case
-#     ],
-# )
-# def test_validate_save_to_disk(save_to_disk_value, expected, expect_exception):
-#     # Arrange
-#     config_object = Element("config")
-#     output_data = SubElement(config_object, "OutputData")
-#     save_to_disk = SubElement(output_data, "save_to_disk")
-#     save_to_disk.text = save_to_disk_value
+@pytest.mark.parametrize(
+    "save_to_disk_value, expected_output, expect_exception",
+    [
+        # Expected to Pass
+        (" True", True, False),  # Valid True case
+        ("faLse", False, False),  # Valid False case
+        # Expected to Fail
+        ("InvalidValue", None, True),  # Invalid case
+        ("", None, True),  # Empty string, invalid case
+        (None, None, True),  # Empty string, invalid case
+    ],
+)
+def test_validate_save_to_disk(save_to_disk_value, expected_output, expect_exception):
+    """
+    Pytest unit test for the `validate_save_to_disk` method.
 
-#     # Pytest need to match error message exactly in this case for it to work
-#     error_message = "Invalid `save_to_disk`. Check Configuration File. "  # + \
-#     # "`save_to_disk` must be either True or False")
+    This test function validates the `save_to_disk` parameter in the XML configuration.
+    It ensures that valid values are properly parsed as booleans, while invalid values
+    raise appropriate exceptions. The test uses `pytest.mark.parametrize` to efficiently
+    check multiple cases.
 
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(ValueError, match=error_message):
-#             # "Invalid `save_to_disk`. Check Configuration File. save_to_disk must be either True or False"
-#             ConfigFile.validate_save_to_disk(
-#                 config_object=config_object,
-#                 save_to_disk="OutputData/save_to_disk",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_save_to_disk(
-#             config_object=config_object,
-#             save_to_disk="OutputData/save_to_disk",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
+    Parameters
+    ----------
+    save_to_disk_value : str or None
+        The value extracted from the XML configuration for `save_to_disk`.
+    expected_output : bool or None
+        The expected validated `save_to_disk` value if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected during validation.
 
+    Raises
+    ------
+    ValueError
+        If `save_to_disk_value` is not `TRUE` or `FALSE`.
+    AttributeError
+        If the required XML tag is missing or incorrectly specified.
 
-# # @pytest.mark.parametrize(
-# #     "search_radius_value, grid_definition, grid_type, expected, expect_exception",
-# #     [
-# #         # Valid Cases
-# #         ('5.0', 'EASE2_G1km', 'L1C', 5000.0, False),  # Defined search_radius (5.0 km)
-# #         # (None, 'EASE2_G1km', 'L1C', 'CIMR', np.sqrt(2 * (1000.9 / 2) ** 2), False),  # L1C with grid_definition
-# #         # (None, 'EASE2_G3km', 'L1C', 'SMAP', np.sqrt(2 * (3002.69 / 2) ** 2), False),  # L1C with SMAP
-# #         # (None, 'EASE2_N3km', 'L1C', 'AMSR2', np.sqrt(2 * (3000 / 2) ** 2), False),  # L1C with AMSR2
-# #         # (None, 'EASE2_G1km', 'L1R', 'CIMR', 73000 / 2, False),  # L1R with CIMR
-# #         # (None, 'EASE2_G1km', 'L1R', 'AMSR2', 62000 / 2, False),  # L1R with AMSR2
+    Notes
+    -----
+    - Uses `pytest.raises` to assert expected exceptions.
+    - Employs parameterized testing to cover multiple test cases efficiently.
+    - Tests valid and invalid cases, including case variations and missing values.
+    """
 
-# #         # # Invalid Cases
-# #         # (None, 'EASE2_G1km', 'L1C', 'INVALID', None, True),  # Invalid input_data_type
-# #         # (None, 'EASE2_G1km', 'L1C', 'cimr', None, True),  # Case-sensitive check (lowercase)
-# #         # (None, 'EASE2_G1km', 'L1C', 'Smap', None, True),  # Case-sensitive check (mixed case)
-# #     ],
-# # )
-# # def test_validate_search_radius(search_radius_value, grid_definition, grid_type, input_data_type, expected, expect_exception):
-# #     # Arrange
-# #     config_object = Element("config")
-# #     regridder_params = SubElement(config_object, "ReGridderParams")
-# #     search_radius = SubElement(regridder_params, "search_radius")
-# #     if search_radius_value is not None:
-# #         search_radius.text = search_radius_value
+    config_xml = f"""<config><OutputData><save_to_disk>{save_to_disk_value}</save_to_disk></OutputData></config>"""
+    config_object = ET.ElementTree(ET.fromstring(config_xml)).getroot()
 
-# #     if expect_exception:
-# #         # Act & Assert: Expect an exception
-# #         with pytest.raises(ValueError, match=f"Invalid `input_data_type`: {input_data_type}"):
-# #             ConfigFile.validate_search_radius(
-# #                 config_object=config_object,
-# #                 search_radius='ReGridderParams/search_radius',
-# #                 grid_definition=grid_definition,
-# #                 grid_type=grid_type,
-# #                 #input_data_type=input_data_type,
-# #             )
-# #     else:
-# #         # Act: No exception expected
-# #         result = ConfigFile.validate_search_radius(
-# #             config_object=config_object,
-# #             search_radius='ReGridderParams/search_radius',
-# #             grid_definition=grid_definition,
-# #             grid_type=grid_type,
-# #             #input_data_type=input_data_type,
-# #         )
-# #         # Assert: Compare result to expected value
-# #         assert result == expected
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises((ValueError, AttributeError)):
+            ConfigFile.validate_save_to_disk(
+                config_object=config_object,
+                save_to_disk="OutputData/save_to_disk",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_save_to_disk(
+            config_object=config_object,
+            save_to_disk="OutputData/save_to_disk",
+        )
+        assert result == expected_output
 
 
-# # TODO: Fix SMAP
-# @pytest.mark.parametrize(
-#     "search_radius_value, grid_definition, grid_type, input_data_type, expected, expect_exception",
-#     [
-#         # Valid Cases
-#         ("5.0", "EASE2_G1km", "L1C", "CIMR", 5000.0, False),  # Valid numeric value
-#         (
-#             None,
-#             "EASE2_G1km",
-#             "L1C",
-#             "CIMR",
-#             np.sqrt(2 * (GRIDS["EASE2_G1km"]["res"] / 2) ** 2),
-#             False,
-#         ),
-#         ("", "EASE2_G36km", "L1R", "CIMR", 73000 / 2, False),
-#         (" ", "EASE2_G1km", "L1R", "AMSR2", 62000 / 2, False),
-#         (
-#             " ",
-#             "STEREO_N25km",
-#             "L1C",
-#             "CIMR",
-#             np.sqrt(2 * (GRIDS["STEREO_N25km"]["res"] / 2) ** 2),
-#             False,
-#         ),
-#         ("18", "MERC_G12.km", "L1C", "SMAP", 18000, False),
-#         # Invalid Cases
-#         (
-#             "18",
-#             "MERC_G12.km",
-#             "L1R",
-#             "SMAP",
-#             18000,
-#             True,
-#         ),  # TODO: SMAP does not have L1R
-#         ("abc", "EASE2_G1km", "L1C", "CIMR", None, True),  # Non-numeric string
-#         ("123abc", "EASE2_G1km", "L1C", "CIMR", None, True),  # Partially numeric
-#     ],
-# )
-# def test_validate_search_radius_numeric_check(
-#     search_radius_value,
-#     grid_definition,
-#     grid_type,
-#     input_data_type,
-#     expected,
-#     expect_exception,
-# ):
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     search_radius = SubElement(regridder_params, "search_radius")
-#     if search_radius_value is not None:
-#         search_radius.text = search_radius_value
+@pytest.mark.parametrize(
+    "search_radius_value, grid_type, input_data_type, expected, expect_exception",
+    [
+        # Valid Cases
+        ("5.0", "L1C", "CIMR", 5000.0, False),  # Defined search_radius (5.0 km)
+        (None, "L1C", "AMSR2", None, False),  # L1C with grid_definition
+        (None, "L1R", "AMSR2", 62000 / 2, False),  # L1C with grid_definition
+        (None, "L1R", "CIMR", 73000 / 2, False),  # L1C with grid_definition
+        # Invalid Cases
+        (
+            "random string",
+            "L1C",
+            "CIMR",
+            None,
+            True,
+        ),
+        (None, "Other Grid", "AMSR2", None, True),
+        (None, "L1R", "Other Data Type", None, True),
+        (" ", "Other Grid", "AMSR2", None, True),
+        ("", "Other Grid", "Other Data Type", None, True),
+    ],
+)
+def test_validate_search_radius(
+    search_radius_value,
+    grid_type,
+    input_data_type,
+    expected,
+    expect_exception,
+):
+    """
+    Pytest unit test for the `validate_search_radius` method.
 
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(ValueError, match="Invalid `search_radius`"):
-#             ConfigFile.validate_search_radius(
-#                 config_object=config_object,
-#                 search_radius="ReGridderParams/search_radius",
-#                 grid_definition=grid_definition,
-#                 grid_type=grid_type,
-#                 input_data_type=input_data_type,
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_search_radius(
-#             config_object=config_object,
-#             search_radius="ReGridderParams/search_radius",
-#             grid_definition=grid_definition,
-#             grid_type=grid_type,
-#             input_data_type=input_data_type,
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
+    This test function validates the `search_radius` parameter from the XML configuration.
+    It ensures that valid numerical values are properly converted to meters, while invalid
+    values raise appropriate exceptions. The test uses `pytest.mark.parametrize` to efficiently
+    check multiple cases.
 
+    Parameters
+    ----------
+    search_radius_value : str or None
+        The value extracted from the XML configuration for `search_radius`.
+    grid_type : str
+        The grid type associated with the search radius.
+    input_data_type : str
+        The input data type influencing the search radius validation.
+    expected : float or None
+        The expected validated `search_radius` value in meters if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected during validation.
 
-# # # TODO: Write the test for this method
-# # def test_get_scan_geometry():
-# #     ...
+    Raises
+    ------
+    ValueError
+        If `search_radius_value` is not a valid numerical value.
 
+    Notes
+    -----
+    - Uses `pytest.raises` to assert expected exceptions.
+    - Employs parameterized testing to cover multiple test cases efficiently.
+    - Tests valid and invalid cases, including empty values and incorrect types.
+    """
 
-# @pytest.mark.parametrize(
-#     "input_data_type, variables_to_regrid_value, expected, expect_exception",
-#     [
-#         # Valid Cases for SMAP
-#         (
-#             "SMAP",
-#             "bt_h bt_v longitude latitude",
-#             ["bt_h", "bt_v", "longitude", "latitude"],
-#             False,
-#         ),
-#         (
-#             "SMAP",
-#             None,
-#             [
-#                 "bt_h",
-#                 "bt_v",
-#                 "bt_3",
-#                 "bt_4",
-#                 "processing_scan_angle",
-#                 "longitude",
-#                 "latitude",
-#             ],
-#             False,
-#         ),  # Default vars
-#         ("SMAP", "bt_h bt_v invalid_var", None, True),  # Invalid variable in SMAP
-#         # Valid Cases for AMSR2
-#         (
-#             "AMSR2",
-#             "bt_h bt_v longitude latitude",
-#             ["bt_h", "bt_v", "longitude", "latitude"],
-#             False,
-#         ),
-#         (
-#             "AMSR2",
-#             None,
-#             ["bt_h", "bt_v"],
-#             False,
-#         ),  # No default_vars for AMSR2, so None should be an error
-#         ("AMSR2", "invalid_var", None, True),  # Invalid variable in AMSR2
-#         # Valid Cases for CIMR
-#         (
-#             "CIMR",
-#             "bt_h bt_v longitude latitude oza",
-#             ["bt_h", "bt_v", "longitude", "latitude", "oza"],
-#             False,
-#         ),
-#         (
-#             "CIMR",
-#             None,
-#             [
-#                 "bt_h",
-#                 "bt_v",
-#                 "bt_3",
-#                 "bt_4",
-#                 "processing_scan_angle",
-#                 "longitude",
-#                 "latitude",
-#             ],
-#             False,
-#         ),  # Default vars
-#         ("CIMR", "invalid_var", None, True),  # Invalid variable in CIMR
-#         # Invalid input_data_type
-#         ("INVALID_TYPE", None, None, True),  # Unsupported input_data_type
-#     ],
-# )
-# def test_validate_variables_to_regrid(
-#     input_data_type, variables_to_regrid_value, expected, expect_exception
-# ):
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     variables_to_regrid = SubElement(regridder_params, "variables_to_regrid")
-#     if variables_to_regrid_value is not None:
-#         variables_to_regrid.text = variables_to_regrid_value
+    config_xml = f"""<config><ReGridderParams><search_radius>{search_radius_value}</search_radius></ReGridderParams></config>"""
+    config_object = ET.ElementTree(ET.fromstring(config_xml)).getroot()
 
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(ValueError):
-#             ConfigFile.validate_variables_to_regrid(
-#                 config_object=config_object,
-#                 input_data_type=input_data_type,
-#                 variables_to_regrid="ReGridderParams/variables_to_regrid",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_variables_to_regrid(
-#             config_object=config_object,
-#             input_data_type=input_data_type,
-#             variables_to_regrid="ReGridderParams/variables_to_regrid",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(ValueError):
+            ConfigFile.validate_search_radius(
+                config_object=config_object,
+                search_radius="ReGridderParams/search_radius",
+                grid_type=grid_type,
+                input_data_type=input_data_type,
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_search_radius(
+            config_object=config_object,
+            search_radius="ReGridderParams/search_radius",
+            grid_type=grid_type,
+            input_data_type=input_data_type,
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
 
 
-# # TODO: The test passes. but I think more needs to be done for checking the configuration
-# @pytest.mark.parametrize(
-#     "regridding_algorithm, max_neighbours_value, expected, expect_exception",
-#     [
-#         # Case: Regridding algorithm is NN
-#         ("NN", None, 1, False),  # Always return 1 regardless of max_neighbours
-#         # Case: Valid max_neighbours value
-#         ("Other", "500", 500, False),  # Valid integer string
-#         ("Other", "1000", 1000, False),  # Valid integer string
-#         # Case: max_neighbours not defined
-#         ("Other", None, 1000, False),  # Defaults to 1000
-#         # Case: Invalid max_neighbours value
-#         ("Other", "invalid", None, True),  # Non-integer string
-#         ("Other", "", None, True),  # Empty string
-#         ("Other", " ", None, True),  # Space-only string
-#     ],
-# )
-# def test_validate_max_neighbours(
-#     regridding_algorithm, max_neighbours_value, expected, expect_exception
-# ):
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     max_neighbours = SubElement(regridder_params, "max_neighbours")
-#     if max_neighbours_value is not None:
-#         max_neighbours.text = max_neighbours_value
+@pytest.mark.parametrize(
+    "input_data_type_value, band_to_remap, expected, expect_exception",
+    [
+        # Valid Cases
+        ("SMAP", None, (779, 241), False),
+        ("CIMR", "L", (74, 691), False),
+        ("CIMR", "C", (74, 2747 * 4), False),
+        ("CIMR", "X", (74, 2807 * 4), False),
+        ("CIMR", "KA", (74, 10395 * 8), False),
+        ("CIMR", "KU", (74, 7692 * 8), False),
+        # Invalid Cases
+        ("UNKNOWN", None, None, True),  # Invalid input_data_type
+    ],
+)
+def test_get_scan_geometry(
+    input_data_type_value, band_to_remap, expected, expect_exception
+):
+    """
+    Pytest unit test for the `get_scan_geometry` method.
 
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(ValueError):
-#             ConfigFile.validate_max_neighbours(
-#                 config_object=config_object,
-#                 max_neighbours="ReGridderParams/max_neighbours",
-#                 regridding_algorithm=regridding_algorithm,
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_max_neighbours(
-#             config_object=config_object,
-#             max_neighbours="ReGridderParams/max_neighbours",
-#             regridding_algorithm=regridding_algorithm,
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
+    This test verifies the correct retrieval of scan geometry for different
+    sensor types and frequency bands. It checks both valid and invalid cases.
 
+    Parameters
+    ----------
+    input_data_type_value : str
+        The input data type being tested (e.g., `SMAP`, `CIMR`).
+    band_to_remap : str or None
+        The frequency band for `CIMR` input data types.
+    expected : tuple or None
+        The expected result (num_scans, num_earth_samples) if valid, otherwise None.
+    expect_exception : bool
+        Whether a `ValueError` exception is expected.
 
-# # TODO: Check the docstring
-# @pytest.mark.parametrize(
-#     "source_antenna_method_value, expected, expect_exception",
-#     [
-#         # Valid cases
-#         ("gaussian", "gaussian", False),
-#         ("real", "real", False),
-#         ("gaussian_projected", "gaussian_projected", False),
-#         # Default case
-#         (None, "real", False),  # Defaults to 'real' if value is None
-#         ("", "real", False),  # Empty string
-#         (" ", "real", False),  # Space-only string
-#         # Invalid cases
-#         ("invalid_value", None, True),  # Invalid string
-#         ("GAUSSIAN", None, True),  # Invalid string
-#         ("Gaussian", None, True),  # Invalid string
-#     ],
-# )
-# def test_validate_source_antenna_method(
-#     source_antenna_method_value, expected, expect_exception
-# ):
-#     """
-#     Test the `validate_source_antenna_method` method of the ConfigFile class.
+    Raises
+    ------
+    ValueError
+        If `input_data_type` is invalid.
 
-#     This test covers the following scenarios:
-#     - Valid `source_antenna_method` values (e.g., 'gaussian', 'real', 'gaussian_projected').
-#     - Missing `source_antenna_method` (defaults to 'real').
-#     - Invalid `source_antenna_method` values (e.g., 'invalid_value', empty strings).
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Mocks the config object using `MagicMock`.
+    """
 
-#     Parameters:
-#     - source_antenna_method_value: The value of the source_antenna_method in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
+    # Mock the config object
+    config_mock = MagicMock()
+    config_mock.input_data_type = input_data_type_value
 
-#     Valid cases should return the correct value.
-#     Missing or invalid cases should raise a ValueError or default to 'real' if appropriate.
-#     """
-
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     source_antenna = SubElement(regridder_params, "source_antenna_method")
-#     if source_antenna_method_value is not None:
-#         source_antenna.text = source_antenna_method_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(
-#             ValueError, match="Invalid antenna method. Check Configuration File."
-#         ):
-#             ConfigFile.validate_source_antenna_method(
-#                 config_object=config_object,
-#                 source_antenna_method="ReGridderParams/source_antenna_method",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_source_antenna_method(
-#             config_object=config_object,
-#             source_antenna_method="ReGridderParams/source_antenna_method",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(ValueError):
+            ConfigFile.get_scan_geometry(
+                config=config_mock, band_to_remap=band_to_remap
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.get_scan_geometry(
+            config=config_mock, band_to_remap=band_to_remap
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
 
 
-# # TODO: Check the docstring
-# @pytest.mark.parametrize(
-#     "target_antenna_method_value, expected, expect_exception",
-#     [
-#         # Valid cases
-#         ("gaussian", "gaussian", False),
-#         ("real", "real", False),
-#         ("gaussian_projected", "gaussian_projected", False),
-#         # Default case
-#         (None, "real", False),  # Defaults to 'real' if value is None
-#         ("", "real", False),  # Empty string
-#         (" ", "real", False),  # Space-only string
-#         # Invalid cases
-#         ("invalid_value", None, True),  # Invalid string
-#         ("GAUSSIAN", None, True),  # Invalid string
-#         ("Gaussian", None, True),  # Invalid string
-#     ],
-# )
-# def test_validate_target_antenna_method(
-#     target_antenna_method_value, expected, expect_exception
-# ):
-#     """
-#     Test the `validate_target_antenna_method` method of the ConfigFile class.
+@pytest.mark.parametrize(
+    "input_data_type, variables_to_regrid_value, expected, expect_exception",
+    [
+        # Valid Cases for SMAP
+        (
+            "SMAP",
+            "bt_h bt_v longitude latitude",
+            ["bt_h", "bt_v", "longitude", "latitude"],
+            False,
+        ),
+        (
+            "SMAP",
+            None,
+            [
+                "bt_h",
+                "bt_v",
+                "bt_3",
+                "bt_4",
+                "processing_scan_angle",
+                "longitude",
+                "latitude",
+                "faraday_rot_angle",
+                "nedt_h",
+                "nedt_v",
+                "nedt_3",
+                "nedt_4",
+                "regridding_n_samples",
+                "regridding_l1b_orphans",
+                "acq_time_utc",
+                "azimuth",
+            ],
+            False,
+        ),  # Default vars
+        ("SMAP", "bt_h bt_v invalid_var", None, True),  # Invalid variable in SMAP
+        # Valid Cases for AMSR2
+        (
+            "AMSR2",
+            "bt_h bt_v longitude latitude",
+            ["bt_h", "bt_v", "longitude", "latitude"],
+            False,
+        ),
+        (
+            "AMSR2",
+            None,
+            [
+                "bt_h",
+                "bt_v",
+                "longitude",
+                "latitude",
+                "regridding_n_samples",
+                "x_position",
+                "y_position",
+                "z_position",
+                "x_velocity",
+                "y_velocity",
+                "z_velocity",
+                "azimuth",
+                "solar_azimuth",
+                "acq_time_utc",
+            ],
+            False,
+        ),
+        ("AMSR2", "invalid_var", None, True),  # Invalid variable in AMSR2
+        # Valid Cases for CIMR
+        (
+            "CIMR",
+            "bt_h bt_v longitude latitude oza",
+            ["bt_h", "bt_v", "longitude", "latitude", "oza"],
+            False,
+        ),
+        (
+            "CIMR",
+            None,
+            [
+                "bt_h",
+                "bt_v",
+                "bt_3",
+                "bt_4",
+                "processing_scan_angle",
+                "longitude",
+                "latitude",
+                "nedt_h",
+                "nedt_v",
+                "nedt_3",
+                "nedt_4",
+                "regridding_n_samples",
+                "regridding_l1b_orphans",
+                "acq_time_utc",
+                "azimuth",
+                "oza",
+            ],
+            False,
+        ),  # Default vars
+        ("CIMR", "invalid_var", None, True),  # Invalid variable in CIMR
+        # Invalid input_data_type
+        ("INVALID_TYPE", None, None, True),  # Unsupported input_data_type
+    ],
+)
+def test_validate_variables_to_regrid(
+    input_data_type, variables_to_regrid_value, expected, expect_exception
+):
+    r"""
+    Pytest unit test for the `validate_variables_to_regrid` method.
 
-#     This test validates:
-#     - Correct behavior for valid `target_antenna_method` values (e.g., 'gaussian', 'real', 'gaussian_projected').
-#     - Default value ('real') when `target_antenna_method` is missing or None.
-#     - Error handling for invalid `target_antenna_method` values.
+    This test function validates the behavior of `validate_variables_to_regrid`, ensuring
+    that valid variables are correctly parsed, and invalid values raise appropriate exceptions.
 
-#     Parameters:
-#     - target_antenna_method_value: The value of the target_antenna_method in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
+    Parameters
+    ----------
+    input_data_type : str
+        The input data type being tested.
+    variables_to_regrid_value : str or None
+        The value assigned to the `variables_to_regrid` XML tag.
+    expected : list of str or None
+        The expected validated output list of variables if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+    """
 
-#     Valid cases return the appropriate value.
-#     Missing values default to 'real'.
-#     Invalid values raise a ValueError.
-#     """
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    variables_to_regrid = ET.SubElement(regridder_params, "variables_to_regrid")
+    if variables_to_regrid_value is not None:
+        variables_to_regrid.text = variables_to_regrid_value
 
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     target_antenna = SubElement(regridder_params, "target_antenna_method")
-#     if target_antenna_method_value is not None:
-#         target_antenna.text = target_antenna_method_value
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(ValueError):
+            ConfigFile.validate_variables_to_regrid(
+                config_object=config_object,
+                input_data_type=input_data_type,
+                variables_to_regrid="ReGridderParams/variables_to_regrid",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_variables_to_regrid(
+            config_object=config_object,
+            input_data_type=input_data_type,
+            variables_to_regrid="ReGridderParams/variables_to_regrid",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
 
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(
-#             ValueError, match="Invalid antenna method. Check Configuration File."
-#         ):
-#             ConfigFile.validate_target_antenna_method(
-#                 config_object=config_object,
-#                 target_antenna_method="ReGridderParams/target_antenna_method",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_target_antenna_method(
-#             config_object=config_object,
-#             target_antenna_method="ReGridderParams/target_antenna_method",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
+
+@pytest.mark.parametrize(
+    "regridding_algorithm, max_neighbours_value, expected, expect_exception",
+    [
+        # Case: Regridding algorithm is NN
+        ("NN", None, 1, False),  # Always return 1 regardless of max_neighbours
+        # Case: Valid max_neighbours value
+        ("Other", "500", 500, False),  # Valid integer string
+        ("Other", "1000", 1000, False),  # Valid integer string
+        # Case: max_neighbours not defined
+        ("Other", None, 1000, False),  # Defaults to 1000
+        # Case: Invalid max_neighbours value
+        ("Other", "invalid", None, True),  # Non-integer string
+        ("Other", "", None, True),  # Empty string
+        ("Other", " ", None, True),  # Space-only string
+    ],
+)
+def test_validate_max_neighbours(
+    regridding_algorithm, max_neighbours_value, expected, expect_exception
+):
+    r"""
+    Pytest unit test for the `validate_max_neighbours` method.
+
+    This test function validates the `max_neighbours` parameter, ensuring that
+    valid values are correctly parsed and invalid values raise appropriate exceptions.
+
+    Parameters
+    ----------
+    regridding_algorithm : str
+        The regridding algorithm being tested (`NN` always returns `1`).
+    max_neighbours_value : str or None
+        The value assigned to the `max_neighbours` XML tag.
+    expected : int or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Tests cases where `max_neighbours` is valid, missing, or invalid.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    max_neighbours = ET.SubElement(regridder_params, "max_neighbours")
+    if max_neighbours_value is not None:
+        max_neighbours.text = max_neighbours_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(ValueError):
+            ConfigFile.validate_max_neighbours(
+                config_object=config_object,
+                max_neighbours="ReGridderParams/max_neighbours",
+                regridding_algorithm=regridding_algorithm,
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_max_neighbours(
+            config_object=config_object,
+            max_neighbours="ReGridderParams/max_neighbours",
+            regridding_algorithm=regridding_algorithm,
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "source_antenna_method_value, expected, expect_exception",
+    [
+        # Valid cases
+        ("gaussian", "gaussian", False),
+        ("instrument", "instrument", False),
+        ("gaussian_projected", "gaussian_projected", False),
+        ("GAUSSIAN", "gaussian", False),  # Invalid string
+        ("Gaussian", "gaussian", False),  # Invalid string
+        # Default case
+        (None, "instrument", False),  # Defaults to 'real' if value is None
+        ("", "instrument", False),  # Empty string
+        (" ", "instrument", False),  # Space-only string
+        # Invalid cases
+        ("invalid_value", None, True),  # Invalid string
+    ],
+)
+def test_validate_source_antenna_method(
+    source_antenna_method_value, expected, expect_exception
+):
+    r"""
+    Pytest unit test for the `validate_source_antenna_method` method.
+
+    This test function validates the behavior of `validate_source_antenna_method`, ensuring
+    that valid values are correctly parsed, and invalid values raise appropriate exceptions.
+
+    The function is designed to be case insensitive, meaning input values will be converted to lowercase.
+
+    Test Scenarios:
+    --------------
+    - Valid `source_antenna_method` values (e.g., `'gaussian'`, `'instrument'`, `'gaussian_projected'`).
+    - Case-insensitive inputs should be correctly mapped to their lowercase equivalents.
+    - Missing `source_antenna_method` values should default to `'instrument'`.
+    - Invalid values should raise a `ValueError`.
+
+    Parameters
+    ----------
+    source_antenna_method_value : str or None
+        The value assigned to the `source_antenna_method` XML tag.
+    expected : str or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures empty or missing values default to `'instrument'`.
+    - Tests case insensitivity by checking uppercase and mixed-case inputs.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    source_antenna = ET.SubElement(regridder_params, "source_antenna_method")
+    if source_antenna_method_value is not None:
+        source_antenna.text = source_antenna_method_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(
+            ValueError  # , match="Invalid antenna method. Check Configuration File."
+        ):
+            ConfigFile.validate_source_antenna_method(
+                config_object=config_object,
+                source_antenna_method="ReGridderParams/source_antenna_method",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_source_antenna_method(
+            config_object=config_object,
+            source_antenna_method="ReGridderParams/source_antenna_method",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "target_antenna_method_value, expected, expect_exception",
+    [
+        # Valid cases
+        ("gaussian", "gaussian", False),
+        ("instrument", "instrument", False),
+        ("gaussian_projected", "gaussian_projected", False),
+        ("GAUSSIAN", "gaussian", False),  # Invalid string
+        ("Gaussian", "gaussian", False),  # Invalid string
+        # Default case
+        (None, "instrument", False),  # Defaults to 'real' if value is None
+        ("", "instrument", False),  # Empty string
+        (" ", "instrument", False),  # Space-only string
+        # Invalid cases
+        ("invalid_value", None, True),  # Invalid string
+    ],
+)
+def test_validate_target_antenna_method(
+    target_antenna_method_value, expected, expect_exception
+):
+    r"""
+    Pytest unit test for the `validate_target_antenna_method` method.
+
+    This test ensures that `validate_target_antenna_method` correctly handles
+    valid, default, and invalid cases, while treating input values case-insensitively.
+
+    Test Scenarios
+    --------------
+    - Valid `target_antenna_method` values (e.g., `'gaussian'`, `'instrument'`, `'gaussian_projected'`).
+    - Case-insensitive inputs should be correctly mapped to their lowercase equivalents.
+    - Missing or empty values should default to `'instrument'`.
+    - Invalid values should raise a `ValueError`.
+
+    Parameters
+    ----------
+    target_antenna_method_value : str or None
+        The value assigned to the `target_antenna_method` XML tag.
+    expected : str or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures empty or missing values default to `'instrument'`.
+    - Tests case insensitivity by checking uppercase and mixed-case inputs.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    target_antenna = ET.SubElement(regridder_params, "target_antenna_method")
+    if target_antenna_method_value is not None:
+        target_antenna.text = target_antenna_method_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(
+            ValueError  # , match="Invalid antenna method. Check Configuration File."
+        ):
+            ConfigFile.validate_target_antenna_method(
+                config_object=config_object,
+                target_antenna_method="ReGridderParams/target_antenna_method",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_target_antenna_method(
+            config_object=config_object,
+            target_antenna_method="ReGridderParams/target_antenna_method",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
 
 
 # # TODO: Check the docstring

@@ -257,7 +257,7 @@ class ConfigFile:
         self.search_radius = self.validate_search_radius(
             config_object=config_object,
             search_radius="ReGridderParams/search_radius",
-            grid_definition=self.grid_definition,
+            # grid_definition=self.grid_definition,
             grid_type=self.grid_type,
             input_data_type=self.input_data_type,
         )
@@ -904,6 +904,69 @@ class ConfigFile:
             Validated grid type
         """
 
+        r"""
+        Validate the grid type parameter from the XML configuration.
+
+        This method verifies if the grid type exists in the XML configuration 
+        and ensures it matches a predefined set of acceptable grid types 
+        based on the selected input data type.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            The root element of the XML configuration file.
+        grid_type : str
+            The XML tag path corresponding to the grid type.
+        input_data_type : str
+            The user-selected input data type that determines the valid grid types.
+
+        Returns
+        -------
+        str
+            The validated grid type if it is found and matches one of the 
+            predefined valid values for the given `input_data_type`.
+
+        Raises
+        ------
+        AttributeError
+            If the required XML tag for `grid_type` is missing or incorrectly 
+            specified in the configuration file.
+        ValueError
+            If the extracted grid type is not in the list of valid grid types.
+
+        Notes
+        -----
+        - The function searches for the `<GridParams><grid_type>` tag in the 
+          XML file and validates its value against predefined grid types.
+        - Valid grid types depend on the input data type:
+          
+          - If `input_data_type` is `SMAP`: `['L1C']`
+          - Otherwise: `['L1C', 'L1R']`
+        - Grid type values are case-insensitive and converted to uppercase.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><GridParams><grid_type>L1C</grid_type></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_grid_type(config_object, "GridParams/grid_type", "SMAP")
+        'L1C'
+
+        >>> xml_data = '''<config><GridParams><grid_type>INVALID</grid_type></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_grid_type(config_object, "GridParams/grid_type", "CIMR")
+        Traceback (most recent call last):
+            ...
+        ValueError: Invalid Grid Type. Check Configuration File. Valid grid types are: ['L1C', 'L1R'] for GridParams/grid_type data.
+
+        >>> xml_data = '''<config><GridParams><otherTag>L1C</otherTag></GridParams></config>''' 
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_grid_type(config_object, "GridParams/grid_type", "SMAP")
+        Traceback (most recent call last):
+            ...
+        AttributeError: Missing or incorrect XML tag: 'GridParams/grid_type' not found in the configuration file.
+        """
+
         if input_data_type == "SMAP":
             valid_input = ["L1C"]
         else:
@@ -1082,7 +1145,10 @@ class ConfigFile:
         >>> ConfigFile.validate_grid_definition(config_object, "GridParams/grid_definition")
         Traceback (most recent call last):
             ...
-        ValueError: Invalid Grid Definition, check configuration file. Valid grid definitions are: ['EASE2_G9km', 'EASE2_N9km', 'EASE2_S9km', 'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km', 'STEREO_N25km', 'STEREO_S25km', 'STEREO_N6.25km', 'STEREO_N12.5km', 'STEREO_S6.25km', 'STEREO_S12.5km', 'STEREO_S25km', 'MERC_G25km', 'MERC_G12.5km', 'MERC_G6.25km']
+        ValueError: Invalid Grid Definition, check configuration file. Valid grid definitions are:
+            ['EASE2_G9km', 'EASE2_N9km', 'EASE2_S9km', 'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km',
+             'STEREO_N25km', 'STEREO_S25km', 'STEREO_N6.25km', 'STEREO_N12.5km', 'STEREO_S6.25km',
+             'STEREO_S12.5km', 'STEREO_S25km', 'MERC_G25km', 'MERC_G12.5km', 'MERC_G6.25km']
 
         >>> xml_data = '''<config><GridParams><otherTag>EASE2_G9km</otherTag></GridParams></config>'''
         >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
@@ -1189,7 +1255,8 @@ class ConfigFile:
         >>> ConfigFile.validate_projection_definition(config_object, "EASE2_G9km", "GridParams/projection_definition")
         Traceback (most recent call last):
             ...
-        ValueError: Grid Definition `EASE2_G9km` received invalid projection definition: `INVALID`; check configuration file. Valid projection definitions are: `['G', 'N', 'S']`
+        ValueError: Grid Definition `EASE2_G9km` received invalid projection definition: `INVALID`; check configuration file.
+                    Valid projection definitions are: `['G', 'N', 'S']`
 
         >>> xml_data = '''<config><GridParams><otherTag>PS_N</otherTag></GridParams></config>'''
         >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
@@ -1317,29 +1384,86 @@ class ConfigFile:
 
     @staticmethod
     def validate_split_fore_aft(config_object, split_fore_aft, input_data_type):
-        """
-        Validates the split fore aft and returns the value if valid
+        r"""
+        Validate the `split_fore_aft` parameter from the XML configuration.
+
+        This method verifies if the `split_fore_aft` parameter exists in the XML
+        configuration and ensures it matches a predefined set of acceptable values.
 
         Parameters
         ----------
-        config_object: xml.etree.ElementTree.Element
-            Root element of the configuration file
-        split_fore_aft: str
-            Path to the split fore aft in the configuration file
+        config_object : xml.etree.ElementTree.Element
+            The root element of the XML configuration file.
+        split_fore_aft : str
+            The XML tag path corresponding to the split fore/aft parameter.
+        input_data_type : str
+            The input data type used to determine valid values for `split_fore_aft`.
 
         Returns
         -------
-        str
-            Validated split fore aft
+        bool
+            The validated `split_fore_aft` value as a boolean.
+
+        Raises
+        ------
+        AttributeError
+            If the required XML tag for `split_fore_aft` is missing or incorrectly
+            specified in the configuration file.
+        ValueError
+            If the extracted `split_fore_aft` value is not in the list of valid options.
+
+        Notes
+        -----
+        - If `input_data_type` is `AMSR2`, the function always returns `False`.
+        - The function searches for the `<InputData><split_fore_aft>` tag in the
+          XML file and validates its value against `TRUE` or `FALSE`.
+        - The values are case-insensitive and converted to uppercase.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><InputData><split_fore_aft>True</split_fore_aft></InputData></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_split_fore_aft(config_object, "InputData/split_fore_aft", "SMAP")
+        True
+
+        >>> xml_data = '''<config><InputData><split_fore_aft>false</split_fore_aft></InputData></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_split_fore_aft(config_object, "InputData/split_fore_aft", "CIMR")
+        False
+
+        >>> xml_data = '''<config><InputData><otherTag>True</otherTag></InputData></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_split_fore_aft(config_object, "InputData/split_fore_aft", "CIMR")
+        Traceback (most recent call last):
+            ...
+        AttributeError: Missing or incorrect XML tag: 'InputData/split_fore_aft' not found in the configuration file.
+
+        >>> ConfigFile.validate_split_fore_aft(config_object, "InputData/split_fore_aft", "AMSR2")
+        False
         """
+
         if input_data_type == "AMSR2":
             return False
-        valid_input = ["True", "False"]
-        if config_object.find(split_fore_aft).text in valid_input:
-            if config_object.find(split_fore_aft).text == "True":
+
+        valid_input = ["TRUE", "FALSE"]
+
+        try:
+            split_fore_aft = str(
+                config_object.find(split_fore_aft).text.strip()
+            ).upper()
+        except AttributeError:
+            raise AttributeError(
+                f"Missing or incorrect XML tag: '{split_fore_aft}' not found in the configuration file."
+            )
+
+        # if config_object.find(split_fore_aft).text in valid_input:
+        if split_fore_aft in valid_input:
+            if split_fore_aft == "TRUE":
                 return True
             else:
                 return False
+
         raise ValueError(
             f"Invalid split fore aft. Check Configuration File."
             f" Valid split fore aft are: {valid_input}"
@@ -1347,44 +1471,133 @@ class ConfigFile:
 
     @staticmethod
     def validate_save_to_disk(config_object, save_to_disk):
-        # value = bool(config_object.find(save_to_disk).text)
-        value = config_object.find(save_to_disk).text
+        r"""
+        Validate the `save_to_disk` parameter from the XML configuration.
 
-        # if value is not True and value is not False:
-        if value not in ["True", "False"]:
-            raise ValueError(
-                f"Invalid `save_to_disk`. Check Configuration File."
-                f" `save_to_disk` must be either True or False"
-            )
-        elif value == "True":
-            value = True
-        elif value == "False":
-            value = False
-
-        return value
-
-    @staticmethod
-    def validate_search_radius(
-        config_object, search_radius, grid_definition, grid_type, input_data_type
-    ):
-        """
-        Validates the search radius and returns the value if valid
+        This method verifies if the `save_to_disk` parameter exists in the XML
+        configuration and ensures it matches a predefined set of acceptable values.
 
         Parameters
         ----------
-        config_object: xml.etree.ElementTree.Element
-            Root element of the configuration file
-        search_radius: str
-            Path to the search radius in the configuration file
+        config_object : xml.etree.ElementTree.Element
+            The root element of the XML configuration file.
+        save_to_disk : str
+            The XML tag path corresponding to the save to disk parameter.
 
         Returns
         -------
-        int
-            Validated search radius
-        """
-        value = config_object.find(search_radius).text
+        bool
+            The validated `save_to_disk` value as a boolean.
 
-        if value is None or value.strip() == "":
+        Raises
+        ------
+        AttributeError
+            If the required XML tag for `save_to_disk` is missing or incorrectly
+            specified in the configuration file.
+        ValueError
+            If the extracted `save_to_disk` value is not in the list of valid options.
+
+        Notes
+        -----
+        - The function searches for the `<OutputParams><save_to_disk>` tag in the
+          XML file and validates its value against `TRUE` or `FALSE`.
+        - The values are case-insensitive and converted to uppercase.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><OutputParams><save_to_disk>True</save_to_disk></OutputParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_save_to_disk(config_object, "OutputParams/save_to_disk")
+        True
+
+        >>> xml_data = '''<config><OutputParams><save_to_disk>false</save_to_disk></OutputParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_save_to_disk(config_object, "OutputParams/save_to_disk")
+        False
+
+        >>> xml_data = '''<config><OutputParams><otherTag>True</otherTag></OutputParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_save_to_disk(config_object, "OutputParams/save_to_disk")
+        Traceback (most recent call last):
+            ...
+        AttributeError: Missing or incorrect XML tag: 'OutputParams/save_to_disk' not found in the configuration file.
+        """
+
+        valid_input = ["TRUE", "FALSE"]
+
+        try:
+            value = str(config_object.find(save_to_disk).text.strip()).upper()
+        except AttributeError:
+            raise AttributeError(
+                f"Missing or incorrect XML tag: '{save_to_disk}' not found in the configuration file."
+            )
+
+        # if value is not True and value is not False:
+        if value in valid_input:
+            if value == "TRUE":
+                value = True
+                return value
+            else:
+                value = False
+                return value
+        else:
+            raise ValueError(
+                "Invalid `save_to_disk`. Check Configuration File."
+                " `save_to_disk` must be either True or False"
+            )
+
+    @staticmethod
+    def validate_search_radius(
+        config_object,
+        search_radius,
+        grid_type,
+        input_data_type,
+    ):
+        r"""
+        Validates the search radius (optional) and returns the value if valid.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the configuration file.
+        search_radius : str
+            Path to the search radius in the configuration file.
+        grid_type : str
+            The type of grid selected.
+        input_data_type : str
+            The input data type used for determining default values.
+
+        Returns
+        -------
+        float or None
+            The validated search radius in meters if specified, otherwise a default value based on grid type.
+
+        Raises
+        ------
+        ValueError
+            If `search_radius` contains a non-numeric value.
+        ValueError
+            If `grid_type` or `input_data_type` is invalid and no default search radius can be determined.
+
+        Notes
+        -----
+        - Converts valid numerical values from kilometers to meters.
+        - Uses predefined defaults based on `grid_type` and `input_data_type` when `search_radius` is None.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><search_radius>5.0</search_radius></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_search_radius(config_object, "ReGridderParams/search_radius", "L1C", "CIMR")
+        5000.0
+        """
+
+        # Making this to accomodate cases of: None, "", and " "
+        value = str(config_object.find(search_radius).text)
+
+        if value == "None" or value == "" or value.strip() == "":
             value = None
         else:
             # Ensure the value is numeric
@@ -1409,11 +1622,58 @@ class ConfigFile:
                     )  # Largest AMSR2 footprint radius, maybe needs tailoring
                 else:
                     raise ValueError(f"Invalid `input_data_type`: {input_data_type}")
+            else:
+                raise ValueError(f"Invalid `grid_type`: {grid_type}")
 
         return value
 
     @staticmethod
     def get_scan_geometry(config, band_to_remap=None):
+        r"""
+        Retrieve the scan geometry based on the input data type and band to remap.
+
+        This function determines the number of scans and earth samples per scan
+        based on the sensor type and frequency band.
+
+        Parameters
+        ----------
+        config : object
+            A configuration object that must have an `input_data_type` attribute.
+        band_to_remap : str, optional
+            The frequency band to remap (applicable only for `CIMR` data).
+
+        Returns
+        -------
+        tuple
+            A tuple containing:
+            - num_scans (int): Number of scans per swath.
+            - num_earth_samples (int): Number of earth samples per scan.
+
+        Raises
+        ------
+        ValueError
+            If an invalid `input_data_type` is provided.
+
+        Notes
+        -----
+        - For `SMAP`, the scan geometry is fixed at (779, 241).
+        - For `CIMR`, the scan geometry depends on the selected frequency band.
+
+        Examples
+        --------
+        >>> class Config:
+        ...     input_data_type = "SMAP"
+        >>> config = Config()
+        >>> get_scan_geometry(config)
+        (779, 241)
+
+        >>> class Config:
+        ...     input_data_type = "CIMR"
+        >>> config = Config()
+        >>> get_scan_geometry(config, band_to_remap="L")
+        (74, 691)
+        """
+
         if config.input_data_type == "SMAP":
             num_scans = 779
             num_earth_samples = 241
@@ -1433,16 +1693,194 @@ class ConfigFile:
             elif band_to_remap == "KU":
                 num_scans = 74
                 num_earth_samples = 7692 * 8
-        # else:
-        #     raise ValueError(f"Invalid `input_data_type`: {input_data_type}")
+            else:
+                raise ValueError(f"Invalid band_to_remap: {band_to_remap}")
+        else:
+            raise ValueError(f"Invalid `input_data_type`: {config.input_data_type}")
 
         return num_scans, num_earth_samples
+
+    # @staticmethod
+    # def validate_variables_to_regrid(
+    #     config_object, input_data_type, variables_to_regrid
+    # ):
+    #     value = config_object.find(variables_to_regrid).text
+
+    #     if input_data_type == "SMAP":
+    #         valid_input = [
+    #             "bt_h",
+    #             "bt_v",
+    #             "bt_3",
+    #             "bt_4",
+    #             "processing_scan_angle",
+    #             "longitude",
+    #             "latitude",
+    #             "faraday_rot_angle",
+    #             "nedt_h",
+    #             "nedt_v",
+    #             "nedt_3",
+    #             "nedt_4",
+    #             "regridding_n_samples",
+    #             "regridding_l1b_orphans",
+    #             "acq_time_utc",
+    #             "azimuth",
+    #         ]
+
+    #         default_vars = [
+    #             "bt_h",
+    #             "bt_v",
+    #             "bt_3",
+    #             "bt_4",
+    #             "processing_scan_angle",
+    #             "longitude",
+    #             "latitude",
+    #             "faraday_rot_angle",
+    #             "nedt_h",
+    #             "nedt_v",
+    #             "nedt_3",
+    #             "nedt_4",
+    #             "regridding_n_samples",
+    #             "regridding_l1b_orphans",
+    #             "acq_time_utc",
+    #             "azimuth",
+    #         ]
+
+    #     elif input_data_type == "AMSR2":
+    #         valid_input = [
+    #             "bt_h",
+    #             "bt_v",
+    #             "longitude",
+    #             "latitude",
+    #             "regridding_n_samples",
+    #             "x_position",
+    #             "y_position",
+    #             "z_position",
+    #             "x_velocity",
+    #             "y_velocity",
+    #             "z_velocity",
+    #             "azimuth",
+    #             "solar_azimuth",
+    #             "acq_time_utc",
+    #         ]
+
+    #         default_vars = [
+    #             "bt_h",
+    #             "bt_v",
+    #             "longitude",
+    #             "latitude",
+    #             "regridding_n_samples",
+    #             "x_position",
+    #             "y_position",
+    #             "z_position",
+    #             "x_velocity",
+    #             "y_velocity",
+    #             "z_velocity",
+    #             "azimuth",
+    #             "solar_azimuth",
+    #             "acq_time_utc",
+    #         ]
+
+    #     elif input_data_type == "CIMR":
+    #         valid_input = [
+    #             "bt_h",
+    #             "bt_v",
+    #             "bt_3",
+    #             "bt_4",
+    #             "processing_scan_angle",
+    #             "longitude",
+    #             "latitude",
+    #             "nedt_h",
+    #             "nedt_v",
+    #             "nedt_3",
+    #             "nedt_4",
+    #             "regridding_n_samples",
+    #             "regridding_l1b_orphans",
+    #             "acq_time_utc",
+    #             "azimuth",
+    #             "oza",
+    #         ]
+
+    #         default_vars = [
+    #             "bt_h",
+    #             "bt_v",
+    #             "bt_3",
+    #             "bt_4",
+    #             "processing_scan_angle",
+    #             "longitude",
+    #             "latitude",
+    #             "nedt_h",
+    #             "nedt_v",
+    #             "nedt_3",
+    #             "nedt_4",
+    #             "regridding_n_samples",
+    #             "regridding_l1b_orphans",
+    #             "acq_time_utc",
+    #             "azimuth",
+    #             "oza",
+    #         ]
+    #     else:
+    #         raise ValueError(f"Invalid `input_data_type`: {input_data_type}")
+
+    #     if value is not None:
+    #         for variable in value.split():
+    #             if variable not in valid_input:
+    #                 raise ValueError(
+    #                     f"Invalid variable_to_regrid. Check Configuration File."
+    #                     f" Valid variables_to_regrid: {valid_input}"
+    #                 )
+    #         return value.split()
+    #     else:
+    #         # Return default variables
+    #         return default_vars
 
     @staticmethod
     def validate_variables_to_regrid(
         config_object, input_data_type, variables_to_regrid
     ):
-        value = config_object.find(variables_to_regrid).text
+        """
+        Validates the `variables_to_regrid` parameter and returns the list of variables
+        if valid. If `variables_to_regrid` is missing, returns the default variable list.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        input_data_type : str
+            The input data type (e.g., `'SMAP'`, `'AMSR2'`, `'CIMR'`).
+        variables_to_regrid : str
+            The XML path to the `variables_to_regrid` parameter.
+
+        Returns
+        -------
+        list of str
+            A list of validated variables to regrid.
+
+        Raises
+        ------
+        ValueError
+            If `input_data_type` is invalid.
+            If any variable in `variables_to_regrid` is not in the list of valid inputs.
+
+        Notes
+        -----
+        - If `variables_to_regrid` is not found or empty, the function returns the default variable list.
+        - The function ensures that all provided variables are in the pre-defined list of valid variables.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><variables_to_regrid>bt_h bt_v</variables_to_regrid></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_variables_to_regrid(config_object, "SMAP", "ReGridderParams/variables_to_regrid")
+        ['bt_h', 'bt_v']
+        """
+
+        # Retrieve the XML element and check if it exists
+        element = config_object.find(variables_to_regrid)
+        value = element.text.strip() if element is not None and element.text else None
+
+        # Define valid and default variable lists based on input data type
+        valid_input, default_vars = None, None
 
         if input_data_type == "SMAP":
             valid_input = [
@@ -1463,25 +1901,7 @@ class ConfigFile:
                 "acq_time_utc",
                 "azimuth",
             ]
-
-            default_vars = [
-                "bt_h",
-                "bt_v",
-                "bt_3",
-                "bt_4",
-                "processing_scan_angle",
-                "longitude",
-                "latitude",
-                "faraday_rot_angle",
-                "nedt_h",
-                "nedt_v",
-                "nedt_3",
-                "nedt_4",
-                "regridding_n_samples",
-                "regridding_l1b_orphans",
-                "acq_time_utc",
-                "azimuth",
-            ]
+            default_vars = valid_input[:]
 
         elif input_data_type == "AMSR2":
             valid_input = [
@@ -1500,23 +1920,7 @@ class ConfigFile:
                 "solar_azimuth",
                 "acq_time_utc",
             ]
-
-            default_vars = [
-                "bt_h",
-                "bt_v",
-                "longitude",
-                "latitude",
-                "regridding_n_samples",
-                "x_position",
-                "y_position",
-                "z_position",
-                "x_velocity",
-                "y_velocity",
-                "z_velocity",
-                "azimuth",
-                "solar_azimuth",
-                "acq_time_utc",
-            ]
+            default_vars = valid_input[:]
 
         elif input_data_type == "CIMR":
             valid_input = [
@@ -1537,42 +1941,65 @@ class ConfigFile:
                 "azimuth",
                 "oza",
             ]
+            default_vars = valid_input[:]
 
-            default_vars = [
-                "bt_h",
-                "bt_v",
-                "bt_3",
-                "bt_4",
-                "processing_scan_angle",
-                "longitude",
-                "latitude",
-                "nedt_h",
-                "nedt_v",
-                "nedt_3",
-                "nedt_4",
-                "regridding_n_samples",
-                "regridding_l1b_orphans",
-                "acq_time_utc",
-                "azimuth",
-                "oza",
-            ]
         else:
             raise ValueError(f"Invalid `input_data_type`: {input_data_type}")
 
-        if value is not None:
-            for variable in value.split():
-                if variable not in valid_input:
-                    raise ValueError(
-                        f"Invalid variable_to_regrid. Check Configuration File."
-                        f" Valid variables_to_regrid: {valid_input}"
-                    )
-            return value.split()
-        else:
-            # Return default variables
+        # If value is missing, return the default variables
+        if value is None:
             return default_vars
+
+        # Validate each variable in the provided list
+        variables = value.split()
+        for variable in variables:
+            if variable not in valid_input:
+                raise ValueError(
+                    f"Invalid variable_to_regrid: `{variable}`. Check Configuration File.\n"
+                    f"Valid variables_to_regrid: {valid_input}"
+                )
+
+        return variables
 
     @staticmethod
     def validate_max_neighbours(config_object, max_neighbours, regridding_algorithm):
+        r"""
+        Validates the `max_neighbours` parameter and returns the value if valid.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        max_neighbours : str
+            The XML path to the `max_neighbours` parameter.
+        regridding_algorithm : str
+            The regridding algorithm used.
+
+        Returns
+        -------
+        int
+            The validated `max_neighbours` value.
+
+        Notes
+        -----
+        - If `regridding_algorithm` is `NN`, the function always returns `1`.
+        - If `max_neighbours` is missing, it defaults to `1000`.
+        - The function ensures `max_neighbours` is a valid integer.
+
+        Raises
+        ------
+        ValueError
+            If `max_neighbours` is not a valid integer value.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><max_neighbours>500</max_neighbours></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_max_neighbours(config_object, "ReGridderParams/max_neighbours", "Other")
+        500
+        """
+
         # The default values here can be tweeked for input data type and Band
         if regridding_algorithm == "NN":
             return 1
@@ -1588,34 +2015,107 @@ class ConfigFile:
 
     @staticmethod
     def validate_source_antenna_method(config_object, source_antenna_method):
+        r"""
+        Validates the `source_antenna_method` parameter and ensures case insensitivity.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        source_antenna_method : str
+            The XML path to the `source_antenna_method` parameter.
+
+        Returns
+        -------
+        str
+            The validated `source_antenna_method` value.
+
+        Notes
+        -----
+        - The function ensures case insensitivity by converting input values to lowercase.
+        - If `source_antenna_method` is missing or empty, it defaults to `instrument`.
+
+        Raises
+        ------
+        ValueError
+            If `source_antenna_method` is not in the list of valid methods.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><Antenna><source_antenna_method>GAUSSIAN</source_antenna_method></Antenna></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_source_antenna_method(config_object, "Antenna/source_antenna_method")
+        'gaussian'
+        """
+
         valid_input = ["gaussian", "instrument", "gaussian_projected"]
 
         value = config_object.find(source_antenna_method).text
 
         if value is None or value.strip() == "":
             return "instrument"
-        elif value in valid_input:
+
+        value = value.strip().lower()
+
+        if value in valid_input:
             return value
         else:
             raise ValueError(
-                f"Invalid antenna method. Check Configuration File."
-                f" Valid antenna methods are: {valid_input}"
+                f"Invalid antenna method. Check Configuration File. "
+                f"Valid antenna methods are: {valid_input}"
             )
 
     @staticmethod
     def validate_target_antenna_method(config_object, target_antenna_method):
+        r"""
+        Validates the `target_antenna_method` parameter and ensures case insensitivity.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        target_antenna_method : str
+            The XML path to the `target_antenna_method` parameter.
+
+        Returns
+        -------
+        str
+            The validated `target_antenna_method` value.
+
+        Notes
+        -----
+        - The function ensures case insensitivity by converting input values to lowercase.
+        - If `target_antenna_method` is missing or empty, it defaults to `instrument`.
+
+        Raises
+        ------
+        ValueError
+            If `target_antenna_method` is not in the list of valid methods.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><Antenna><target_antenna_method>GAUSSIAN</target_antenna_method></Antenna></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_target_antenna_method(config_object, "Antenna/target_antenna_method")
+        'gaussian'
+        """
         valid_input = ["gaussian", "instrument", "gaussian_projected"]
 
         value = config_object.find(target_antenna_method).text
 
         if value is None or value.strip() == "":
             return "instrument"
-        elif value in valid_input:
+
+        value = value.strip().lower()
+
+        if value in valid_input:
             return value
         else:
             raise ValueError(
-                f"Invalid antenna method. Check Configuration File."
-                f" Valid antenna methods are: {valid_input}"
+                f"Invalid antenna method. Check Configuration File. "
+                f"Valid antenna methods are: {valid_input}"
             )
 
     @staticmethod
