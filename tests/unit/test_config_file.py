@@ -1196,948 +1196,1188 @@ def test_validate_target_antenna_method(
         assert result == expected
 
 
-# # TODO: Check the docstring
-# @pytest.mark.parametrize(
-#     "source_antenna_threshold_value, expected, expect_exception",
-#     [
-#         # Valid cases
-#         ("9.5", 9.5, False),  # Float value
-#         ("10", 10.0, False),  # Integer value as string
-#         ("0", 0.0, False),  # Zero value
-#         ("-5", -5.0, False),  # Negative value
-#         # Default case
-#         (None, None, False),  # Returns None if value is not provided
-#         ("", None, False),  # Empty string
-#         (" ", None, False),  # Space-only string
-#         # Invalid cases
-#         ("invalid", None, True),  # Non-numeric string
-#         ("a9.5", 9.5, True),  # Typo in Float value
-#     ],
-# )
-# def test_validate_source_antenna_threshold(
-#     source_antenna_threshold_value, expected, expect_exception
-# ):
-#     """
-#     Test the `validate_source_antenna_threshold` method of the ConfigFile class.
-
-#     This test validates:
-#     - Correct behavior for valid numeric `source_antenna_threshold` values (float and integer).
-#     - Default behavior (returns None) when `source_antenna_threshold` is missing or None.
-#     - Error handling for invalid `source_antenna_threshold` values (non-numeric).
-
-#     Parameters:
-#     - source_antenna_threshold_value: The value of the source_antenna_threshold in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
-
-#     Valid cases return the appropriate numeric value.
-#     Missing values return None.
-#     Invalid values raise a ValueError.
-#     """
-
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     source_antenna_threshold = SubElement(regridder_params, "source_antenna_threshold")
-
-#     if source_antenna_threshold_value is not None:
-#         source_antenna_threshold.text = source_antenna_threshold_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(
-#             ValueError, match="Invalid antenna threshold"
-#         ):  # . Check Configuration File."):
-#             ConfigFile.validate_source_antenna_threshold(
-#                 config_object=config_object,
-#                 source_antenna_threshold="ReGridderParams/source_antenna_threshold",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_source_antenna_threshold(
-#             config_object=config_object,
-#             source_antenna_threshold="ReGridderParams/source_antenna_threshold",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
-
-
-# # TODO: Check the docstring
-# @pytest.mark.parametrize(
-#     "target_antenna_threshold_value, expected, expect_exception",
-#     [
-#         # Valid cases
-#         ("9.5", 9.5, False),  # Float value
-#         ("10", 10.0, False),  # Integer value as string
-#         ("0", 0.0, False),  # Zero value
-#         ("-5", -5.0, False),  # Negative value
-#         # Default case
-#         (None, 9.0, False),  # Defaults to 9.0 if value is None
-#         ("", 9.0, False),  # Empty string
-#         (" ", 9.0, False),  # Space-only string
-#         # Invalid cases
-#         ("invalid", None, True),  # Non-numeric string
-#         ("a9.5", 9.5, True),  # Typo in Float value
-#     ],
-# )
-# def test_validate_target_antenna_threshold(
-#     target_antenna_threshold_value, expected, expect_exception
-# ):
-#     """
-#     Test the `validate_target_antenna_threshold` method of the ConfigFile class.
-
-#     This test validates:
-#     - Correct behavior for valid numeric `target_antenna_threshold` values (float and integer).
-#     - Default behavior (returns 9.0) when `target_antenna_threshold` is missing or None.
-#     - Error handling for invalid `target_antenna_threshold` values (non-numeric).
-
-#     Parameters:
-#     - target_antenna_threshold_value: The value of the target_antenna_threshold in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
-
-#     Valid cases return the appropriate numeric value.
-#     Missing values return the default of 9.0.
-#     Invalid values raise a ValueError.
-#     """
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     target_antenna_threshold = SubElement(regridder_params, "target_antenna_threshold")
-#     if target_antenna_threshold_value is not None:
-#         target_antenna_threshold.text = target_antenna_threshold_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(
-#             ValueError, match="Invalid antenna threshold:"
-#         ):  # . Check Configuration File."):
-#             ConfigFile.validate_target_antenna_threshold(
-#                 config_object=config_object,
-#                 target_antenna_threshold="ReGridderParams/target_antenna_threshold",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_target_antenna_threshold(
-#             config_object=config_object,
-#             target_antenna_threshold="ReGridderParams/target_antenna_threshold",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
-
-
-# # TODO: Check the docstring
-# @pytest.mark.parametrize(
-#     "polarisation_method_value, expected, expect_exception",
-#     [
-#         # Valid cases
-#         ("scalar", "scalar", False),
-#         ("mueller", "mueller", False),
-#         # Default case
-#         (None, "scalar", False),  # Defaults to 'scalar' if value is None
-#         ("", "scalar", False),  # Empty string
-#         (" ", "scalar", False),  # Space-only string
-#         # Invalid cases
-#         ("invalid", None, True),  # Invalid string
-#     ],
-# )
-# def test_validate_polarisation_method(
-#     polarisation_method_value, expected, expect_exception
-# ):
-#     """
-#     Test the `validate_polarisation_method` method of the ConfigFile class.
-
-#     This test validates:
-#     - Correct behavior for valid `polarisation_method` values (e.g., 'scalar', 'mueller').
-#     - Default behavior (returns 'scalar') when `polarisation_method` is missing or None.
-#     - Error handling for invalid `polarisation_method` values (non-valid strings).
-
-#     Parameters:
-#     - polarisation_method_value: The value of the polarisation_method in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
-
-#     Valid cases return the appropriate value.
-#     Missing values default to 'scalar'.
-#     Invalid values raise a ValueError.
-#     """
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     polarisation = SubElement(regridder_params, "polarisation_method")
-#     if polarisation_method_value is not None:
-#         polarisation.text = polarisation_method_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(
-#             ValueError, match="Invalid polarisation method:"
-#         ):  # . Check Configuration File."):
-#             ConfigFile.validate_polarisation_method(
-#                 config_object=config_object,
-#                 polarisation_method="ReGridderParams/polarisation_method",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_polarisation_method(
-#             config_object=config_object,
-#             polarisation_method="ReGridderParams/polarisation_method",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
-
-
-# # TODO: Check the docstring
-# @pytest.mark.parametrize(
-#     "input_data_type, boresight_shift_value, expected, expect_exception",
-#     [
-#         # Case: Input data type is not SMAP
-#         ("AMSR2", None, False, False),  # Always return False for non-SMAP
-#         ("CIMR", "True", False, False),  # Always return False for non-SMAP
-#         # Case: Input data type is SMAP
-#         ("SMAP", "True", True, False),  # Valid True case
-#         ("SMAP", "False", False, False),  # Valid False case
-#         ("SMAP", None, False, False),  # Defaults to False if value is None
-#         ("SMAP", "", False, False),  # Empty string
-#         ("SMAP", " ", False, False),  # Space-only string
-#         # Invalid cases
-#         ("SMAP", "invalid_value", None, True),  # Invalid string
-#     ],
-# )
-# def test_validate_boresight_shift(
-#     input_data_type, boresight_shift_value, expected, expect_exception
-# ):
-#     """
-#     Test the `validate_boresight_shift` method of the ConfigFile class.
-
-#     This test validates:
-#     - Correct behavior for valid `boresight_shift` values (e.g., 'True', 'False').
-#     - Default behavior (returns False) when `boresight_shift` is missing or None.
-#     - Always returns False for non-SMAP input_data_type.
-#     - Error handling for invalid `boresight_shift` values.
-
-#     Parameters:
-#     - input_data_type: The type of input data (e.g., 'SMAP', 'AMSR2', 'CIMR').
-#     - boresight_shift_value: The value of the boresight_shift in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
-
-#     Valid cases return the appropriate Boolean value.
-#     Missing values default to False.
-#     Invalid values raise a ValueError.
-#     """
-
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     boresight_shift = SubElement(regridder_params, "boresight_shift")
-#     if boresight_shift_value is not None:
-#         boresight_shift.text = boresight_shift_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(
-#             ValueError, match="Invalid boresight shift:"
-#         ):  # . Check Configuration File."):
-#             ConfigFile.validate_boresight_shift(
-#                 config_object=config_object,
-#                 boresight_shift="ReGridderParams/boresight_shift",
-#                 input_data_type=input_data_type,
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_boresight_shift(
-#             config_object=config_object,
-#             boresight_shift="ReGridderParams/boresight_shift",
-#             input_data_type=input_data_type,
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
-
-
-# # TODO: Check the docstring
-# @pytest.mark.parametrize(
-#     "reduced_grid_inds_value, expected, expect_exception",
-#     [
-#         # Valid cases
-#         ("0 10 0 10", [0, 10, 0, 10], False),
-#         ("5 15 3 12", [5, 15, 3, 12], False),
-#         ("", None, False),  # Empty string
-#         # Missing case
-#         (None, None, False),
-#         # Invalid cases
-#         ("-1 10 0 10", None, True),  # Negative grid_row_min
-#         ("0 -10 0 10", None, True),  # Negative grid_row_max
-#         ("0 10 -5 10", None, True),  # Negative grid_col_min
-#         ("0 10 0 -10", None, True),  # Negative grid_col_max
-#         ("10 5 0 10", None, True),  # grid_row_min > grid_row_max
-#         ("0 10 12 5", None, True),  # grid_col_min > grid_col_max
-#         ("0 10", None, True),  # Insufficient values
-#         ("invalid input here", None, True),  # Non-numeric values
-#     ],
-# )
-# def test_validate_reduced_grid_inds(
-#     reduced_grid_inds_value, expected, expect_exception
-# ):
-#     """
-#     Test the `validate_reduced_grid_inds` method of the ConfigFile class.
-
-#     This test validates:
-#     - Correct behavior for valid grid indices.
-#     - Default behavior (returns None) when `reduced_grid_inds` is missing.
-#     - Error handling for invalid grid indices (negative values, out-of-order ranges, etc.).
-
-#     Parameters:
-#     - reduced_grid_inds_value: The value of reduced_grid_inds in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
-
-#     Valid cases return the parsed grid indices as a list of integers.
-#     Missing values return None.
-#     Invalid values raise a ValueError.
-#     """
-#     # Arrange
-#     config_object = Element("config")
-#     grid_params = SubElement(config_object, "GridParams")
-#     reduced_grid_inds = SubElement(grid_params, "reduced_grid_inds")
-#     if reduced_grid_inds_value is not None:
-#         reduced_grid_inds.text = reduced_grid_inds_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(ValueError, match="Invalid `reduced_grid_inds`:"):
-#             ConfigFile.validate_reduced_grid_inds(
-#                 config_object=config_object,
-#                 reduced_grid_inds="GridParams/reduced_grid_inds",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_reduced_grid_inds(
-#             config_object=config_object,
-#             reduced_grid_inds="GridParams/reduced_grid_inds",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
-
-
-# # TODO: Check the docstring
-# @pytest.mark.parametrize(
-#     "source_gaussian_params_value, expected, expect_exception",
-#     [
-#         # Valid cases
-#         ("1.5 2.5", [1.5, 2.5], False),  # Two valid floats
-#         ("0 10", [0.0, 10.0], False),  # Integer values as strings
-#         ("-5.5 3.2", [-5.5, 3.2], False),  # Negative and positive floats
-#         # Invalid cases
-#         (None, None, True),  # Missing value
-#         ("1.5", None, True),  # Only one parameter
-#         ("1.5 2.5 3.5", None, True),  # Too many parameters
-#         ("invalid 2.5", None, True),  # Non-numeric parameter
-#         ("1.5 invalid", None, True),  # Non-numeric parameter
-#         ("", None, True),  # Empty string
-#         (" ", None, True),  # Space-only string
-#     ],
-# )
-# def test_validate_source_gaussian_params(
-#     source_gaussian_params_value, expected, expect_exception
-# ):
-#     """
-#     Test the `validate_source_gaussian_params` method of the ConfigFile class.
-
-#     This test validates:
-#     - Correct behavior for valid source Gaussian parameters (two numbers).
-#     - Error handling for invalid or missing parameters.
-
-#     Parameters:
-#     - source_gaussian_params_value: The value of source_gaussian_params in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
-
-#     Valid cases return a list of two floats.
-#     Invalid cases raise a ValueError.
-#     """
-
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     source_gaussian_params = SubElement(regridder_params, "source_gaussian_params")
-#     if source_gaussian_params_value is not None:
-#         source_gaussian_params.text = source_gaussian_params_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(
-#             ValueError, match="Invalid|Missing "
-#         ):  # source Gaussian parameters"):#|Missing source Gaussian parameters|Invalid parameter"):
-#             ConfigFile.validate_source_gaussian_params(
-#                 config_object=config_object,
-#                 source_gaussian_params="ReGridderParams/source_gaussian_params",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_source_gaussian_params(
-#             config_object=config_object,
-#             source_gaussian_params="ReGridderParams/source_gaussian_params",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
-
-
-# # TODO: Check the docstring
-# @pytest.mark.parametrize(
-#     "target_gaussian_params_value, expected, expect_exception",
-#     [
-#         # Valid cases
-#         ("1.5 2.5", [1.5, 2.5], False),  # Two valid floats
-#         ("0 10", [0.0, 10.0], False),  # Integer values as strings
-#         ("-5.5 3.2", [-5.5, 3.2], False),  # Negative and positive floats
-#         # Invalid cases
-#         (None, None, True),  # Missing value
-#         ("1.5", None, True),  # Only one parameter
-#         ("1.5 2.5 3.5", None, True),  # Too many parameters
-#         ("invalid 2.5", None, True),  # Non-numeric parameter
-#         ("1.5 invalid", None, True),  # Non-numeric parameter
-#         ("", None, True),  # Empty string
-#         (" ", None, True),  # Space-only string
-#     ],
-# )
-# def test_validate_target_gaussian_params(
-#     target_gaussian_params_value, expected, expect_exception
-# ):
-#     """
-#     Test the `validate_target_gaussian_params` method of the ConfigFile class.
-
-#     This test validates:
-#     - Correct behavior for valid target Gaussian parameters (two numbers).
-#     - Error handling for invalid or missing parameters.
-
-#     Parameters:
-#     - target_gaussian_params_value: The value of target_gaussian_params in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
-
-#     Valid cases return a list of two floats.
-#     Invalid cases raise a ValueError.
-#     """
-
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     target_gaussian_params = SubElement(regridder_params, "target_gaussian_params")
-#     if target_gaussian_params_value is not None:
-#         target_gaussian_params.text = target_gaussian_params_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(ValueError, match="Invalid|Missing"):
-#             ConfigFile.validate_target_gaussian_params(
-#                 config_object=config_object,
-#                 target_gaussian_params="ReGridderParams/target_gaussian_params",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_target_gaussian_params(
-#             config_object=config_object,
-#             target_gaussian_params="ReGridderParams/target_gaussian_params",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
-
-
-# # TODO: Check the docstring
-# @pytest.mark.parametrize(
-#     "rsir_iteration_value, expected, expect_exception",
-#     [
-#         # Valid cases
-#         ("10", 10, False),  # Valid integer
-#         ("0", 0, False),  # Edge case: Zero iterations
-#         ("1", 1, False),  # Edge case: Minimum positive iterations
-#         # Invalid cases
-#         (None, None, True),  # Missing value
-#         ("", None, True),  # Empty string
-#         ("invalid", None, True),  # Non-numeric string
-#         ("1.5", None, True),  # Float value
-#         ("-5", None, True),  # Negative integer (assuming it's invalid in this context)
-#     ],
-# )
-# def test_validate_rsir_iteration(rsir_iteration_value, expected, expect_exception):
-#     """
-#     Test the `validate_rsir_iteration` method of the ConfigFile class.
-
-#     This test validates:
-#     - Correct behavior for valid RSIR iteration counts.
-#     - Error handling for invalid or missing RSIR iteration counts.
-
-#     Parameters:
-#     - rsir_iteration_value: The value of rsir_iteration in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
-
-#     Valid cases return the integer value of the iteration count.
-#     Invalid cases raise a ValueError.
-#     """
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     rsir_iteration = SubElement(regridder_params, "rsir_iteration")
-#     if rsir_iteration_value is not None:
-#         rsir_iteration.text = rsir_iteration_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(ValueError, match="Invalid|Missing|rSIR"):
-#             ConfigFile.validate_rsir_iteration(
-#                 config_object=config_object,
-#                 rsir_iteration="ReGridderParams/rsir_iteration",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_rsir_iteration(
-#             config_object=config_object,
-#             rsir_iteration="ReGridderParams/rsir_iteration",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
-
-
-# # TODO: Check the docstring
-# @pytest.mark.parametrize(
-#     "max_number_iteration_value, expected, expect_exception",
-#     [
-#         # Valid cases
-#         ("10", 10, False),  # Valid integer
-#         ("0", 0, False),  # Edge case: Zero iterations
-#         ("1", 1, False),  # Edge case: Minimum positive iterations
-#         # Invalid cases
-#         (None, None, True),  # Missing value
-#         ("", None, True),  # Empty string
-#         ("invalid", None, True),  # Non-numeric string
-#         ("1.5", None, True),  # Float value
-#         ("-5", None, True),  # Negative integer
-#     ],
-# )
-# def test_validate_max_number_iteration(
-#     max_number_iteration_value, expected, expect_exception
-# ):
-#     """
-#     Test the `validate_max_number_iteration` method of the ConfigFile class.
-
-#     This test validates:
-#     - Correct behavior for valid maximum number of iteration counts.
-#     - Error handling for invalid or missing maximum iteration counts.
-
-#     Parameters:
-#     - max_number_iteration_value: The value of max_number_iteration in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
-
-#     Valid cases return the integer value of the iteration count.
-#     Invalid cases raise a ValueError.
-#     """
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     max_number_iteration = SubElement(regridder_params, "max_number_iteration")
-#     if max_number_iteration_value is not None:
-#         max_number_iteration.text = max_number_iteration_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(ValueError, match="Invalid|Missing|Maximum"):
-#             ConfigFile.validate_max_number_iteration(
-#                 config_object=config_object,
-#                 max_number_iteration="ReGridderParams/max_number_iteration",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_max_number_iteration(
-#             config_object=config_object,
-#             max_number_iteration="ReGridderParams/max_number_iteration",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
-
-
-# # TODO: Check the docstring
-# @pytest.mark.parametrize(
-#     "relative_tolerance_value, expected, expect_exception",
-#     [
-#         # Valid cases
-#         ("0.01", 0.01, False),  # Valid positive float
-#         ("0", 0.0, False),  # Edge case: Zero tolerance
-#         ("1.5", 1.5, False),  # Valid larger float value
-#         # Invalid cases
-#         (None, None, True),  # Missing value
-#         ("", None, True),  # Empty string
-#         ("invalid", None, True),  # Non-numeric string
-#         ("-0.01", None, True),  # Negative float
-#         ("-1", None, True),  # Negative integer
-#     ],
-# )
-# def test_validate_relative_tolerance(
-#     relative_tolerance_value, expected, expect_exception
-# ):
-#     """
-#     Test the `validate_relative_tolerance` method of the ConfigFile class.
-
-#     This test validates:
-#     - Correct behavior for valid relative tolerance values.
-#     - Error handling for invalid or missing tolerance values.
-
-#     Parameters:
-#     - relative_tolerance_value: The value of relative_tolerance in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
-
-#     Valid cases return the float value of the tolerance.
-#     Invalid cases raise a ValueError.
-#     """
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     relative_tolerance = SubElement(regridder_params, "relative_tolerance")
-#     if relative_tolerance_value is not None:
-#         relative_tolerance.text = relative_tolerance_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(ValueError, match="Invalid|Missing|Relative"):
-#             ConfigFile.validate_relative_tolerance(
-#                 config_object=config_object,
-#                 relative_tolerance="ReGridderParams/relative_tolerance",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_relative_tolerance(
-#             config_object=config_object,
-#             relative_tolerance="ReGridderParams/relative_tolerance",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
-
-
-# # TODO:
-# # - Check the docstring
-# # - Check the tests here (figure out what kind of vals the reg param can get)
-# @pytest.mark.parametrize(
-#     "regularization_parameter_value, expected, expect_exception",
-#     [
-#         # Valid cases
-#         ("0.1", 0.1, False),  # Positive float
-#         ("0", 0.0, False),  # Zero value
-#         ("10", 10.0, False),  # Positive integer
-#         ("-0.1", -0.1, False),  # Negative float
-#         ("-5", -5.0, False),  # Negative integer
-#         # Invalid cases
-#         (None, None, True),  # Missing value
-#         ("", None, True),  # Empty string
-#         ("invalid", None, True),  # Non-numeric string
-#     ],
-# )
-# def test_validate_regularization_parameter(
-#     regularization_parameter_value, expected, expect_exception
-# ):
-#     """
-#     Test the `validate_regularization_parameter` method of the ConfigFile class.
-
-#     This test validates:
-#     - Correct behavior for valid regularization parameter values.
-#     - Error handling for invalid or missing values.
-
-#     Parameters:
-#     - regularization_parameter_value: The value of regularization_parameter in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
-
-#     Valid cases return the float value of the regularization parameter.
-#     Invalid cases raise a ValueError.
-#     """
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     regularization_parameter = SubElement(regridder_params, "regularization_parameter")
-#     if regularization_parameter_value is not None:
-#         regularization_parameter.text = regularization_parameter_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(ValueError, match="Invalid|Missing"):
-#             ConfigFile.validate_regularization_parameter(
-#                 config_object=config_object,
-#                 regularization_parameter="ReGridderParams/regularization_parameter",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_regularization_parameter(
-#             config_object=config_object,
-#             regularization_parameter="ReGridderParams/regularization_parameter",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
-
-
-# # TODO: Check the docstring
-# @pytest.mark.parametrize(
-#     "MRF_grid_definition_value, expected, expect_exception",
-#     [
-#         # Valid cases
-#         ("EASE2_G3km", "EASE2_G3km", False),
-#         ("EASE2_G1km", "EASE2_G1km", False),
-#         ("EASE2_S36km", "EASE2_S36km", False),
-#         # Invalid cases
-#         (None, None, True),  # Missing value
-#         ("", None, True),  # Empty string
-#         ("invalid_grid", None, True),  # Invalid grid definition
-#         ("EASE2_G3km ", None, True),  # Trailing space (not an exact match)
-#     ],
-# )
-# def test_validate_MRF_grid_definition(
-#     MRF_grid_definition_value, expected, expect_exception
-# ):
-#     """
-#     Test the `validate_MRF_grid_definition` method of the ConfigFile class.
-
-#     This test validates:
-#     - Correct behavior for valid grid definitions.
-#     - Error handling for invalid or missing grid definitions.
-
-#     Parameters:
-#     - MRF_grid_definition_value: The value of the MRF grid definition in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
-
-#     Valid cases return the valid grid definition.
-#     Invalid cases raise a ValueError.
-#     """
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     MRF_grid_definition = SubElement(regridder_params, "MRF_grid_definition")
-
-#     if MRF_grid_definition_value is not None:
-#         MRF_grid_definition.text = MRF_grid_definition_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(ValueError, match="Invalid|Missing"):
-#             ConfigFile.validate_MRF_grid_definition(
-#                 config_object=config_object,
-#                 MRF_grid_definition="ReGridderParams/MRF_grid_definition",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_MRF_grid_definition(
-#             config_object=config_object,
-#             MRF_grid_definition="ReGridderParams/MRF_grid_definition",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
-
-
-# @pytest.mark.parametrize(
-#     "MRF_projection_definition_value, expected, expect_exception, match_message",
-#     [
-#         # Valid cases
-#         ("G", "G", False, None),  # Global projection
-#         ("N", "N", False, None),  # Northern projection
-#         ("S", "S", False, None),  # Southern projection
-#         (" G ", "G", False, None),  # Trailing/leading whitespace
-#         # Invalid cases
-#         (
-#             None,
-#             None,
-#             True,
-#             "Missing or blank MRF projection definition in the configuration file",
-#         ),  # Missing value
-#         (
-#             "",
-#             None,
-#             True,
-#             "Missing or blank MRF projection definition in the configuration file",
-#         ),  # Empty string
-#         (
-#             "invalid",
-#             None,
-#             True,
-#             "Invalid Projection Definition",
-#         ),  # Invalid projection definition
-#     ],
-# )
-# def test_validate_MRF_projection_definition(
-#     MRF_projection_definition_value, expected, expect_exception, match_message
-# ):
-#     """
-#     Test the `validate_MRF_projection_definition` method of the ConfigFile class.
-
-#     This test validates:
-#     - Correct behavior for valid projection definitions.
-#     - Error handling for invalid or missing projection definitions.
-
-#     Parameters:
-#     - MRF_projection_definition_value: The value of the MRF projection definition in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
-#     - match_message: Substring to match in the raised exception message for invalid cases.
-
-#     Valid cases return the valid projection definition.
-#     Invalid cases raise a ValueError.
-#     """
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     MRF_projection_definition = SubElement(
-#         regridder_params, "MRF_projection_definition"
-#     )
-#     if MRF_projection_definition_value is not None:
-#         MRF_projection_definition.text = MRF_projection_definition_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(ValueError, match=match_message):
-#             ConfigFile.validate_MRF_projection_definition(
-#                 config_object=config_object,
-#                 MRF_projection_definition="ReGridderParams/MRF_projection_definition",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_MRF_projection_definition(
-#             config_object=config_object,
-#             MRF_projection_definition="ReGridderParams/MRF_projection_definition",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
-
-
-# # TODO: Check the docstring
-# @pytest.mark.parametrize(
-#     "bg_smoothing_value, expected, expect_exception, match_message",
-#     [
-#         # Valid cases
-#         ("1.5", 1.5, False, None),  # Positive float
-#         ("0", 0.0, False, None),  # Zero
-#         ("-2.3", -2.3, False, None),  # Negative float
-#         (None, 0.0, False, None),  # Missing value, should default to 0
-#         (" 3.7 ", 3.7, False, None),  # Float with leading/trailing whitespace
-#         # Invalid cases
-#         ("invalid", None, True, "Invalid `bg_smoothing` value"),  # Non-numeric string
-#         ("", None, True, "Invalid `bg_smoothing` value"),  # Empty string
-#         (" ", None, True, "Invalid `bg_smoothing` value"),  # Space-only string
-#     ],
-# )
-# def test_validate_bg_smoothing(
-#     bg_smoothing_value, expected, expect_exception, match_message
-# ):
-#     """
-#     Test the `validate_bg_smoothing` method of the ConfigFile class.
-
-#     This test validates:
-#     - Correct behavior for valid bg_smoothing values.
-#     - Default behavior for missing values (defaults to 0).
-#     - Error handling for invalid or non-numeric values.
-
-#     Parameters:
-#     - bg_smoothing_value: The value of bg_smoothing in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
-#     - match_message: Substring to match in the raised exception message for invalid cases.
-
-#     Valid cases return the float value of bg_smoothing.
-#     Invalid cases raise a ValueError.
-#     """
-
-#     # Arrange
-#     config_object = Element("config")
-#     regridder_params = SubElement(config_object, "ReGridderParams")
-#     bg_smoothing = SubElement(regridder_params, "bg_smoothing")
-#     if bg_smoothing_value is not None:
-#         bg_smoothing.text = bg_smoothing_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(ValueError, match=match_message):
-#             ConfigFile.validate_bg_smoothing(
-#                 config_object=config_object,
-#                 bg_smoothing="ReGridderParams/bg_smoothing",
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_bg_smoothing(
-#             config_object=config_object,
-#             bg_smoothing="ReGridderParams/bg_smoothing",
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
-
-
-# # TODO: Check the docstring
-# @pytest.mark.parametrize(
-#     "input_data_type, quality_control_value, expected, expect_exception, match_message",
-#     [
-#         # Input data types that always return False
-#         ("AMSR2", "True", False, False, None),  # AMSR2 ignores quality control setting
-#         ("CIMR", "False", False, False, None),  # CIMR ignores quality control setting
-#         # Valid cases for other input data types
-#         ("Other", "True", True, False, None),  # Valid True setting
-#         ("Other", "False", False, False, None),  # Valid False setting
-#         # Invalid cases for other input data types
-#         (
-#             "Other",
-#             "Invalid",
-#             None,
-#             True,
-#             "Invalid `quality_control` value: Invalid",
-#         ),  # Invalid quality control value
-#         (
-#             "Other",
-#             None,
-#             None,
-#             True,
-#             "Invalid `quality_control` value: None",
-#         ),  # Missing quality control value
-#     ],
-# )
-# def test_validate_quality_control(
-#     input_data_type, quality_control_value, expected, expect_exception, match_message
-# ):
-#     """
-#     Test the `validate_quality_control` method of the ConfigFile class.
-
-#     This test validates:
-#     - Correct handling of 'AMSR2' and 'CIMR' input data types (always return False).
-#     - Validation of 'True' and 'False' values for other input data types.
-#     - Error handling for invalid or missing quality control values.
-
-#     Parameters:
-#     - input_data_type: The type of input data (e.g., 'AMSR2', 'CIMR', or 'Other').
-#     - quality_control_value: The value of quality_control in the configuration file.
-#     - expected: The expected output or None if an exception is expected.
-#     - expect_exception: Boolean indicating if a ValueError is expected.
-#     - match_message: Substring to match in the raised exception message for invalid cases.
-
-#     Valid cases return the correct boolean value for quality control.
-#     Invalid cases raise a ValueError.
-#     """
-#     # Arrange
-#     config_object = Element("config")
-#     input_data = SubElement(config_object, "InputData")
-#     quality_control = SubElement(input_data, "quality_control")
-#     if quality_control_value is not None:
-#         quality_control.text = quality_control_value
-
-#     if expect_exception:
-#         # Act & Assert: Expect an exception
-#         with pytest.raises(ValueError, match=match_message):
-#             ConfigFile.validate_quality_control(
-#                 config_object=config_object,
-#                 quality_control="InputData/quality_control",
-#                 input_data_type=input_data_type,
-#             )
-#     else:
-#         # Act: No exception expected
-#         result = ConfigFile.validate_quality_control(
-#             config_object=config_object,
-#             quality_control="InputData/quality_control",
-#             input_data_type=input_data_type,
-#         )
-#         # Assert: Compare result to expected value
-#         assert result == expected
+@pytest.mark.parametrize(
+    "source_antenna_threshold_value, expected, expect_exception",
+    [
+        # Valid cases
+        ("9.5", 9.5, False),  # Float value
+        ("10", 10.0, False),  # Integer value as string
+        ("0", 0.0, False),  # Zero value
+        ("-5", -5.0, False),  # Negative value
+        # Default case
+        (None, None, False),  # Returns None if value is not provided
+        ("", None, False),  # Empty string
+        (" ", None, False),  # Space-only string
+        # Invalid cases
+        ("invalid", None, True),  # Non-numeric string
+        ("a9.5", 9.5, True),  # Typo in Float value
+    ],
+)
+def test_validate_source_antenna_threshold(
+    source_antenna_threshold_value, expected, expect_exception
+):
+    """
+    Pytest unit test for the `validate_source_antenna_threshold` method.
+
+    This test ensures that `validate_source_antenna_threshold` correctly handles
+    valid, default, and invalid cases, while treating input values as numeric.
+
+    Test Scenarios
+    --------------
+    - Valid `source_antenna_threshold` values (e.g., positive/negative floats and integers).
+    - Missing or empty values should return `None`.
+    - Invalid values (non-numeric) should raise a `ValueError`.
+
+    Parameters
+    ----------
+    source_antenna_threshold_value : str or None
+        The value assigned to the `source_antenna_threshold` XML tag.
+    expected : float or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures empty or missing values default to `None`.
+    - Tests valid float and integer conversions.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    source_antenna_threshold = ET.SubElement(
+        regridder_params, "source_antenna_threshold"
+    )
+
+    if source_antenna_threshold_value is not None:
+        source_antenna_threshold.text = source_antenna_threshold_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(
+            ValueError, match="Invalid antenna threshold"
+        ):  # . Check Configuration File."):
+            ConfigFile.validate_source_antenna_threshold(
+                config_object=config_object,
+                source_antenna_threshold="ReGridderParams/source_antenna_threshold",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_source_antenna_threshold(
+            config_object=config_object,
+            source_antenna_threshold="ReGridderParams/source_antenna_threshold",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "target_antenna_threshold_value, expected, expect_exception",
+    [
+        # Valid cases
+        ("9.5", 9.5, False),  # Float value
+        ("10", 10.0, False),  # Integer value as string
+        ("0", 0.0, False),  # Zero value
+        ("-5", -5.0, False),  # Negative value
+        # Default case
+        (None, 9.0, False),  # Defaults to 9.0 if value is None
+        ("", 9.0, False),  # Empty string
+        (" ", 9.0, False),  # Space-only string
+        # Invalid cases
+        ("invalid", None, True),  # Non-numeric string
+        ("a9.5", 9.5, True),  # Typo in Float value
+    ],
+)
+def test_validate_target_antenna_threshold(
+    target_antenna_threshold_value, expected, expect_exception
+):
+    """
+    Pytest unit test for the `validate_target_antenna_threshold` method.
+
+    This test ensures that `validate_target_antenna_threshold` correctly handles
+    valid, default, and invalid cases, while treating input values as numeric.
+
+    Test Scenarios
+    --------------
+    - Valid `target_antenna_threshold` values (e.g., positive/negative floats and integers).
+    - Missing or empty values should return the default of `9.0`.
+    - Invalid values (non-numeric) should raise a `ValueError`.
+
+    Parameters
+    ----------
+    target_antenna_threshold_value : str or None
+        The value assigned to the `target_antenna_threshold` XML tag.
+    expected : float or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures empty or missing values default to `9.0`.
+    - Tests valid float and integer conversions.
+
+    Examples
+    --------
+    >>> test_validate_target_antenna_threshold("9.5", 9.5, False)
+    >>> test_validate_target_antenna_threshold(None, 9.0, False)
+    >>> test_validate_target_antenna_threshold("invalid", None, True)
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    target_antenna_threshold = ET.SubElement(
+        regridder_params, "target_antenna_threshold"
+    )
+    if target_antenna_threshold_value is not None:
+        target_antenna_threshold.text = target_antenna_threshold_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(
+            ValueError, match="Invalid antenna threshold:"
+        ):  # . Check Configuration File."):
+            ConfigFile.validate_target_antenna_threshold(
+                config_object=config_object,
+                target_antenna_threshold="ReGridderParams/target_antenna_threshold",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_target_antenna_threshold(
+            config_object=config_object,
+            target_antenna_threshold="ReGridderParams/target_antenna_threshold",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "polarisation_method_value, expected, expect_exception",
+    [
+        # Valid cases
+        ("scalar", "scalar", False),
+        ("mueller", "mueller", False),
+        # Default case
+        (None, "scalar", False),  # Defaults to 'scalar' if value is None
+        ("", "scalar", False),  # Empty string
+        (" ", "scalar", False),  # Space-only string
+        # Invalid cases
+        ("invalid", None, True),  # Invalid string
+    ],
+)
+def test_validate_polarisation_method(
+    polarisation_method_value, expected, expect_exception
+):
+    """
+    Pytest unit test for the `validate_polarisation_method` method.
+
+    This test ensures that `validate_polarisation_method` correctly handles
+    valid, default, and invalid cases.
+
+    Test Scenarios
+    --------------
+    - Valid `polarisation_method` values (e.g., `'scalar'`, `'mueller'`).
+    - Missing or empty values should return the default of `'scalar'`.
+    - Invalid values (non-valid strings) should raise a `ValueError`.
+
+    Parameters
+    ----------
+    polarisation_method_value : str or None
+        The value assigned to the `polarisation_method` XML tag.
+    expected : str or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures empty or missing values default to `'scalar'`.
+    - Tests valid string inputs and invalid cases.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    polarisation = ET.SubElement(regridder_params, "polarisation_method")
+    if polarisation_method_value is not None:
+        polarisation.text = polarisation_method_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(
+            ValueError, match="Invalid polarisation method:"
+        ):  # . Check Configuration File."):
+            ConfigFile.validate_polarisation_method(
+                config_object=config_object,
+                polarisation_method="ReGridderParams/polarisation_method",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_polarisation_method(
+            config_object=config_object,
+            polarisation_method="ReGridderParams/polarisation_method",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "input_data_type, boresight_shift_value, expected, expect_exception",
+    [
+        # Case: Input data type is not SMAP
+        ("AMSR2", None, False, False),  # Always return False for non-SMAP
+        ("CIMR", "true", False, False),  # Always return False for non-SMAP
+        # Case: Input data type is SMAP
+        ("SMAP", "True", True, False),  # Valid True case
+        ("SMAP", "FALSE", False, False),  # Valid False case
+        ("SMAP", None, False, False),  # Defaults to False if value is None
+        ("SMAP", "", False, False),  # Empty string
+        ("SMAP", " ", False, False),  # Space-only string
+        # Invalid cases
+        ("SMAP", "invalid_value", None, True),  # Invalid string
+    ],
+)
+def test_validate_boresight_shift(
+    input_data_type, boresight_shift_value, expected, expect_exception
+):
+    """
+    Pytest unit test for the `validate_boresight_shift` method.
+
+    This test ensures that `validate_boresight_shift` correctly processes
+    valid, default, and invalid cases, while treating input values case insensitively.
+
+    Test Scenarios
+    --------------
+    - Valid `boresight_shift` values (e.g., `'True'`, `'False'`).
+    - Missing or empty values should return the default of `False`.
+    - Non-SMAP input data types should always return `False`.
+    - Invalid values should raise a `ValueError`.
+
+    Parameters
+    ----------
+    input_data_type : str
+        The type of input data (e.g., `'SMAP'`, `'AMSR2'`, `'CIMR'`).
+    boresight_shift_value : str or None
+        The value assigned to the `boresight_shift` XML tag.
+    expected : bool or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures empty or missing values default to `False`.
+    - Tests case insensitivity by verifying mixed-case inputs.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    boresight_shift = ET.SubElement(regridder_params, "boresight_shift")
+    if boresight_shift_value is not None:
+        boresight_shift.text = boresight_shift_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(
+            ValueError  # , match="Invalid boresight shift:"
+        ):  # . Check Configuration File."):
+            ConfigFile.validate_boresight_shift(
+                config_object=config_object,
+                boresight_shift="ReGridderParams/boresight_shift",
+                input_data_type=input_data_type,
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_boresight_shift(
+            config_object=config_object,
+            boresight_shift="ReGridderParams/boresight_shift",
+            input_data_type=input_data_type,
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "reduced_grid_inds_value, expected, expect_exception",
+    [
+        # Valid cases
+        ("0 10 0 10", [0, 10, 0, 10], False),
+        ("5 15 3 12", [5, 15, 3, 12], False),
+        ("", None, False),  # Empty string
+        # Missing case
+        (None, None, False),
+        # Invalid cases
+        ("-1 10 0 10", None, True),  # Negative grid_row_min
+        ("0 -10 0 10", None, True),  # Negative grid_row_max
+        ("0 10 -5 10", None, True),  # Negative grid_col_min
+        ("0 10 0 -10", None, True),  # Negative grid_col_max
+        ("10 5 0 10", None, True),  # grid_row_min > grid_row_max
+        ("0 10 12 5", None, True),  # grid_col_min > grid_col_max
+        ("0 10", None, True),  # Insufficient values
+        ("invalid input here", None, True),  # Non-numeric values
+    ],
+)
+def test_validate_reduced_grid_inds(
+    reduced_grid_inds_value, expected, expect_exception
+):
+    """
+    Pytest unit test for the `validate_reduced_grid_inds` method.
+
+    This test ensures that `validate_reduced_grid_inds` correctly processes
+    valid, default, and invalid cases.
+
+    Test Scenarios
+    --------------
+    - Valid `reduced_grid_inds` values should return a list of four integers.
+    - Missing or empty values should return `None`.
+    - Negative values should raise a `ValueError`.
+    - Row/column minimums exceeding maximums should raise a `ValueError`.
+    - Non-numeric values should raise a `ValueError`.
+
+    Parameters
+    ----------
+    reduced_grid_inds_value : str or None
+        The value assigned to the `reduced_grid_inds` XML tag.
+    expected : list of int or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures empty or missing values default to `None`.
+    - Tests valid integer inputs and invalid cases.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    grid_params = ET.SubElement(config_object, "GridParams")
+    reduced_grid_inds = ET.SubElement(grid_params, "reduced_grid_inds")
+    if reduced_grid_inds_value is not None:
+        reduced_grid_inds.text = reduced_grid_inds_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(ValueError):  # , match="Invalid `reduced_grid_inds`:"):
+            ConfigFile.validate_reduced_grid_inds(
+                config_object=config_object,
+                reduced_grid_inds="GridParams/reduced_grid_inds",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_reduced_grid_inds(
+            config_object=config_object,
+            reduced_grid_inds="GridParams/reduced_grid_inds",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "source_gaussian_params_value, expected, expect_exception",
+    [
+        # Valid cases
+        ("1.5 2.5", [1.5, 2.5], False),  # Two valid floats
+        ("0 10", [0.0, 10.0], False),  # Integer values as strings
+        ("-5.5 3.2", [-5.5, 3.2], False),  # Negative and positive floats
+        # Invalid cases
+        (None, None, True),  # Missing value
+        ("1.5", None, True),  # Only one parameter
+        ("1.5 2.5 3.5", None, True),  # Too many parameters
+        ("invalid 2.5", None, True),  # Non-numeric parameter
+        ("1.5 invalid", None, True),  # Non-numeric parameter
+        ("", None, True),  # Empty string
+        (" ", None, True),  # Space-only string
+    ],
+)
+def test_validate_source_gaussian_params(
+    source_gaussian_params_value, expected, expect_exception
+):
+    """
+    Pytest unit test for the `validate_source_gaussian_params` method.
+
+    This test ensures that `validate_source_gaussian_params` correctly processes
+    valid, default, and invalid cases.
+
+    Test Scenarios
+    --------------
+    - Valid `source_gaussian_params` values should return a list of two float values.
+    - Missing or empty values should raise a `ValueError`.
+    - Inputs with incorrect numbers of parameters should raise a `ValueError`.
+    - Non-numeric values should raise a `ValueError`.
+
+    Parameters
+    ----------
+    source_gaussian_params_value : str or None
+        The value assigned to the `source_gaussian_params` XML tag.
+    expected : list of float or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures only two valid numeric values are accepted.
+    - Tests valid float inputs and invalid cases.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    source_gaussian_params = ET.SubElement(regridder_params, "source_gaussian_params")
+    if source_gaussian_params_value is not None:
+        source_gaussian_params.text = source_gaussian_params_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(
+            ValueError  # , match="Invalid|Missing "
+        ):  # source Gaussian parameters"):#|Missing source Gaussian parameters|Invalid parameter"):
+            ConfigFile.validate_source_gaussian_params(
+                config_object=config_object,
+                source_gaussian_params="ReGridderParams/source_gaussian_params",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_source_gaussian_params(
+            config_object=config_object,
+            source_gaussian_params="ReGridderParams/source_gaussian_params",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "target_gaussian_params_value, expected, expect_exception",
+    [
+        # Valid cases
+        ("1.5 2.5", [1.5, 2.5], False),  # Two valid floats
+        ("0 10", [0.0, 10.0], False),  # Integer values as strings
+        ("-5.5 3.2", [-5.5, 3.2], False),  # Negative and positive floats
+        # Invalid cases
+        (None, None, True),  # Missing value
+        ("1.5", None, True),  # Only one parameter
+        ("1.5 2.5 3.5", None, True),  # Too many parameters
+        ("invalid 2.5", None, True),  # Non-numeric parameter
+        ("1.5 invalid", None, True),  # Non-numeric parameter
+        ("", None, True),  # Empty string
+        (" ", None, True),  # Space-only string
+    ],
+)
+def test_validate_target_gaussian_params(
+    target_gaussian_params_value, expected, expect_exception
+):
+    """
+    Pytest unit test for the `validate_target_gaussian_params` method.
+
+    This test ensures that `validate_target_gaussian_params` correctly processes
+    valid, default, and invalid cases.
+
+    Test Scenarios
+    --------------
+    - Valid `target_gaussian_params` values should return a list of two float values.
+    - Missing or empty values should raise a `ValueError`.
+    - Inputs with incorrect numbers of parameters should raise a `ValueError`.
+    - Non-numeric values should raise a `ValueError`.
+
+    Parameters
+    ----------
+    target_gaussian_params_value : str or None
+        The value assigned to the `target_gaussian_params` XML tag.
+    expected : list of float or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures only two valid numeric values are accepted.
+    - Tests valid float inputs and invalid cases.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    target_gaussian_params = ET.SubElement(regridder_params, "target_gaussian_params")
+    if target_gaussian_params_value is not None:
+        target_gaussian_params.text = target_gaussian_params_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(ValueError):  # , match="Invalid|Missing"):
+            ConfigFile.validate_target_gaussian_params(
+                config_object=config_object,
+                target_gaussian_params="ReGridderParams/target_gaussian_params",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_target_gaussian_params(
+            config_object=config_object,
+            target_gaussian_params="ReGridderParams/target_gaussian_params",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "rsir_iteration_value, expected, expect_exception",
+    [
+        # Valid cases
+        ("10", 10, False),  # Valid integer
+        ("0", 0, False),  # Edge case: Zero iterations
+        ("1", 1, False),  # Edge case: Minimum positive iterations
+        # Invalid cases
+        (None, None, True),  # Missing value
+        ("", None, True),  # Empty string
+        ("invalid", None, True),  # Non-numeric string
+        ("1.5", None, True),  # Float value
+        ("-5", None, True),  # Negative integer (assuming it's invalid in this context)
+    ],
+)
+def test_validate_rsir_iteration(rsir_iteration_value, expected, expect_exception):
+    """
+    Pytest unit test for the `validate_rsir_iteration` method.
+
+    This test ensures that `validate_rsir_iteration` correctly processes
+    valid, default, and invalid cases.
+
+    Test Scenarios
+    --------------
+    - Valid `rsir_iteration` values should return a non-negative integer.
+    - Missing or empty values should raise a `ValueError`.
+    - Negative or non-numeric values should raise a `ValueError`.
+
+    Parameters
+    ----------
+    rsir_iteration_value : str or None
+        The value assigned to the `rsir_iteration` XML tag.
+    expected : int or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures only non-negative integers are accepted.
+    - Tests valid integer inputs and invalid cases.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    rsir_iteration = ET.SubElement(regridder_params, "rsir_iteration")
+    if rsir_iteration_value is not None:
+        rsir_iteration.text = rsir_iteration_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(ValueError):  # , match="Invalid|Missing|rSIR"):
+            ConfigFile.validate_rsir_iteration(
+                config_object=config_object,
+                rsir_iteration="ReGridderParams/rsir_iteration",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_rsir_iteration(
+            config_object=config_object,
+            rsir_iteration="ReGridderParams/rsir_iteration",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "max_number_iteration_value, expected, expect_exception",
+    [
+        # Valid cases
+        ("10", 10, False),  # Valid integer
+        ("0", 0, False),  # Edge case: Zero iterations
+        ("1", 1, False),  # Edge case: Minimum positive iterations
+        # Invalid cases
+        (None, None, True),  # Missing value
+        ("", None, True),  # Empty string
+        ("invalid", None, True),  # Non-numeric string
+        ("1.5", None, True),  # Float value
+        ("-5", None, True),  # Negative integer
+    ],
+)
+def test_validate_max_number_iteration(
+    max_number_iteration_value, expected, expect_exception
+):
+    """
+    Pytest unit test for the `validate_max_number_iteration` method.
+
+    This test ensures that `validate_max_number_iteration` correctly processes
+    valid, default, and invalid cases.
+
+    Test Scenarios
+    --------------
+    - Valid `max_number_iteration` values should return a non-negative integer.
+    - Missing or empty values should raise a `ValueError`.
+    - Negative or non-numeric values should raise a `ValueError`.
+
+    Parameters
+    ----------
+    max_number_iteration_value : str or None
+        The value assigned to the `max_number_iteration` XML tag.
+    expected : int or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures only non-negative integers are accepted.
+    - Tests valid integer inputs and invalid cases.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    max_number_iteration = ET.SubElement(regridder_params, "max_number_iteration")
+    if max_number_iteration_value is not None:
+        max_number_iteration.text = max_number_iteration_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(ValueError):  # , match="Invalid|Missing|Maximum"):
+            ConfigFile.validate_max_number_iteration(
+                config_object=config_object,
+                max_number_iteration="ReGridderParams/max_number_iteration",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_max_number_iteration(
+            config_object=config_object,
+            max_number_iteration="ReGridderParams/max_number_iteration",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "relative_tolerance_value, expected, expect_exception",
+    [
+        # Valid cases
+        ("0.01", 0.01, False),  # Valid positive float
+        ("0", 0.0, False),  # Edge case: Zero tolerance
+        ("1.5", 1.5, False),  # Valid larger float value
+        # Invalid cases
+        (None, None, True),  # Missing value
+        ("", None, True),  # Empty string
+        ("invalid", None, True),  # Non-numeric string
+        ("-0.01", None, True),  # Negative float
+        ("-1", None, True),  # Negative integer
+    ],
+)
+def test_validate_relative_tolerance(
+    relative_tolerance_value, expected, expect_exception
+):
+    """
+    Pytest unit test for the `validate_relative_tolerance` method.
+
+    This test ensures that `validate_relative_tolerance` correctly processes
+    valid, default, and invalid cases.
+
+    Test Scenarios
+    --------------
+    - Valid `relative_tolerance` values should return a non-negative float.
+    - Missing or empty values should raise a `ValueError`.
+    - Negative or non-numeric values should raise a `ValueError`.
+
+    Parameters
+    ----------
+    relative_tolerance_value : str or None
+        The value assigned to the `relative_tolerance` XML tag.
+    expected : float or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures only non-negative floats are accepted.
+    - Tests valid float inputs and invalid cases.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    relative_tolerance = ET.SubElement(regridder_params, "relative_tolerance")
+    if relative_tolerance_value is not None:
+        relative_tolerance.text = relative_tolerance_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(ValueError):  # , match="Invalid|Missing|Relative"):
+            ConfigFile.validate_relative_tolerance(
+                config_object=config_object,
+                relative_tolerance="ReGridderParams/relative_tolerance",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_relative_tolerance(
+            config_object=config_object,
+            relative_tolerance="ReGridderParams/relative_tolerance",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "regularization_parameter_value, expected, expect_exception",
+    [
+        # Valid cases
+        ("0.1", 0.1, False),  # Positive float
+        ("0", 0.0, False),  # Zero value
+        ("10", 10.0, False),  # Positive integer
+        ("-0.1", -0.1, False),  # Negative float
+        ("-5", -5.0, False),  # Negative integer
+        # Invalid cases
+        (None, None, True),  # Missing value
+        ("", None, True),  # Empty string
+        ("invalid", None, True),  # Non-numeric string
+    ],
+)
+def test_validate_regularization_parameter(
+    regularization_parameter_value, expected, expect_exception
+):
+    """
+    Pytest unit test for the `validate_regularization_parameter` method.
+
+    This test ensures that `validate_regularization_parameter` correctly processes
+    valid, default, and invalid cases.
+
+    Test Scenarios
+    --------------
+    - Valid `regularization_parameter` values should return a float.
+    - Missing or empty values should raise a `ValueError`.
+    - Non-numeric values should raise a `ValueError`.
+
+    Parameters
+    ----------
+    regularization_parameter_value : str or None
+        The value assigned to the `regularization_parameter` XML tag.
+    expected : float or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures only valid float values are accepted.
+    - Tests valid float inputs and invalid cases.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    regularization_parameter = ET.SubElement(
+        regridder_params, "regularization_parameter"
+    )
+    if regularization_parameter_value is not None:
+        regularization_parameter.text = regularization_parameter_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(ValueError):  # , match="Invalid|Missing"):
+            ConfigFile.validate_regularization_parameter(
+                config_object=config_object,
+                regularization_parameter="ReGridderParams/regularization_parameter",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_regularization_parameter(
+            config_object=config_object,
+            regularization_parameter="ReGridderParams/regularization_parameter",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "MRF_grid_definition_value, expected, expect_exception",
+    [
+        # Valid cases
+        ("EASE2_G3km", "EASE2_G3km", False),
+        ("EASE2_G1km", "EASE2_G1km", False),
+        (" EASE2_S36km", "EASE2_S36km", False),
+        ("EASE2_G3km ", "EASE2_G3km", False),  # Trailing space (not an exact match)
+        # Invalid cases
+        (None, None, True),  # Missing value
+        ("", None, True),  # Empty string
+        ("invalid_grid", None, True),  # Invalid grid definition
+    ],
+)
+def test_validate_MRF_grid_definition(
+    MRF_grid_definition_value, expected, expect_exception
+):
+    """
+    Pytest unit test for the `validate_MRF_grid_definition` method.
+
+    This test ensures that `validate_MRF_grid_definition` correctly processes
+    valid, default, and invalid cases.
+
+    Test Scenarios
+    --------------
+    - Valid `MRF_grid_definition` values should return a recognized grid definition.
+    - Missing or empty values should raise a `ValueError`.
+    - Invalid values should raise a `ValueError`.
+
+    Parameters
+    ----------
+    MRF_grid_definition_value : str or None
+        The value assigned to the `MRF_grid_definition` XML tag.
+    expected : str or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures only predefined grid definitions are accepted.
+    - Tests valid inputs and invalid cases.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    MRF_grid_definition = ET.SubElement(regridder_params, "MRF_grid_definition")
+
+    if MRF_grid_definition_value is not None:
+        MRF_grid_definition.text = MRF_grid_definition_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(ValueError):  # , match="Invalid|Missing"):
+            ConfigFile.validate_MRF_grid_definition(
+                config_object=config_object,
+                MRF_grid_definition="ReGridderParams/MRF_grid_definition",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_MRF_grid_definition(
+            config_object=config_object,
+            MRF_grid_definition="ReGridderParams/MRF_grid_definition",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "MRF_projection_definition_value, expected, expect_exception, match_message",
+    [
+        # Valid cases
+        ("G", "G", False, None),  # Global projection
+        ("N", "N", False, None),  # Northern projection
+        ("S", "S", False, None),  # Southern projection
+        (" G ", "G", False, None),  # Trailing/leading whitespace
+        # Invalid cases
+        (
+            None,
+            None,
+            True,
+            "Missing or blank MRF projection definition in the configuration file",
+        ),  # Missing value
+        (
+            "",
+            None,
+            True,
+            "Missing or blank MRF projection definition in the configuration file",
+        ),  # Empty string
+        (
+            "invalid",
+            None,
+            True,
+            "Invalid Projection Definition",
+        ),  # Invalid projection definition
+    ],
+)
+def test_validate_MRF_projection_definition(
+    MRF_projection_definition_value, expected, expect_exception, match_message
+):
+    """
+    Pytest unit test for the `validate_MRF_projection_definition` method.
+
+    This test ensures that `validate_MRF_projection_definition` correctly processes
+    valid, default, and invalid cases.
+
+    Test Scenarios
+    --------------
+    - Valid `MRF_projection_definition` values should return a recognized projection ('G', 'N', or 'S').
+    - Missing or empty values should raise a `ValueError`.
+    - Invalid values should raise a `ValueError`.
+
+    Parameters
+    ----------
+    MRF_projection_definition_value : str or None
+        The value assigned to the `MRF_projection_definition` XML tag.
+    expected : str or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+    match_message : str
+        The expected exception message for invalid cases.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures only predefined projection definitions are accepted.
+    - Tests valid inputs and invalid cases.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    MRF_projection_definition = ET.SubElement(
+        regridder_params, "MRF_projection_definition"
+    )
+    if MRF_projection_definition_value is not None:
+        MRF_projection_definition.text = MRF_projection_definition_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(ValueError, match=match_message):
+            ConfigFile.validate_MRF_projection_definition(
+                config_object=config_object,
+                MRF_projection_definition="ReGridderParams/MRF_projection_definition",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_MRF_projection_definition(
+            config_object=config_object,
+            MRF_projection_definition="ReGridderParams/MRF_projection_definition",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "bg_smoothing_value, expected, expect_exception",
+    [
+        # Valid cases
+        ("1.5", 1.5, False),  # Positive float
+        ("0", 0.0, False),  # Zero
+        ("-2.3", -2.3, False),  # Negative float
+        (None, 0.0, False),  # Missing value, should default to 0
+        (" 3.7 ", 3.7, False),  # Float with leading/trailing whitespace
+        ("", 0.0, False),  # Empty string
+        (" ", 0.0, False),  # Space-only string
+        # Invalid cases
+        ("invalid", None, True),  # Non-numeric string
+    ],
+)
+def test_validate_bg_smoothing(
+    bg_smoothing_value,
+    expected,
+    expect_exception,
+):
+    """
+    Pytest unit test for the `validate_bg_smoothing` method.
+
+    This test ensures that `validate_bg_smoothing` correctly processes
+    valid, default, and invalid cases.
+
+    Test Scenarios
+    --------------
+    - Valid `bg_smoothing` values should return a float.
+    - Missing values default to `0.0`.
+    - Invalid values should raise a `ValueError`.
+
+    Parameters
+    ----------
+    bg_smoothing_value : str or None
+        The value assigned to the `bg_smoothing` XML tag.
+    expected : float or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures only valid floats are accepted.
+    - Tests valid inputs and invalid cases.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    bg_smoothing = ET.SubElement(regridder_params, "bg_smoothing")
+    if bg_smoothing_value is not None:
+        bg_smoothing.text = bg_smoothing_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(ValueError):  # , match=match_message):
+            ConfigFile.validate_bg_smoothing(
+                config_object=config_object,
+                bg_smoothing="ReGridderParams/bg_smoothing",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_bg_smoothing(
+            config_object=config_object,
+            bg_smoothing="ReGridderParams/bg_smoothing",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "input_data_type, quality_control_value, expected, expect_exception",
+    [
+        # Input data types that always return False
+        ("AMSR2", "True", False, False),  # AMSR2 ignores quality control setting
+        ("CIMR", "False", False, False),  # CIMR ignores quality control setting
+        # Valid cases for other input data types
+        ("Other", "True", True, False),  # Valid True setting
+        ("Other", "False", False, False),  # Valid False setting
+        ("Other", "false", False, False),
+        # Invalid cases for other input data types
+        ("Other", "Invalid", None, True),  # Invalid quality control value
+        ("Other", None, None, True),
+    ],
+)
+def test_validate_quality_control(
+    input_data_type, quality_control_value, expected, expect_exception
+):
+    """
+    Pytest unit test for the `validate_quality_control` method.
+
+    This test ensures that `validate_quality_control` correctly processes
+    valid, default, and invalid cases.
+
+    Test Scenarios
+    --------------
+    - `AMSR2` and `CIMR` always return `False`.
+    - Valid values ('True' and 'False', case insensitive) return the corresponding boolean.
+    - Invalid or missing values raise a `ValueError`.
+
+    Parameters
+    ----------
+    input_data_type : str
+        The type of input data (e.g., 'AMSR2', 'CIMR', or another type).
+    quality_control_value : str or None
+        The value assigned to the `quality_control` XML tag.
+    expected : bool or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures `AMSR2` and `CIMR` always return `False`.
+    - Tests valid inputs and invalid cases.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    input_data = ET.SubElement(config_object, "InputData")
+    quality_control = ET.SubElement(input_data, "quality_control")
+
+    if quality_control_value is not None:
+        quality_control.text = quality_control_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(ValueError):
+            ConfigFile.validate_quality_control(
+                config_object=config_object,
+                quality_control="InputData/quality_control",
+                input_data_type=input_data_type,
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_quality_control(
+            config_object=config_object,
+            quality_control="InputData/quality_control",
+            input_data_type=input_data_type,
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "antenna_pattern_uncertainty_value, expected, expect_exception",
+    [
+        # Valid cases
+        ("1.5", 1.5, False),  # Positive float
+        ("0", 0.0, False),  # Zero
+        ("-2.3", -2.3, False),  # Negative float
+        (None, 0.0, False),  # Missing value, should default to 0.0
+        (" 3.7 ", 3.7, False),  # Float with leading/trailing whitespace
+        ("", 0.0, False),  # Empty string should return default 0.0
+        (" ", 0.0, False),  # Space-only string should return default 0.0
+        # Invalid cases
+        ("invalid", None, True),  # Non-numeric string
+    ],
+)
+def test_validate_antenna_pattern_uncertainty(
+    antenna_pattern_uncertainty_value, expected, expect_exception
+):
+    """
+    Test the `validate_antenna_pattern_uncertainty` method of the ConfigFile class.
+
+    This test validates:
+    - Correct behavior for valid `antenna_pattern_uncertainty` values.
+    - Default behavior for missing values (defaults to 0.0).
+    - Error handling for invalid or non-numeric values.
+
+    Parameters
+    ----------
+    antenna_pattern_uncertainty_value : str or None
+        The value of `antenna_pattern_uncertainty` in the configuration file.
+    expected : float or None
+        The expected validated output if valid, otherwise None.
+    expect_exception : bool
+        Indicates whether an exception is expected.
+
+    Notes
+    -----
+    - Uses `pytest.raises` to verify exceptions.
+    - Ensures default return value is `0.0` for missing entries.
+    - Tests valid float inputs and invalid cases.
+    """
+
+    # Arrange
+    config_object = ET.Element("config")
+    uncertainty_params = ET.SubElement(config_object, "Uncertainty")
+    antenna_pattern_uncertainty = ET.SubElement(
+        uncertainty_params, "antenna_pattern_uncertainty"
+    )
+
+    if antenna_pattern_uncertainty_value is not None:
+        antenna_pattern_uncertainty.text = antenna_pattern_uncertainty_value
+
+    if expect_exception:
+        # Act & Assert: Expect an exception
+        with pytest.raises(ValueError):
+            ConfigFile.validate_antenna_pattern_uncertainty(
+                config_object=config_object,
+                antenna_pattern_uncertainty="Uncertainty/antenna_pattern_uncertainty",
+            )
+    else:
+        # Act: No exception expected
+        result = ConfigFile.validate_antenna_pattern_uncertainty(
+            config_object=config_object,
+            antenna_pattern_uncertainty="Uncertainty/antenna_pattern_uncertainty",
+        )
+        # Assert: Compare result to expected value
+        assert result == expected
