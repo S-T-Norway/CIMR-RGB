@@ -11,12 +11,12 @@ from scipy.interpolate import griddata
 def landweber(A, Y, lambda_param=1e-4, alpha=None, n_iter=1000, rtol=1e-5):
 
     """
-    Perform Landweber iteration with Tikhonov regularization to solve AX = Y.
+    Perform Landweber iteration with Tikhonov regularisation to solve AX = Y.
     
     Parameters:
     - A: 2D numpy array, the system matrix.
     - Y: 1D or 2D numpy array, the observed data.
-    - lambda_param: float, regularization parameter for Tikhonov regularization.
+    - lambda_param: float, regularisation parameter for Tikhonov regularisation.
     - alpha: float, step size.
     - n_iter: int, maximum number of iterations.
     - rtol: float, tolerance for the relative error stopping criterion.
@@ -34,13 +34,13 @@ def landweber(A, Y, lambda_param=1e-4, alpha=None, n_iter=1000, rtol=1e-5):
     count = 0
     for i in range(n_iter):
         residual = Y - A @ X
-        regularization_term = lambda_param * X
+        regularisation_term = lambda_param * X
         rel_error = np.linalg.norm(residual) / np.linalg.norm(Y)
         if rel_error < rtol:
             # print(f"Converged in {i+1} iterations with residual {np.linalg.norm(residual)} and relative error {rel_error}")
             return X, count
         else:
-            X = X + alpha * (At @ residual - regularization_term)
+            X = X + alpha * (At @ residual - regularisation_term)
             count += 1
 
     # print(f"Reached maximum iterations without full convergence: residual {np.linalg.norm(residual)} and relative error {rel_error}")
@@ -74,12 +74,12 @@ def landweber_nedt(A, varY, lambda_param, alpha, n_iter):
 def conjugate_gradient_ne(A, Y, lambda_param=1e-4, n_iter=1000, rtol=1e-5):
 
     """
-    Perform Conjugate Gradient iteration with Tikhonov regularization to solve AX = Y.
+    Perform Conjugate Gradient iteration with Tikhonov regularisation to solve AX = Y.
     
     Parameters:
     - A: 2D numpy array, the system matrix.
     - Y: 1D or 2D numpy array, the observed data.
-    - lambda_param: float, regularization parameter for Tikhonov regularization.
+    - lambda_param: float, regularisation parameter for Tikhonov regularisation.
     - n_iter: int, maximum number of iterations.
     - rtol: float, tolerance for the relative error stopping criterion.
     
@@ -187,7 +187,7 @@ class MIIinterp:
             variable_dict_int[variable] = np.zeros((integration_grid.n_rows, integration_grid.n_cols))
 
         #TODO: set max_chunk_size as a parameter
-        max_chunk_size = 50
+        max_chunk_size = self.config.max_chunk_size
         nchunkx = (imax - imin) // max_chunk_size #number of "full" chunks (so it can be zero)
         nchunky = (jmax - jmin) // max_chunk_size
 
@@ -224,7 +224,7 @@ class MIIinterp:
                     int_grid_definition=self.config.MRF_grid_definition,
                     longitude=[chunklon1, chunklon2, chunklon3, chunklon4],
                     latitude =[chunklat1, chunklat2, chunklat3, chunklat4],
-                    ap_radii = 1.2*Rpattern
+                    ap_radii = self.config.chunk_buffer*Rpattern
                 )
 
                 #find integration grid corners
@@ -325,15 +325,15 @@ class MIIinterp:
 
                     if self.inversion_method == 'CG':
                         X1, n_iter = conjugate_gradient_ne(A, Y, 
-                                                   lambda_param = self.config.regularization_parameter, 
-                                                   n_iter       = self.config.max_number_iteration,
+                                                   lambda_param = self.config.regularisation_parameter,
+                                                   n_iter       = self.config.max_iterations,
                                                    rtol         = self.config.relative_tolerance
                         )
 
                     elif self.inversion_method == 'LW':
                         X1, n_iter = landweber(A, Y,
-                                       lambda_param = self.config.regularization_parameter, 
-                                       n_iter       = self.config.max_number_iteration,
+                                       lambda_param = self.config.regularisation_parameter,
+                                       n_iter       = self.config.max_iterations,
                                        rtol         = self.config.relative_tolerance
                         )
 
@@ -351,7 +351,7 @@ class MIIinterp:
                     #     elif self.inversion_method == 'LW':
                     #         Xnedt = landweber_nedt(A, variable_dict[nedt_var][mask],
                     #                                                alpha = None,
-                    #                                                lambda_param = self.config.regularization_parameter,
+                    #                                                lambda_param = self.config.regularisation_parameter,
                     #                                                n_iter       = n_iter
                     #         )
                     #     Finterp = RegularGridInterpolator((int_dom_lats[:, 0], int_dom_lons[0]), Xnedt.reshape(int_dom_lons.shape), bounds_error=False, fill_value=0.)
@@ -431,15 +431,15 @@ class MIIinterp:
 
             if self.inversion_method == 'CG':
                 X1, n_iter = conjugate_gradient_ne(A, Y,
-                                                   lambda_param=self.config.regularization_parameter,
-                                                   n_iter=self.config.max_number_iteration,
+                                                   lambda_param=self.config.regularisation_parameter,
+                                                   n_iter=self.config.max_iterations,
                                                    rtol=self.config.relative_tolerance
                                                    )
 
             elif self.inversion_method == 'LW':
                 X1, n_iter = landweber(A, Y,
-                                       lambda_param=self.config.regularization_parameter,
-                                       n_iter=self.config.max_number_iteration,
+                                       lambda_param=self.config.regularisation_parameter,
+                                       n_iter=self.config.max_iterations,
                                        rtol=self.config.relative_tolerance
                                        )
 

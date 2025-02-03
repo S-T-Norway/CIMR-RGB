@@ -636,7 +636,7 @@ class DataIngestion:
                         shape = band_data[self.config.variable_key_map["longitude"]][
                             :
                         ].shape
-                        nedt = self.config.nedt[band]
+                        nedt = self.config.cimr_nedt[band]
                         variable_dict[variable] = tile(nedt, shape)
                     elif "regridding_n_samples" in variable:
                         continue
