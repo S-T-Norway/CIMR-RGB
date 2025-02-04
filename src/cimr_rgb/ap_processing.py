@@ -131,6 +131,7 @@ class AntennaPattern:
     def gaussian_antenna_patterns(self, ap_dict):
 
         if self.antenna_threshold is None:
+            # Specify this as default in config and/or docs
             ant_th = 0.001
         else:
             ant_th = self.antenna_threshold
@@ -235,7 +236,7 @@ class AntennaPattern:
         tilt_angle = np.deg2rad(self.config.antenna_tilt_angle)
 
         if self.config.input_data_type == "SMAP":
-            tilt_angle = pi - tilt_angle # remove this if tilt_angle redefined already in data injestion
+            tilt_angle = pi - tilt_angle
 
         satellite_altitude = self.config.max_altitude
 
@@ -554,37 +555,47 @@ def make_integration_grid(int_projection_definition, int_grid_definition, longit
     mask = lonsx<-180.
     lonsx[mask] = lonsx[mask] + 360.
 
-    latmin = np.minimum(latdn.min(), latup.min())
-    latmax = np.maximum(latdn.max(), latup.max())
-    lonmin = np.minimum(lonsx.min(), londx.min())
-    lonmax = np.maximum(lonsx.max(), londx.max())
+    lons = np.concatenate((lonsx, londx))
+    lats = np.concatenate((latdn, latup))
 
     if int_projection_definition == 'G':
 
-        easelatmin = GRIDS[int_grid_definition]['lat_min']
-        easelatmax = GRIDS[int_grid_definition]['lat_max']
-        xmin, ymin = integration_grid.lonlat_to_xy(lonmin, latmin)
-        xmax, ymax = integration_grid.lonlat_to_xy(lonmax, latmax)
-        xs, ys = integration_grid.generate_grid_xy()
-        dist = np.abs(lonmax-lonmin)
-        dist_wrapped = np.abs(180-lonmax) + np.abs(lonmin+180)
-        if dist<=dist_wrapped:
+        max1 = np.max(180 - lons[lons > 0]) if np.any(lons > 0) else 0
+        max2 = np.max(lons[lons < 0] + 180) if np.any(lons < 0) else 0
+        size_wrapped = max1 + max2    
+        size_non_wrapped = lons.max() - lons.min()
+
+        if size_non_wrapped <= size_wrapped: #not wrapping across the IDL:
+            lonmin = np.min(lons)
+            lonmax = np.max(lons)
+            latmin = np.min(lats)
+            latmax = np.max(lats)
+            xmin, ymin = integration_grid.lonlat_to_xy(lonmin, latmin)
+            xmax, ymax = integration_grid.lonlat_to_xy(lonmax, latmax)
+            xs, ys = integration_grid.generate_grid_xy()
             xs = xs[logical_and(xs > xmin, xs < xmax)]
-        else:
-            xs = concatenate((xs[xs > xmax], xs[xs < xmin]))
-        ys = ys[logical_and(ys > ymin, ys < ymax)]
+            ys = ys[logical_and(ys > ymin, ys < ymax)]
+
+        else: #wrapping across the IDL
+            lonmax = np.max(lons[lons<0]) #further point from IDL with lon < 0
+            lonmin = np.min(lons[lons>0]) #further point from IDL with lon > 0
+            latmin = np.min(lats)
+            latmax = np.max(lats)
+            xmin, ymin = integration_grid.lonlat_to_xy(lonmin, latmin)
+            xmax, ymax = integration_grid.lonlat_to_xy(lonmax, latmax)
+            xs, ys = integration_grid.generate_grid_xy()
+            xs = concatenate((xs[xs > xmin], xs[xs < xmax]))
+            ys = ys[logical_and(ys > ymin, ys < ymax)]
+
         Xs, Ys = meshgrid(xs, ys)
 
     elif int_projection_definition in ['N', 'S']:
 
-        x0, y0 = integration_grid.lonlat_to_xy(lonmin, latmin)
-        x1, y1 = integration_grid.lonlat_to_xy(lonmin, latmax)
-        x2, y2 = integration_grid.lonlat_to_xy(lonmax, latmin)
-        x3, y3 = integration_grid.lonlat_to_xy(lonmax, latmax)
-        xmin = np.min([x0, x1, x2, x3])
-        xmax = np.max([x0, x1, x2, x3])
-        ymin = np.min([y0, y1, y2, y3])
-        ymax = np.max([y0, y1, y2, y3])
+        x, y = integration_grid.lonlat_to_xy(lons, lats)
+        xmin = np.min(x)
+        xmax = np.max(x)
+        ymin = np.min(y)
+        ymax = np.max(y)
         xs, ys = integration_grid.generate_grid_xy()
         xs = xs[logical_and(xs > xmin, xs < xmax)]
         ys = ys[logical_and(ys > ymin, ys < ymax)]

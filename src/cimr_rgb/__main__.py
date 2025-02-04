@@ -334,37 +334,67 @@ def get_rgb_configuration(
             "aps",
             "antenna-patterns-uncertainty",
             str,
-            "Value for ReGridderParams/antenna_patterns_uncertainty parameter.",
+            "Value for ReGridderParams/antenna_pattern_uncertainty parameter.",
         ],
-        "ReGridderParams/cimr_l_nedt": [
+        "ReGridderParams/cimr_L_nedt": [
             "nedtl",
             "cimr-l-nedt",
             str,
-            "Value for ReGridderParams/cimr_l_nedt parameter.",
+            "Value for ReGridderParams/cimr_L_nedt parameter.",
         ],
-        "ReGridderParams/cimr_c_nedt": [
+        "ReGridderParams/cimr_C_nedt": [
             "nedtc",
             "cimr-c-nedt",
             str,
-            "Value for ReGridderParams/cimr_c_nedt parameter.",
+            "Value for ReGridderParams/cimr_C_nedt parameter.",
         ],
-        "ReGridderParams/cimr_x_nedt": [
+        "ReGridderParams/cimr_X_nedt": [
             "nedtx",
             "cimr-x-nedt",
             str,
-            "Value for ReGridderParams/cimr_x_nedt parameter.",
+            "Value for ReGridderParams/cimr_X_nedt parameter.",
         ],
-        "ReGridderParams/cimr_k_nedt": [
+        "ReGridderParams/cimr_K_nedt": [
             "nedtk",
             "cimr-k-nedt",
             str,
-            "Value for ReGridderParams/cimr_k_nedt parameter.",
+            "Value for ReGridderParams/cimr_K_nedt parameter.",
         ],
-        "ReGridderParams/cimr_ka_nedt": [
+        "ReGridderParams/cimr_KA_nedt": [
             "nedtka",
             "cimr-ka-nedt",
             str,
-            "Value for ReGridderParams/cimr_ka_nedt parameter.",
+            "Value for ReGridderParams/cimr_KA_nedt parameter.",
+        ],
+        "ReGridderParams/regularisation_parameter": [
+            "rp",
+            "regularisation-parameter",
+            str,
+            "Value for ReGridderParams/regularisation_parameter parameter.",
+        ],
+        "ReGridderParams/max_iterations": [
+            "mi",
+            "max-iterations",
+            str,
+            "Value for ReGridderParams/max_iterations parameter.",
+        ],
+        "ReGridderParams/relative_tolerance": [
+            "rt",
+            "relative-tolerance",
+            str,
+            "Value for ReGridderParams/relative_tolerance parameter.",
+        ],
+        "ReGridderParams/max_chunk_size": [
+            "mcs",
+            "max-chunk-size",
+            str,
+            "Value for ReGridderParams/max_chunk_size parameter.",
+        ],
+        "ReGridderParams/chunk_buffer": [
+            "cb",
+            "chunk-buffer",
+            str,
+            "Value for ReGridderParams/chunk_buffer parameter.",
         ],
         # Output data parameters
         "OutputData/save_to_disk": [

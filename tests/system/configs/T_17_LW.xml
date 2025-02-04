@@ -2,8 +2,7 @@
 <config>
   <InputData>
     <type>CIMR</type>
-    <path>
-      ./dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
+    <path>./dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
     <antenna_patterns_path>./dpr/antenna_patterns</antenna_patterns_path>
     <split_fore_aft>False</split_fore_aft>
     <source_band>C</source_band>
@@ -20,7 +19,7 @@
     <regridding_algorithm>LW</regridding_algorithm>
     <search_radius>18</search_radius>
     <max_neighbours>20</max_neighbours>
-    <variables_to_regrid>bt_h nedt_h</variables_to_regrid>
+    <variables_to_regrid>bt_h</variables_to_regrid>
     <source_antenna_method>instrument</source_antenna_method>
     <target_antenna_method>instrument</target_antenna_method>
     <polarisation_method>scalar</polarisation_method>
@@ -35,9 +34,19 @@
     <rsir_iteration>15</rsir_iteration>
     <bg_smoothing>1</bg_smoothing>
     <antenna_pattern_uncertainty>0</antenna_pattern_uncertainty>
-    <regularization_parameter>0.001</regularization_parameter>
+    <regularization_parameter>0.0035</regularization_parameter>
     <max_number_iteration>1000</max_number_iteration>
-    <relative_tolerance>0.0001</relative_tolerance>
+    <relative_tolerance>0.00000000001</relative_tolerance>
+    <cimr_L_nedt>0.3</cimr_L_nedt>
+    <cimr_C_nedt>0.2</cimr_C_nedt>
+    <cimr_X_nedt>0.3</cimr_X_nedt>
+    <cimr_K_nedt>0.7</cimr_K_nedt>
+    <cimr_KA_nedt>0.4</cimr_KA_nedt>
+    <relative_tolerance>0.0011</relative_tolerance>
+    <max_iterations>1000</max_iterations>
+    <regularisation_parameter>0.0035</regularisation_parameter>
+    <max_chunk_size>100</max_chunk_size>
+    <chunk_buffer>1.5</chunk_buffer>
   </ReGridderParams>
   <OutputData>
     <save_to_disk>True</save_to_disk>

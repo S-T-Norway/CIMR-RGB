@@ -413,7 +413,7 @@ class ConfigFile:
                 "C": 4,
                 "X": 4,
                 "KA": 8,
-                "KU": 8,
+                "K": 8,
             }
             self.scan_angle_feed_offsets = {}
             self.u0 = {}
@@ -424,9 +424,11 @@ class ConfigFile:
                 "C": (74, 2747 * 4),
                 "X": (74, 2807 * 4),
                 "KA": (74, 10395 * 8),
-                "KU": (74, 7692 * 8),
+                "K": (74, 7692 * 8),
             }
-            self.nedt = {"L": 0.3, "C": 0.2, "X": 0.3, "KA": 0.4, "KU": 0.7}
+            self.cimr_nedt = self.validate_cimr_nedt(
+                config_object=config_object
+            )
 
         self.variables_to_regrid = self.validate_variables_to_regrid(
             config_object=config_object,
@@ -514,18 +516,27 @@ class ConfigFile:
             )
 
         if self.regridding_algorithm in ["LW", "CG"]:
-            self.max_number_iteration = self.validate_max_number_iteration(
+            self.max_iterations = self.validate_max_iterations(
                 config_object=config_object,
-                max_number_iteration="ReGridderParams/max_number_iteration",
+                max_iterations="ReGridderParams/max_iterations",
             )
             self.relative_tolerance = self.validate_relative_tolerance(
                 config_object=config_object,
                 relative_tolerance="ReGridderParams/relative_tolerance",
             )
-            self.regularization_parameter = self.validate_regularization_parameter(
+            self.regularisation_parameter = self.validate_regularisation_parameter(
                 config_object=config_object,
-                regularization_parameter="ReGridderParams/regularization_parameter",
+                regularisation_parameter="ReGridderParams/regularisation_parameter",
             )
+            self.max_chunk_size = self.validate_max_chunk_size(
+                config_object=config_object,
+                max_chunk_size="ReGridderParams/max_chunk_size"
+            )
+            self.chunk_buffer = self.validate_chunk_buffer(
+                config_object,
+                chunk_buffer="ReGridderParams/chunk_buffer"
+            )
+
 
     @staticmethod
     def read_config(config_file_path):
@@ -581,6 +592,7 @@ class ConfigFile:
             raise ValueError(error_message)
         else:
             return email
+          
 
     @staticmethod
     def validate_output_data_metadata(parameter):
@@ -589,6 +601,7 @@ class ConfigFile:
         else:
             parameter = parameter.text.strip()
         return parameter
+      
 
     @staticmethod
     def validate_output_directory_path(
@@ -1029,12 +1042,12 @@ class ConfigFile:
 
         elif input_data_type == "CIMR":
             if grid_type == "L1C":
-                valid_input = ["L", "C", "X", "KA", "KU", "All"]
+                valid_input = ["L", "C", "X", "KA", "K", "All"]
             elif grid_type == "L1R":
-                valid_input = ["L", "C", "X", "KA", "KU"]
+                valid_input = ["L", "C", "X", "KA", "K"]
             config_input = config_object.find(target_band).text.split()
             if config_input == ["All"]:
-                return ["L", "C", "X", "KA", "KU"]
+                return ["L", "C", "X", "KA", "K"]
             else:
                 for i in config_input:
                     if i not in valid_input:
@@ -1079,7 +1092,7 @@ class ConfigFile:
             valid_input = ["L"]
 
         if input_data_type == "CIMR":
-            valid_input = ["L", "C", "X", "KA", "KU"]
+            valid_input = ["L", "C", "X", "KA", "K"]
 
         try:
             value = config_object.find(source_band).text.split()
@@ -1159,7 +1172,9 @@ class ConfigFile:
         """
 
         valid_input = [
+            "EASE2_G3km",
             "EASE2_G9km",
+            "EASE2_N3km",
             "EASE2_N9km",
             "EASE2_S9km",
             "EASE2_G36km",
@@ -1690,7 +1705,7 @@ class ConfigFile:
             elif band_to_remap == "KA":
                 num_scans = 74
                 num_earth_samples = 10395 * 8
-            elif band_to_remap == "KU":
+            elif band_to_remap == "K":
                 num_scans = 74
                 num_earth_samples = 7692 * 8
             else:
@@ -2642,7 +2657,7 @@ class ConfigFile:
         return iteration
 
     @staticmethod
-    def validate_max_number_iteration(config_object, max_number_iteration):
+    def validate_max_iterations(config_object, max_iterations):
         """
         Validates the maximum number of iterations.
 
@@ -2650,7 +2665,7 @@ class ConfigFile:
         ----------
         config_object : xml.etree.ElementTree.Element
             Root element of the XML configuration file.
-        max_number_iteration : str
+        max_iterations : str
             The XML path to the `max_number_iteration` parameter.
 
         Returns
@@ -2666,18 +2681,19 @@ class ConfigFile:
         Notes
         -----
         - The function ensures the iteration count is a non-negative integer.
-        - If `max_number_iteration` is missing or empty, an exception is raised.
+        - If `max_iterations` is missing or empty, an exception is raised.
         - Float or non-numeric values will also trigger a `ValueError`.
+
 
         Examples
         --------
         >>> import xml.etree.ElementTree as ET
-        >>> xml_data = '''<config><ReGridderParams><max_number_iteration>10</max_number_iteration></ReGridderParams></config>'''
+        >>> xml_data = '''<config><ReGridderParams><max_iterations>10</max_iterations></ReGridderParams></config>'''
         >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
-        >>> ConfigFile.validate_max_number_iteration(config_object, "ReGridderParams/max_number_iteration")
+        >>> ConfigFile.validate_iterations(config_object, "ReGridderParams/max_iterations")
         10
         """
-        element = config_object.find(max_number_iteration)
+        element = config_object.find(max_iterations)
         if element is None or element.text is None or element.text.strip() == "":
             raise ValueError(
                 "Missing maximum number of iteration value in the configuration file."
@@ -2753,9 +2769,9 @@ class ConfigFile:
         return tolerance
 
     @staticmethod
-    def validate_regularization_parameter(config_object, regularization_parameter):
+    def validate_regularisation_parameter(config_object, regularisation_parameter):
         """
-        Validates the regularization parameter value.
+        Validates the regularisation parameter value.
 
         Parameters
         ----------
@@ -2777,30 +2793,31 @@ class ConfigFile:
         Notes
         -----
         - The function ensures the parameter is a valid float.
-        - If `regularization_parameter` is missing or empty, an exception is raised.
+        - If `regularisation_parameter` is missing or empty, an exception is raised.
         - Non-numeric values will also trigger a `ValueError`.
 
         Examples
         --------
         >>> import xml.etree.ElementTree as ET
-        >>> xml_data = '''<config><ReGridderParams><regularization_parameter>0.1</regularization_parameter></ReGridderParams></config>'''
+        >>> xml_data = '''<config><ReGridderParams><regularisation_parameter>0.1</regularisation_parameter></ReGridderParams></config>'''
         >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
-        >>> ConfigFile.validate_regularization_parameter(config_object, "ReGridderParams/regularization_parameter")
+        >>> ConfigFile.validate_regularisation_parameter(config_object, "ReGridderParams/regularisation_parameter")
         0.1
         """
 
-        element = config_object.find(regularization_parameter)
+        element = config_object.find(regularisation_parameter)
         if element is None or element.text is None or element.text.strip() == "":
             raise ValueError(
-                "Missing regularization parameter value in the configuration file."
+                "Missing regularisation parameter value in the configuration file."
             )
 
         try:
             return float(element.text.strip())
         except ValueError:
             raise ValueError(
-                f"Invalid regularization parameter: {element.text}. It must be a valid float."
+                f"Invalid regularisation parameter: {element.text}. It must be a valid float."
             )
+
 
     @staticmethod
     def validate_MRF_grid_definition(config_object, MRF_grid_definition):
@@ -2838,6 +2855,7 @@ class ConfigFile:
         >>> ConfigFile.validate_MRF_grid_definition(config_object, "ReGridderParams/MRF_grid_definition")
         'EASE2_G3km'
         """
+        
         element = config_object.find(MRF_grid_definition)
         if element is None or element.text is None or element.text.strip() == "":
             raise ValueError(
@@ -3077,5 +3095,50 @@ class ConfigFile:
             )  # Convert to float after stripping whitespace
         except ValueError:
             raise ValueError(
-                f"Invalid `antenna_pattern_uncertainty` value: {element.text}. It must be a valid float."
-            )
+                "Invalid `antenna_pattern_uncertainty` value. It must be a valid float."
+            ) from e
+
+    @staticmethod
+    def validate_cimr_nedt(config_object):
+        cimr_nedt = {"L": 0.3, "C": 0.2, "X": 0.3, "KA": 0.4, "K": 0.7}
+
+        for nedt in ['L', 'C', 'X', 'K', 'KA']:
+            value = config_object.find(f"ReGridderParams/cimr_{nedt}_nedt").text
+            if value is None or value.strip() == "":
+                continue
+            try:
+                value = float(value)
+                if value < 0:
+                    raise ValueError(f"{nedt} must be a non-negative float.")
+                cimr_nedt[nedt] = value
+            except ValueError as e:
+                raise ValueError(f"Invalid {nedt} value. It must be a non-negative float.") from e
+        return cimr_nedt
+
+    @staticmethod
+    def validate_max_chunk_size(config_object, max_chunk_size):
+        value = config_object.find(max_chunk_size).text
+        if value is not None:
+            try:
+                value = int(value)
+            except ValueError as e:
+                raise ValueError(
+                    f"Invalid max_chunk_size value: {value}. It must be a valid integer > 0."
+                ) from e
+        else:
+            raise ValueError("Missing max_chunk_size value in the configuration file.")
+        return value
+
+    @staticmethod
+    def validate_chunk_buffer(config_object, chunk_buffer):
+        value = config_object.find(chunk_buffer).text
+        if value is not None:
+            try:
+                value = float(value)
+            except ValueError as e:
+                raise ValueError(
+                    f"Invalid chunk_buffer value: {value}. It must be a valid float > 0."
+                ) from e
+        else:
+            raise ValueError("Missing chunk_buffer value in the configuration file.")
+        return value
