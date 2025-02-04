@@ -776,7 +776,7 @@ def test_validate_search_radius(
         ("CIMR", "C", (74, 2747 * 4), False),
         ("CIMR", "X", (74, 2807 * 4), False),
         ("CIMR", "KA", (74, 10395 * 8), False),
-        ("CIMR", "KU", (74, 7692 * 8), False),
+        ("CIMR", "K", (74, 7692 * 8), False),
         # Invalid Cases
         ("UNKNOWN", None, None, True),  # Invalid input_data_type
     ],
@@ -1798,7 +1798,7 @@ def test_validate_rsir_iteration(rsir_iteration_value, expected, expect_exceptio
 
 
 @pytest.mark.parametrize(
-    "max_number_iteration_value, expected, expect_exception",
+    "max_iterations_value, expected, expect_exception",
     [
         # Valid cases
         ("10", 10, False),  # Valid integer
@@ -1812,25 +1812,23 @@ def test_validate_rsir_iteration(rsir_iteration_value, expected, expect_exceptio
         ("-5", None, True),  # Negative integer
     ],
 )
-def test_validate_max_number_iteration(
-    max_number_iteration_value, expected, expect_exception
-):
+def test_validate_max_iterations(max_iterations_value, expected, expect_exception):
     """
-    Pytest unit test for the `validate_max_number_iteration` method.
+    Pytest unit test for the `validate_max_iterations` method.
 
-    This test ensures that `validate_max_number_iteration` correctly processes
+    This test ensures that `validate_max_iterations` correctly processes
     valid, default, and invalid cases.
 
     Test Scenarios
     --------------
-    - Valid `max_number_iteration` values should return a non-negative integer.
+    - Valid `max_iterations` values should return a non-negative integer.
     - Missing or empty values should raise a `ValueError`.
     - Negative or non-numeric values should raise a `ValueError`.
 
     Parameters
     ----------
-    max_number_iteration_value : str or None
-        The value assigned to the `max_number_iteration` XML tag.
+    max_iterations_value : str or None
+        The value assigned to the `max_iterations` XML tag.
     expected : int or None
         The expected validated output if valid, otherwise None.
     expect_exception : bool
@@ -1846,22 +1844,22 @@ def test_validate_max_number_iteration(
     # Arrange
     config_object = ET.Element("config")
     regridder_params = ET.SubElement(config_object, "ReGridderParams")
-    max_number_iteration = ET.SubElement(regridder_params, "max_number_iteration")
-    if max_number_iteration_value is not None:
-        max_number_iteration.text = max_number_iteration_value
+    max_iterations = ET.SubElement(regridder_params, "max_iterations")
+    if max_iterations_value is not None:
+        max_iterations.text = max_iterations_value
 
     if expect_exception:
         # Act & Assert: Expect an exception
         with pytest.raises(ValueError):  # , match="Invalid|Missing|Maximum"):
-            ConfigFile.validate_max_number_iteration(
+            ConfigFile.validate_max_iterations(
                 config_object=config_object,
-                max_number_iteration="ReGridderParams/max_number_iteration",
+                max_iterations="ReGridderParams/max_iterations",
             )
     else:
         # Act: No exception expected
-        result = ConfigFile.validate_max_number_iteration(
+        result = ConfigFile.validate_max_iterations(
             config_object=config_object,
-            max_number_iteration="ReGridderParams/max_number_iteration",
+            max_iterations="ReGridderParams/max_iterations",
         )
         # Assert: Compare result to expected value
         assert result == expected
@@ -1938,7 +1936,7 @@ def test_validate_relative_tolerance(
 
 
 @pytest.mark.parametrize(
-    "regularization_parameter_value, expected, expect_exception",
+    "regularisation_parameter_value, expected, expect_exception",
     [
         # Valid cases
         ("0.1", 0.1, False),  # Positive float
@@ -1952,25 +1950,25 @@ def test_validate_relative_tolerance(
         ("invalid", None, True),  # Non-numeric string
     ],
 )
-def test_validate_regularization_parameter(
-    regularization_parameter_value, expected, expect_exception
+def test_validate_regularisation_parameter(
+    regularisation_parameter_value, expected, expect_exception
 ):
     """
-    Pytest unit test for the `validate_regularization_parameter` method.
+    Pytest unit test for the `validate_regularisation_parameter` method.
 
-    This test ensures that `validate_regularization_parameter` correctly processes
+    This test ensures that `validate_regularisation_parameter` correctly processes
     valid, default, and invalid cases.
 
     Test Scenarios
     --------------
-    - Valid `regularization_parameter` values should return a float.
+    - Valid `regularisation_parameter` values should return a float.
     - Missing or empty values should raise a `ValueError`.
     - Non-numeric values should raise a `ValueError`.
 
     Parameters
     ----------
-    regularization_parameter_value : str or None
-        The value assigned to the `regularization_parameter` XML tag.
+    regularisation_parameter_value : str or None
+        The value assigned to the `regularisation_parameter` XML tag.
     expected : float or None
         The expected validated output if valid, otherwise None.
     expect_exception : bool
@@ -1986,24 +1984,24 @@ def test_validate_regularization_parameter(
     # Arrange
     config_object = ET.Element("config")
     regridder_params = ET.SubElement(config_object, "ReGridderParams")
-    regularization_parameter = ET.SubElement(
-        regridder_params, "regularization_parameter"
+    regularisation_parameter = ET.SubElement(
+        regridder_params, "regularisation_parameter"
     )
-    if regularization_parameter_value is not None:
-        regularization_parameter.text = regularization_parameter_value
+    if regularisation_parameter_value is not None:
+        regularisation_parameter.text = regularisation_parameter_value
 
     if expect_exception:
         # Act & Assert: Expect an exception
         with pytest.raises(ValueError):  # , match="Invalid|Missing"):
-            ConfigFile.validate_regularization_parameter(
+            ConfigFile.validate_regularisation_parameter(
                 config_object=config_object,
-                regularization_parameter="ReGridderParams/regularization_parameter",
+                regularisation_parameter="ReGridderParams/regularisation_parameter",
             )
     else:
         # Act: No exception expected
-        result = ConfigFile.validate_regularization_parameter(
+        result = ConfigFile.validate_regularisation_parameter(
             config_object=config_object,
-            regularization_parameter="ReGridderParams/regularization_parameter",
+            regularisation_parameter="ReGridderParams/regularisation_parameter",
         )
         # Assert: Compare result to expected value
         assert result == expected

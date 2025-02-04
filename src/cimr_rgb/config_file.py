@@ -426,9 +426,7 @@ class ConfigFile:
                 "KA": (74, 10395 * 8),
                 "K": (74, 7692 * 8),
             }
-            self.cimr_nedt = self.validate_cimr_nedt(
-                config_object=config_object
-            )
+            self.cimr_nedt = self.validate_cimr_nedt(config_object=config_object)
 
         self.variables_to_regrid = self.validate_variables_to_regrid(
             config_object=config_object,
@@ -530,13 +528,11 @@ class ConfigFile:
             )
             self.max_chunk_size = self.validate_max_chunk_size(
                 config_object=config_object,
-                max_chunk_size="ReGridderParams/max_chunk_size"
+                max_chunk_size="ReGridderParams/max_chunk_size",
             )
             self.chunk_buffer = self.validate_chunk_buffer(
-                config_object,
-                chunk_buffer="ReGridderParams/chunk_buffer"
+                config_object, chunk_buffer="ReGridderParams/chunk_buffer"
             )
-
 
     @staticmethod
     def read_config(config_file_path):
@@ -592,7 +588,6 @@ class ConfigFile:
             raise ValueError(error_message)
         else:
             return email
-          
 
     @staticmethod
     def validate_output_data_metadata(parameter):
@@ -601,7 +596,6 @@ class ConfigFile:
         else:
             parameter = parameter.text.strip()
         return parameter
-      
 
     @staticmethod
     def validate_output_directory_path(
@@ -2818,7 +2812,6 @@ class ConfigFile:
                 f"Invalid regularisation parameter: {element.text}. It must be a valid float."
             )
 
-
     @staticmethod
     def validate_MRF_grid_definition(config_object, MRF_grid_definition):
         """
@@ -2855,7 +2848,7 @@ class ConfigFile:
         >>> ConfigFile.validate_MRF_grid_definition(config_object, "ReGridderParams/MRF_grid_definition")
         'EASE2_G3km'
         """
-        
+
         element = config_object.find(MRF_grid_definition)
         if element is None or element.text is None or element.text.strip() == "":
             raise ValueError(
@@ -3096,13 +3089,13 @@ class ConfigFile:
         except ValueError:
             raise ValueError(
                 "Invalid `antenna_pattern_uncertainty` value. It must be a valid float."
-            ) from e
+            )  # from e
 
     @staticmethod
     def validate_cimr_nedt(config_object):
         cimr_nedt = {"L": 0.3, "C": 0.2, "X": 0.3, "KA": 0.4, "K": 0.7}
 
-        for nedt in ['L', 'C', 'X', 'K', 'KA']:
+        for nedt in ["L", "C", "X", "K", "KA"]:
             value = config_object.find(f"ReGridderParams/cimr_{nedt}_nedt").text
             if value is None or value.strip() == "":
                 continue
@@ -3112,7 +3105,9 @@ class ConfigFile:
                     raise ValueError(f"{nedt} must be a non-negative float.")
                 cimr_nedt[nedt] = value
             except ValueError as e:
-                raise ValueError(f"Invalid {nedt} value. It must be a non-negative float.") from e
+                raise ValueError(
+                    f"Invalid {nedt} value. It must be a non-negative float."
+                ) from e
         return cimr_nedt
 
     @staticmethod
