@@ -257,7 +257,7 @@ class ConfigFile:
         self.search_radius = self.validate_search_radius(
             config_object=config_object,
             search_radius="ReGridderParams/search_radius",
-            grid_definition=self.grid_definition,
+            # grid_definition=self.grid_definition,
             grid_type=self.grid_type,
             input_data_type=self.input_data_type,
         )
@@ -592,6 +592,7 @@ class ConfigFile:
             raise ValueError(error_message)
         else:
             return email
+          
 
     @staticmethod
     def validate_output_data_metadata(parameter):
@@ -600,6 +601,7 @@ class ConfigFile:
         else:
             parameter = parameter.text.strip()
         return parameter
+      
 
     @staticmethod
     def validate_output_directory_path(
@@ -738,35 +740,77 @@ class ConfigFile:
 
     @staticmethod
     def validate_input_data_type(config_object, input_data_type):
-        """
-        Validates the input data type and returns the value if valid
+        r"""
+        Validate the `input_data_type` parameter by checking its existence in the XML
+        configuration and ensuring it matches a predefined set of valid values.
 
         Parameters
         ----------
-        config_object: xml.etree.ElementTree.Element
-            Root element of the configuration file
-        input_data_type: str
-            Path to the input data type in the configuration file
+        config_object : xml.etree.ElementTree.Element
+            The root element of the XML configuration file.
+        input_data_type : str
+            The XML tag name corresponding to the input data type.
 
         Returns
         -------
         str
-            Validated input data type
+            The validated input data type in uppercase format.
+
+        Raises
+        ------
+        AttributeError
+            If the XML tag `input_data_type` is missing or incorrectly specified.
+        ValueError
+            If the extracted `input_data_type` is not in the predefined valid set.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = <config><InputData><type>AMSR2</type></InputData></config>
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_input_data_type(config_object, "inputType")
+        'AMSR2'
+
+        >>> xml_data = <config><InputData><type>INVALID</type></InputData></config>
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_input_data_type(config_object, "inputType")
+        Traceback (most recent call last):
+            ...
+        ValueError: Invalid input data type. Valid input data types are: ['AMSR2', 'SMAP', 'CIMR'].
+
+        >>> xml_data = <config><inputData>AMSR2</inputData></config>
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_input_data_type(config_object, "inputType")
+        Traceback (most recent call last):
+            ...
+        AttributeError: Missing or incorrect XML tag: '<inputData>' not found in the configuration file.
         """
 
         valid_input = ["AMSR2", "SMAP", "CIMR"]
 
-        if config_object.find(input_data_type).text in valid_input:
-            return config_object.find(input_data_type).text
+        # Checking if `<InputData><type>` parameter is present in the config file
+        try:
+            input_data_type = str(
+                config_object.find(input_data_type).text.strip()
+            ).upper()
+        except AttributeError:
+            raise AttributeError(
+                f"Missing or incorrect XML tag: '{input_data_type}' not found in the configuration file."
+            )
+
+        if input_data_type in valid_input:
+            return input_data_type
 
         raise ValueError(
-            f"Invalid input data type. Valid input data types are: {valid_input}"
+            f"Invalid input data type. Valid input data types are: {valid_input}."
         )
 
+    # TODO: Add proper docstring in scipy/numpy format
     @staticmethod
     def validate_input_data_path(config_object, input_data_path):
         """
         Validates the input data path and returns the value if valid
+
         Parameters
         ----------
         config_object: xml.etree.ElementTree.Element
@@ -780,23 +824,31 @@ class ConfigFile:
             Validated input data path
         """
 
+        valid_extensions = [".h5", ".hdf5", ".nc"]
+
         input_data_path = (config_object.find(input_data_path).text).strip()
         input_data_path = grasp_io.resolve_config_path(path_string=input_data_path)
-        print(input_data_path)
 
         if input_data_path.exists():
-            return input_data_path
+            if input_data_path.suffix in valid_extensions:
+                return input_data_path
+            else:
+                raise ValueError(
+                    f"File\n {input_data_path} is of invalid type. Valid file types are: {valid_extensions}."
+                )
         else:
             raise FileNotFoundError(
                 f"File\n {input_data_path}\n not found. Check file location."
             )
 
+    # TODO: Add proper docstring in scipy/numpy format
     @staticmethod
     def validate_input_antenna_patterns_path(
         config_object, antenna_patterns_path, input_data_type
     ):
         """
         Validates the input data path and returns the value if valid
+
         Parameters
         ----------
         config_object: xml.etree.ElementTree.Element
@@ -812,7 +864,7 @@ class ConfigFile:
 
         antenna_patterns_path = pb.Path(
             config_object.find(antenna_patterns_path).text.strip()
-        )  # .resolve()
+        )
         antenna_patterns_path = grasp_io.resolve_config_path(
             path_string=antenna_patterns_path
         )
@@ -826,7 +878,7 @@ class ConfigFile:
                     )
                 except AttributeError as e:
                     raise ValueError(
-                        f"Error: SMAP Antenna Pattern not found in dpr"
+                        "Error: SMAP Antenna Pattern not found in dpr"
                     ) from e
             elif input_data_type == "CIMR":
                 try:
@@ -865,19 +917,91 @@ class ConfigFile:
             Validated grid type
         """
 
+        r"""
+        Validate the grid type parameter from the XML configuration.
+
+        This method verifies if the grid type exists in the XML configuration 
+        and ensures it matches a predefined set of acceptable grid types 
+        based on the selected input data type.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            The root element of the XML configuration file.
+        grid_type : str
+            The XML tag path corresponding to the grid type.
+        input_data_type : str
+            The user-selected input data type that determines the valid grid types.
+
+        Returns
+        -------
+        str
+            The validated grid type if it is found and matches one of the 
+            predefined valid values for the given `input_data_type`.
+
+        Raises
+        ------
+        AttributeError
+            If the required XML tag for `grid_type` is missing or incorrectly 
+            specified in the configuration file.
+        ValueError
+            If the extracted grid type is not in the list of valid grid types.
+
+        Notes
+        -----
+        - The function searches for the `<GridParams><grid_type>` tag in the 
+          XML file and validates its value against predefined grid types.
+        - Valid grid types depend on the input data type:
+          
+          - If `input_data_type` is `SMAP`: `['L1C']`
+          - Otherwise: `['L1C', 'L1R']`
+        - Grid type values are case-insensitive and converted to uppercase.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><GridParams><grid_type>L1C</grid_type></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_grid_type(config_object, "GridParams/grid_type", "SMAP")
+        'L1C'
+
+        >>> xml_data = '''<config><GridParams><grid_type>INVALID</grid_type></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_grid_type(config_object, "GridParams/grid_type", "CIMR")
+        Traceback (most recent call last):
+            ...
+        ValueError: Invalid Grid Type. Check Configuration File. Valid grid types are: ['L1C', 'L1R'] for GridParams/grid_type data.
+
+        >>> xml_data = '''<config><GridParams><otherTag>L1C</otherTag></GridParams></config>''' 
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_grid_type(config_object, "GridParams/grid_type", "SMAP")
+        Traceback (most recent call last):
+            ...
+        AttributeError: Missing or incorrect XML tag: 'GridParams/grid_type' not found in the configuration file.
+        """
+
         if input_data_type == "SMAP":
             valid_input = ["L1C"]
         else:
             valid_input = ["L1C", "L1R"]
 
-        if config_object.find(grid_type).text in valid_input:
-            return config_object.find(grid_type).text
+        # Checking if `<GridParams><grid_type>` parameter is present in the config file
+        try:
+            grid_type = str(config_object.find(grid_type).text.strip()).upper()
+        except AttributeError:
+            raise AttributeError(
+                f"Missing or incorrect XML tag: '{grid_type}' not found in the configuration file."
+            )
+
+        if grid_type in valid_input:
+            return grid_type
 
         raise ValueError(
             f"Invalid Grid Type. Check Configuration File. Valid grid types are:"
-            f" {valid_input} for {input_data_type} data."
+            f" {valid_input} for GridParams/grid_type data."
         )
 
+    # TODO:
     @staticmethod
     def validate_target_band(config_object, target_band, input_data_type, grid_type):
         """
@@ -941,6 +1065,7 @@ class ConfigFile:
                 f"Invalid target band for SMAP L1C remap. Valid target band is: {valid_input}"
             )
 
+    # TODO:
     @staticmethod
     def validate_source_band(config_object, source_band, input_data_type):
         """
@@ -973,7 +1098,7 @@ class ConfigFile:
             value = config_object.find(source_band).text.split()
         except AttributeError as e:
             raise ValueError(
-                f"Error: Source Band not found in configuration file. Check configuration file."
+                "Error: Source Band not found in configuration file. Check configuration file."
             ) from e
 
         if all(item in valid_input for item in value):
@@ -986,22 +1111,64 @@ class ConfigFile:
 
     @staticmethod
     def validate_grid_definition(config_object, grid_definition):
-        """
-        Validates the grid definition and returns the value if valid
+        r"""
+        Validate the grid definition parameter from the XML configuration.
+
+        This method checks if the provided grid definition exists in the XML
+        configuration and validates it against a predefined set of acceptable
+        grid definitions.
 
         Parameters
         ----------
-        config_object: xml.etree.ElementTree.Element
-            Root element of the configuration file
-        grid_type: str
-            User selected Grid Type in the configuration file
-        grid_definition: str
-            Path to the grid definition in the configuration file
+        config_object : xml.etree.ElementTree.Element
+            The root element of the XML configuration file.
+        grid_definition : str
+            The XML tag path corresponding to the grid definition.
 
         Returns
         -------
         str
-            Validated grid definition
+            The validated grid definition if it is found and matches one of the
+            predefined valid values.
+
+        Raises
+        ------
+        AttributeError
+            If the required XML tag for `grid_definition` is missing or incorrectly
+            specified in the configuration file.
+        ValueError
+            If the extracted grid definition is not in the list of valid grid definitions.
+
+        Notes
+        -----
+        - Grid definitions are case-sensitive.
+        - The function searches for the `<GridParams><grid_definition>` tag in the
+          XML file and validates its value against predefined grid types.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><GridParams><grid_definition>EASE2_G9km</grid_definition></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_grid_definition(config_object, "GridParams/grid_definition")
+        'EASE2_G9km'
+
+        >>> xml_data = '''<config><GridParams><grid_definition>INVALID_GRID</grid_definition></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_grid_definition(config_object, "GridParams/grid_definition")
+        Traceback (most recent call last):
+            ...
+        ValueError: Invalid Grid Definition, check configuration file. Valid grid definitions are:
+            ['EASE2_G9km', 'EASE2_N9km', 'EASE2_S9km', 'EASE2_G36km', 'EASE2_N36km', 'EASE2_S36km',
+             'STEREO_N25km', 'STEREO_S25km', 'STEREO_N6.25km', 'STEREO_N12.5km', 'STEREO_S6.25km',
+             'STEREO_S12.5km', 'STEREO_S25km', 'MERC_G25km', 'MERC_G12.5km', 'MERC_G6.25km']
+
+        >>> xml_data = '''<config><GridParams><otherTag>EASE2_G9km</otherTag></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_grid_definition(config_object, "GridParams/grid_definition")
+        Traceback (most recent call last):
+            ...
+        AttributeError: Missing or incorrect XML tag: 'GridParams/grid_definition' not found in the configuration file.
         """
 
         valid_input = [
@@ -1025,34 +1192,96 @@ class ConfigFile:
             "MERC_G6.25km",
         ]
 
-        if config_object.find(grid_definition).text in valid_input:
-            return config_object.find(grid_definition).text
+        # Checking if `<GridParams><grid_definition>` parameter is present in the config file
+        #
+        # Note: grid_definition is case sensitive
+        try:
+            grid_definition = config_object.find(grid_definition).text.strip()
+        except AttributeError:
+            raise AttributeError(
+                f"Missing or incorrect XML tag: '{grid_definition}' not found in the configuration file."
+            )
+
+        if grid_definition in valid_input:
+            return grid_definition
+
         raise ValueError(
             f"Invalid Grid Definition, check configuration file. "
             f"Valid grid definitions are: {valid_input}"
         )
 
-    # TODO: Check the docstring, seems to have an incorrect description
     @staticmethod
     def validate_projection_definition(
         config_object, grid_definition, projection_definition
     ):
-        """
-        Validates the projection definition and returns the value if valid
+        r"""
+        Validate the projection definition parameter from the XML configuration.
+
+        This method verifies if the projection definition exists in the XML
+        configuration and ensures it matches the expected projection type based on
+        the selected grid definition.
 
         Parameters
         ----------
-        config_object: xml.etree.ElementTree.Element
-            Root element of the configuration file
-        grid_definition: str
-            User selected Grid Definition in the configuration file
-        projection_definition: str
-            Path to the projection definition in the configuration file
+        config_object : xml.etree.ElementTree.Element
+            The root element of the XML configuration file.
+        grid_definition : str
+            The user-selected grid definition that determines the expected projection types.
+        projection_definition : str
+            The XML tag path corresponding to the projection definition.
 
         Returns
         -------
-        str
-            Validated projection definition
+        str or None
+            The validated projection definition if it is found and matches one of the
+            predefined valid values for the given `grid_definition`, or `None` if
+            `grid_definition` is not provided.
+
+        Raises
+        ------
+        AttributeError
+            If the required XML tag for `projection_definition` is missing or incorrectly
+            specified in the configuration file.
+        ValueError
+            If the extracted projection definition is not valid for the given `grid_definition`.
+
+        Notes
+        -----
+        - The valid projection definitions depend on the `grid_definition`:
+
+          - `EASE2_*` grids: `["G", "N", "S"]`
+          - `STEREO_*` grids: `["PS_N", "PS_S"]`
+          - `MERC_*` grids: `["MERC_G"]`
+
+        - The function searches for the `<GridParams><projection_definition>` tag in the
+          XML file and validates its value accordingly.
+        - Projection definitions are case-insensitive and converted to uppercase.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><GridParams><projection_definition>G</projection_definition></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_projection_definition(config_object, "EASE2_G9km", "GridParams/projection_definition")
+        'G'
+
+        >>> xml_data = '''<config><GridParams><projection_definition>INVALID</projection_definition></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_projection_definition(config_object, "EASE2_G9km", "GridParams/projection_definition")
+        Traceback (most recent call last):
+            ...
+        ValueError: Grid Definition `EASE2_G9km` received invalid projection definition: `INVALID`; check configuration file.
+                    Valid projection definitions are: `['G', 'N', 'S']`
+
+        >>> xml_data = '''<config><GridParams><otherTag>PS_N</otherTag></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_projection_definition(config_object, "STEREO_N25km", "GridParams/projection_definition")
+        Traceback (most recent call last):
+            ...
+        AttributeError: Missing or incorrect XML tag: 'GridParams/projection_definition' not found in the configuration file.
+
+        >>> ConfigFile.validate_projection_definition(config_object, None, "GridParams/projection_definition")
+        None
         """
 
         if grid_definition:
@@ -1065,9 +1294,22 @@ class ConfigFile:
             elif "MERC" in grid_definition:
                 valid_input = ["MERC_G"]
 
-            proj_val = config_object.find(projection_definition).text
+            else:
+                valid_input = []
+
+            # Checking if `<GridParams><projection_definition>` parameter is present in the config file
+            try:
+                proj_val = str(
+                    config_object.find(projection_definition).text.strip()
+                ).upper()
+            except AttributeError:
+                raise AttributeError(
+                    f"Missing or incorrect XML tag: '{projection_definition}' not found in the configuration file."
+                )
+
             if proj_val in valid_input:
-                return proj_val  # config_object.find(projection_definition).text
+                return proj_val
+
             raise ValueError(
                 f"Grid Definiton `{grid_definition}` received invalid projection definition: `{proj_val}`; "
                 f"check configuration file."
@@ -1078,24 +1320,78 @@ class ConfigFile:
 
     @staticmethod
     def validate_regridding_algorithm(config_object, regridding_algorithm):
-        """
-        Validates the regridding algorithm and returns the value if valid
+        r"""
+        Validate the regridding algorithm parameter from the XML configuration.
+
+        This method verifies if the regridding algorithm exists in the XML configuration
+        and ensures it matches a predefined set of acceptable regridding algorithms.
 
         Parameters
         ----------
-        config_object: xml.etree.ElementTree.Element
-            Root element of the configuration file
-        regridding_algorithm: str
-            Path to the regridding algorithm in the configuration file
+        config_object : xml.etree.ElementTree.Element
+            The root element of the XML configuration file.
+        regridding_algorithm : str
+            The XML tag path corresponding to the regridding algorithm.
 
         Returns
         -------
         str
-            Validated regridding algorithm
+            The validated regridding algorithm if it is found and matches one of the
+            predefined valid values.
+
+        Raises
+        ------
+        AttributeError
+            If the required XML tag for `regridding_algorithm` is missing or incorrectly
+            specified in the configuration file.
+        ValueError
+            If the extracted regridding algorithm is not in the list of valid algorithms.
+
+        Notes
+        -----
+        - The function searches for the `<ReGridderParams><regridding_algorithm>` tag in the
+          XML file and validates its value against predefined regridding methods.
+        - Valid regridding algorithms include:
+          `['NN', 'DIB', 'IDS', 'BG', 'RSIR', 'LW', 'CG']`
+        - Algorithm names are case-insensitive and converted to uppercase.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><regridding_algorithm>NN</regridding_algorithm></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_regridding_algorithm(config_object, "ReGridderParams/regridding_algorithm")
+        'NN'
+
+        >>> xml_data = '''<config><ReGridderParams><regridding_algorithm>INVALID</regridding_algorithm></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_regridding_algorithm(config_object, "ReGridderParams/regridding_algorithm")
+        Traceback (most recent call last):
+            ...
+        ValueError: Invalid regridding algorithm. Check Configuration File. Valid regridding algorithms are: ['NN', 'DIB', 'IDS', 'BG', 'RSIR', 'LW', 'CG']
+
+        >>> xml_data = '''<config><ReGridderParams><otherTag>NN</otherTag></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_regridding_algorithm(config_object, "ReGridderParams/regridding_algorithm")
+        Traceback (most recent call last):
+            ...
+        AttributeError: Missing or incorrect XML tag: 'ReGridderParams/regridding_algorithm' not found in the configuration file.
         """
+
         valid_input = ["NN", "DIB", "IDS", "BG", "RSIR", "LW", "CG"]
-        if config_object.find(regridding_algorithm).text in valid_input:
-            return config_object.find(regridding_algorithm).text
+
+        try:
+            regridding_algorithm = str(
+                config_object.find(regridding_algorithm).text.strip()
+            ).upper()
+        except AttributeError:
+            raise AttributeError(
+                f"Missing or incorrect XML tag: '{regridding_algorithm}' not found in the configuration file."
+            )
+
+        if regridding_algorithm in valid_input:
+            return regridding_algorithm
+
         raise ValueError(
             f"Invalid regridding algorithm. Check Configuration File."
             f" Valid regridding algorithms are: {valid_input}"
@@ -1103,29 +1399,86 @@ class ConfigFile:
 
     @staticmethod
     def validate_split_fore_aft(config_object, split_fore_aft, input_data_type):
-        """
-        Validates the split fore aft and returns the value if valid
+        r"""
+        Validate the `split_fore_aft` parameter from the XML configuration.
+
+        This method verifies if the `split_fore_aft` parameter exists in the XML
+        configuration and ensures it matches a predefined set of acceptable values.
 
         Parameters
         ----------
-        config_object: xml.etree.ElementTree.Element
-            Root element of the configuration file
-        split_fore_aft: str
-            Path to the split fore aft in the configuration file
+        config_object : xml.etree.ElementTree.Element
+            The root element of the XML configuration file.
+        split_fore_aft : str
+            The XML tag path corresponding to the split fore/aft parameter.
+        input_data_type : str
+            The input data type used to determine valid values for `split_fore_aft`.
 
         Returns
         -------
-        str
-            Validated split fore aft
+        bool
+            The validated `split_fore_aft` value as a boolean.
+
+        Raises
+        ------
+        AttributeError
+            If the required XML tag for `split_fore_aft` is missing or incorrectly
+            specified in the configuration file.
+        ValueError
+            If the extracted `split_fore_aft` value is not in the list of valid options.
+
+        Notes
+        -----
+        - If `input_data_type` is `AMSR2`, the function always returns `False`.
+        - The function searches for the `<InputData><split_fore_aft>` tag in the
+          XML file and validates its value against `TRUE` or `FALSE`.
+        - The values are case-insensitive and converted to uppercase.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><InputData><split_fore_aft>True</split_fore_aft></InputData></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_split_fore_aft(config_object, "InputData/split_fore_aft", "SMAP")
+        True
+
+        >>> xml_data = '''<config><InputData><split_fore_aft>false</split_fore_aft></InputData></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_split_fore_aft(config_object, "InputData/split_fore_aft", "CIMR")
+        False
+
+        >>> xml_data = '''<config><InputData><otherTag>True</otherTag></InputData></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_split_fore_aft(config_object, "InputData/split_fore_aft", "CIMR")
+        Traceback (most recent call last):
+            ...
+        AttributeError: Missing or incorrect XML tag: 'InputData/split_fore_aft' not found in the configuration file.
+
+        >>> ConfigFile.validate_split_fore_aft(config_object, "InputData/split_fore_aft", "AMSR2")
+        False
         """
+
         if input_data_type == "AMSR2":
             return False
-        valid_input = ["True", "False"]
-        if config_object.find(split_fore_aft).text in valid_input:
-            if config_object.find(split_fore_aft).text == "True":
+
+        valid_input = ["TRUE", "FALSE"]
+
+        try:
+            split_fore_aft = str(
+                config_object.find(split_fore_aft).text.strip()
+            ).upper()
+        except AttributeError:
+            raise AttributeError(
+                f"Missing or incorrect XML tag: '{split_fore_aft}' not found in the configuration file."
+            )
+
+        # if config_object.find(split_fore_aft).text in valid_input:
+        if split_fore_aft in valid_input:
+            if split_fore_aft == "TRUE":
                 return True
             else:
                 return False
+
         raise ValueError(
             f"Invalid split fore aft. Check Configuration File."
             f" Valid split fore aft are: {valid_input}"
@@ -1133,44 +1486,133 @@ class ConfigFile:
 
     @staticmethod
     def validate_save_to_disk(config_object, save_to_disk):
-        # value = bool(config_object.find(save_to_disk).text)
-        value = config_object.find(save_to_disk).text
+        r"""
+        Validate the `save_to_disk` parameter from the XML configuration.
 
-        # if value is not True and value is not False:
-        if value not in ["True", "False"]:
-            raise ValueError(
-                f"Invalid `save_to_disk`. Check Configuration File."
-                f" `save_to_disk` must be either True or False"
-            )
-        elif value == "True":
-            value = True
-        elif value == "False":
-            value = False
-
-        return value
-
-    @staticmethod
-    def validate_search_radius(
-        config_object, search_radius, grid_definition, grid_type, input_data_type
-    ):
-        """
-        Validates the search radius and returns the value if valid
+        This method verifies if the `save_to_disk` parameter exists in the XML
+        configuration and ensures it matches a predefined set of acceptable values.
 
         Parameters
         ----------
-        config_object: xml.etree.ElementTree.Element
-            Root element of the configuration file
-        search_radius: str
-            Path to the search radius in the configuration file
+        config_object : xml.etree.ElementTree.Element
+            The root element of the XML configuration file.
+        save_to_disk : str
+            The XML tag path corresponding to the save to disk parameter.
 
         Returns
         -------
-        int
-            Validated search radius
-        """
-        value = config_object.find(search_radius).text
+        bool
+            The validated `save_to_disk` value as a boolean.
 
-        if value is None or value.strip() == "":
+        Raises
+        ------
+        AttributeError
+            If the required XML tag for `save_to_disk` is missing or incorrectly
+            specified in the configuration file.
+        ValueError
+            If the extracted `save_to_disk` value is not in the list of valid options.
+
+        Notes
+        -----
+        - The function searches for the `<OutputParams><save_to_disk>` tag in the
+          XML file and validates its value against `TRUE` or `FALSE`.
+        - The values are case-insensitive and converted to uppercase.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><OutputParams><save_to_disk>True</save_to_disk></OutputParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_save_to_disk(config_object, "OutputParams/save_to_disk")
+        True
+
+        >>> xml_data = '''<config><OutputParams><save_to_disk>false</save_to_disk></OutputParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_save_to_disk(config_object, "OutputParams/save_to_disk")
+        False
+
+        >>> xml_data = '''<config><OutputParams><otherTag>True</otherTag></OutputParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_save_to_disk(config_object, "OutputParams/save_to_disk")
+        Traceback (most recent call last):
+            ...
+        AttributeError: Missing or incorrect XML tag: 'OutputParams/save_to_disk' not found in the configuration file.
+        """
+
+        valid_input = ["TRUE", "FALSE"]
+
+        try:
+            value = str(config_object.find(save_to_disk).text.strip()).upper()
+        except AttributeError:
+            raise AttributeError(
+                f"Missing or incorrect XML tag: '{save_to_disk}' not found in the configuration file."
+            )
+
+        # if value is not True and value is not False:
+        if value in valid_input:
+            if value == "TRUE":
+                value = True
+                return value
+            else:
+                value = False
+                return value
+        else:
+            raise ValueError(
+                "Invalid `save_to_disk`. Check Configuration File."
+                " `save_to_disk` must be either True or False"
+            )
+
+    @staticmethod
+    def validate_search_radius(
+        config_object,
+        search_radius,
+        grid_type,
+        input_data_type,
+    ):
+        r"""
+        Validates the search radius (optional) and returns the value if valid.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the configuration file.
+        search_radius : str
+            Path to the search radius in the configuration file.
+        grid_type : str
+            The type of grid selected.
+        input_data_type : str
+            The input data type used for determining default values.
+
+        Returns
+        -------
+        float or None
+            The validated search radius in meters if specified, otherwise a default value based on grid type.
+
+        Raises
+        ------
+        ValueError
+            If `search_radius` contains a non-numeric value.
+        ValueError
+            If `grid_type` or `input_data_type` is invalid and no default search radius can be determined.
+
+        Notes
+        -----
+        - Converts valid numerical values from kilometers to meters.
+        - Uses predefined defaults based on `grid_type` and `input_data_type` when `search_radius` is None.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><search_radius>5.0</search_radius></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_search_radius(config_object, "ReGridderParams/search_radius", "L1C", "CIMR")
+        5000.0
+        """
+
+        # Making this to accomodate cases of: None, "", and " "
+        value = str(config_object.find(search_radius).text)
+
+        if value == "None" or value == "" or value.strip() == "":
             value = None
         else:
             # Ensure the value is numeric
@@ -1195,11 +1637,58 @@ class ConfigFile:
                     )  # Largest AMSR2 footprint radius, maybe needs tailoring
                 else:
                     raise ValueError(f"Invalid `input_data_type`: {input_data_type}")
+            else:
+                raise ValueError(f"Invalid `grid_type`: {grid_type}")
 
         return value
 
     @staticmethod
     def get_scan_geometry(config, band_to_remap=None):
+        r"""
+        Retrieve the scan geometry based on the input data type and band to remap.
+
+        This function determines the number of scans and earth samples per scan
+        based on the sensor type and frequency band.
+
+        Parameters
+        ----------
+        config : object
+            A configuration object that must have an `input_data_type` attribute.
+        band_to_remap : str, optional
+            The frequency band to remap (applicable only for `CIMR` data).
+
+        Returns
+        -------
+        tuple
+            A tuple containing:
+            - num_scans (int): Number of scans per swath.
+            - num_earth_samples (int): Number of earth samples per scan.
+
+        Raises
+        ------
+        ValueError
+            If an invalid `input_data_type` is provided.
+
+        Notes
+        -----
+        - For `SMAP`, the scan geometry is fixed at (779, 241).
+        - For `CIMR`, the scan geometry depends on the selected frequency band.
+
+        Examples
+        --------
+        >>> class Config:
+        ...     input_data_type = "SMAP"
+        >>> config = Config()
+        >>> get_scan_geometry(config)
+        (779, 241)
+
+        >>> class Config:
+        ...     input_data_type = "CIMR"
+        >>> config = Config()
+        >>> get_scan_geometry(config, band_to_remap="L")
+        (74, 691)
+        """
+
         if config.input_data_type == "SMAP":
             num_scans = 779
             num_earth_samples = 241
@@ -1219,16 +1708,194 @@ class ConfigFile:
             elif band_to_remap == "K":
                 num_scans = 74
                 num_earth_samples = 7692 * 8
-        # else:
-        #     raise ValueError(f"Invalid `input_data_type`: {input_data_type}")
+            else:
+                raise ValueError(f"Invalid band_to_remap: {band_to_remap}")
+        else:
+            raise ValueError(f"Invalid `input_data_type`: {config.input_data_type}")
 
         return num_scans, num_earth_samples
+
+    # @staticmethod
+    # def validate_variables_to_regrid(
+    #     config_object, input_data_type, variables_to_regrid
+    # ):
+    #     value = config_object.find(variables_to_regrid).text
+
+    #     if input_data_type == "SMAP":
+    #         valid_input = [
+    #             "bt_h",
+    #             "bt_v",
+    #             "bt_3",
+    #             "bt_4",
+    #             "processing_scan_angle",
+    #             "longitude",
+    #             "latitude",
+    #             "faraday_rot_angle",
+    #             "nedt_h",
+    #             "nedt_v",
+    #             "nedt_3",
+    #             "nedt_4",
+    #             "regridding_n_samples",
+    #             "regridding_l1b_orphans",
+    #             "acq_time_utc",
+    #             "azimuth",
+    #         ]
+
+    #         default_vars = [
+    #             "bt_h",
+    #             "bt_v",
+    #             "bt_3",
+    #             "bt_4",
+    #             "processing_scan_angle",
+    #             "longitude",
+    #             "latitude",
+    #             "faraday_rot_angle",
+    #             "nedt_h",
+    #             "nedt_v",
+    #             "nedt_3",
+    #             "nedt_4",
+    #             "regridding_n_samples",
+    #             "regridding_l1b_orphans",
+    #             "acq_time_utc",
+    #             "azimuth",
+    #         ]
+
+    #     elif input_data_type == "AMSR2":
+    #         valid_input = [
+    #             "bt_h",
+    #             "bt_v",
+    #             "longitude",
+    #             "latitude",
+    #             "regridding_n_samples",
+    #             "x_position",
+    #             "y_position",
+    #             "z_position",
+    #             "x_velocity",
+    #             "y_velocity",
+    #             "z_velocity",
+    #             "azimuth",
+    #             "solar_azimuth",
+    #             "acq_time_utc",
+    #         ]
+
+    #         default_vars = [
+    #             "bt_h",
+    #             "bt_v",
+    #             "longitude",
+    #             "latitude",
+    #             "regridding_n_samples",
+    #             "x_position",
+    #             "y_position",
+    #             "z_position",
+    #             "x_velocity",
+    #             "y_velocity",
+    #             "z_velocity",
+    #             "azimuth",
+    #             "solar_azimuth",
+    #             "acq_time_utc",
+    #         ]
+
+    #     elif input_data_type == "CIMR":
+    #         valid_input = [
+    #             "bt_h",
+    #             "bt_v",
+    #             "bt_3",
+    #             "bt_4",
+    #             "processing_scan_angle",
+    #             "longitude",
+    #             "latitude",
+    #             "nedt_h",
+    #             "nedt_v",
+    #             "nedt_3",
+    #             "nedt_4",
+    #             "regridding_n_samples",
+    #             "regridding_l1b_orphans",
+    #             "acq_time_utc",
+    #             "azimuth",
+    #             "oza",
+    #         ]
+
+    #         default_vars = [
+    #             "bt_h",
+    #             "bt_v",
+    #             "bt_3",
+    #             "bt_4",
+    #             "processing_scan_angle",
+    #             "longitude",
+    #             "latitude",
+    #             "nedt_h",
+    #             "nedt_v",
+    #             "nedt_3",
+    #             "nedt_4",
+    #             "regridding_n_samples",
+    #             "regridding_l1b_orphans",
+    #             "acq_time_utc",
+    #             "azimuth",
+    #             "oza",
+    #         ]
+    #     else:
+    #         raise ValueError(f"Invalid `input_data_type`: {input_data_type}")
+
+    #     if value is not None:
+    #         for variable in value.split():
+    #             if variable not in valid_input:
+    #                 raise ValueError(
+    #                     f"Invalid variable_to_regrid. Check Configuration File."
+    #                     f" Valid variables_to_regrid: {valid_input}"
+    #                 )
+    #         return value.split()
+    #     else:
+    #         # Return default variables
+    #         return default_vars
 
     @staticmethod
     def validate_variables_to_regrid(
         config_object, input_data_type, variables_to_regrid
     ):
-        value = config_object.find(variables_to_regrid).text
+        """
+        Validates the `variables_to_regrid` parameter and returns the list of variables
+        if valid. If `variables_to_regrid` is missing, returns the default variable list.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        input_data_type : str
+            The input data type (e.g., `'SMAP'`, `'AMSR2'`, `'CIMR'`).
+        variables_to_regrid : str
+            The XML path to the `variables_to_regrid` parameter.
+
+        Returns
+        -------
+        list of str
+            A list of validated variables to regrid.
+
+        Raises
+        ------
+        ValueError
+            If `input_data_type` is invalid.
+            If any variable in `variables_to_regrid` is not in the list of valid inputs.
+
+        Notes
+        -----
+        - If `variables_to_regrid` is not found or empty, the function returns the default variable list.
+        - The function ensures that all provided variables are in the pre-defined list of valid variables.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><variables_to_regrid>bt_h bt_v</variables_to_regrid></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_variables_to_regrid(config_object, "SMAP", "ReGridderParams/variables_to_regrid")
+        ['bt_h', 'bt_v']
+        """
+
+        # Retrieve the XML element and check if it exists
+        element = config_object.find(variables_to_regrid)
+        value = element.text.strip() if element is not None and element.text else None
+
+        # Define valid and default variable lists based on input data type
+        valid_input, default_vars = None, None
 
         if input_data_type == "SMAP":
             valid_input = [
@@ -1249,25 +1916,7 @@ class ConfigFile:
                 "acq_time_utc",
                 "azimuth",
             ]
-
-            default_vars = [
-                "bt_h",
-                "bt_v",
-                "bt_3",
-                "bt_4",
-                "processing_scan_angle",
-                "longitude",
-                "latitude",
-                "faraday_rot_angle",
-                "nedt_h",
-                "nedt_v",
-                "nedt_3",
-                "nedt_4",
-                "regridding_n_samples",
-                "regridding_l1b_orphans",
-                "acq_time_utc",
-                "azimuth",
-            ]
+            default_vars = valid_input[:]
 
         elif input_data_type == "AMSR2":
             valid_input = [
@@ -1286,23 +1935,7 @@ class ConfigFile:
                 "solar_azimuth",
                 "acq_time_utc",
             ]
-
-            default_vars = [
-                "bt_h",
-                "bt_v",
-                "longitude",
-                "latitude",
-                "regridding_n_samples",
-                "x_position",
-                "y_position",
-                "z_position",
-                "x_velocity",
-                "y_velocity",
-                "z_velocity",
-                "azimuth",
-                "solar_azimuth",
-                "acq_time_utc",
-            ]
+            default_vars = valid_input[:]
 
         elif input_data_type == "CIMR":
             valid_input = [
@@ -1323,42 +1956,65 @@ class ConfigFile:
                 "azimuth",
                 "oza",
             ]
+            default_vars = valid_input[:]
 
-            default_vars = [
-                "bt_h",
-                "bt_v",
-                "bt_3",
-                "bt_4",
-                "processing_scan_angle",
-                "longitude",
-                "latitude",
-                "nedt_h",
-                "nedt_v",
-                "nedt_3",
-                "nedt_4",
-                "regridding_n_samples",
-                "regridding_l1b_orphans",
-                "acq_time_utc",
-                "azimuth",
-                "oza",
-            ]
         else:
             raise ValueError(f"Invalid `input_data_type`: {input_data_type}")
 
-        if value is not None:
-            for variable in value.split():
-                if variable not in valid_input:
-                    raise ValueError(
-                        f"Invalid variable_to_regrid. Check Configuration File."
-                        f" Valid variables_to_regrid: {valid_input}"
-                    )
-            return value.split()
-        else:
-            # Return default variables
+        # If value is missing, return the default variables
+        if value is None:
             return default_vars
+
+        # Validate each variable in the provided list
+        variables = value.split()
+        for variable in variables:
+            if variable not in valid_input:
+                raise ValueError(
+                    f"Invalid variable_to_regrid: `{variable}`. Check Configuration File.\n"
+                    f"Valid variables_to_regrid: {valid_input}"
+                )
+
+        return variables
 
     @staticmethod
     def validate_max_neighbours(config_object, max_neighbours, regridding_algorithm):
+        r"""
+        Validates the `max_neighbours` parameter and returns the value if valid.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        max_neighbours : str
+            The XML path to the `max_neighbours` parameter.
+        regridding_algorithm : str
+            The regridding algorithm used.
+
+        Returns
+        -------
+        int
+            The validated `max_neighbours` value.
+
+        Notes
+        -----
+        - If `regridding_algorithm` is `NN`, the function always returns `1`.
+        - If `max_neighbours` is missing, it defaults to `1000`.
+        - The function ensures `max_neighbours` is a valid integer.
+
+        Raises
+        ------
+        ValueError
+            If `max_neighbours` is not a valid integer value.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><max_neighbours>500</max_neighbours></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_max_neighbours(config_object, "ReGridderParams/max_neighbours", "Other")
+        500
+        """
+
         # The default values here can be tweeked for input data type and Band
         if regridding_algorithm == "NN":
             return 1
@@ -1374,38 +2030,145 @@ class ConfigFile:
 
     @staticmethod
     def validate_source_antenna_method(config_object, source_antenna_method):
+        r"""
+        Validates the `source_antenna_method` parameter and ensures case insensitivity.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        source_antenna_method : str
+            The XML path to the `source_antenna_method` parameter.
+
+        Returns
+        -------
+        str
+            The validated `source_antenna_method` value.
+
+        Notes
+        -----
+        - The function ensures case insensitivity by converting input values to lowercase.
+        - If `source_antenna_method` is missing or empty, it defaults to `instrument`.
+
+        Raises
+        ------
+        ValueError
+            If `source_antenna_method` is not in the list of valid methods.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><Antenna><source_antenna_method>GAUSSIAN</source_antenna_method></Antenna></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_source_antenna_method(config_object, "Antenna/source_antenna_method")
+        'gaussian'
+        """
+
         valid_input = ["gaussian", "instrument", "gaussian_projected"]
 
         value = config_object.find(source_antenna_method).text
 
         if value is None or value.strip() == "":
             return "instrument"
-        elif value in valid_input:
+
+        value = value.strip().lower()
+
+        if value in valid_input:
             return value
         else:
             raise ValueError(
-                f"Invalid antenna method. Check Configuration File."
-                f" Valid antenna methods are: {valid_input}"
+                f"Invalid antenna method. Check Configuration File. "
+                f"Valid antenna methods are: {valid_input}"
             )
 
     @staticmethod
     def validate_target_antenna_method(config_object, target_antenna_method):
+        r"""
+        Validates the `target_antenna_method` parameter and ensures case insensitivity.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        target_antenna_method : str
+            The XML path to the `target_antenna_method` parameter.
+
+        Returns
+        -------
+        str
+            The validated `target_antenna_method` value.
+
+        Notes
+        -----
+        - The function ensures case insensitivity by converting input values to lowercase.
+        - If `target_antenna_method` is missing or empty, it defaults to `instrument`.
+
+        Raises
+        ------
+        ValueError
+            If `target_antenna_method` is not in the list of valid methods.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><Antenna><target_antenna_method>GAUSSIAN</target_antenna_method></Antenna></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_target_antenna_method(config_object, "Antenna/target_antenna_method")
+        'gaussian'
+        """
         valid_input = ["gaussian", "instrument", "gaussian_projected"]
 
         value = config_object.find(target_antenna_method).text
 
         if value is None or value.strip() == "":
             return "instrument"
-        elif value in valid_input:
+
+        value = value.strip().lower()
+
+        if value in valid_input:
             return value
         else:
             raise ValueError(
-                f"Invalid antenna method. Check Configuration File."
-                f" Valid antenna methods are: {valid_input}"
+                f"Invalid antenna method. Check Configuration File. "
+                f"Valid antenna methods are: {valid_input}"
             )
 
     @staticmethod
     def validate_source_antenna_threshold(config_object, source_antenna_threshold):
+        """
+        Validates the `source_antenna_threshold` parameter and ensures it is a valid float or integer.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        source_antenna_threshold : str
+            The XML path to the `source_antenna_threshold` parameter.
+
+        Returns
+        -------
+        float or None
+            The validated `source_antenna_threshold` value as a float.
+            Returns `None` if the value is missing or empty.
+
+        Raises
+        ------
+        ValueError
+            If `source_antenna_threshold` is not a valid numeric value.
+
+        Notes
+        -----
+        - If `source_antenna_threshold` is missing or empty, it defaults to `None`.
+        - If provided, the value must be convertible to a float.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><source_antenna_threshold>9.5</source_antenna_threshold></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_source_antenna_threshold(config_object, "ReGridderParams/source_antenna_threshold")
+        9.5
+        """
         value = config_object.find(source_antenna_threshold).text
 
         if value is None or value.strip() == "":
@@ -1415,8 +2178,7 @@ class ConfigFile:
 
         try:
             return float(value)
-
-        except:
+        except ValueError:
             raise ValueError(
                 f"Invalid antenna threshold: {value}. Check Configuration File."
                 f" Antenna threshold must be a float or integer"
@@ -1424,6 +2186,41 @@ class ConfigFile:
 
     @staticmethod
     def validate_target_antenna_threshold(config_object, target_antenna_threshold):
+        """
+        Validates the `target_antenna_threshold` parameter and ensures it is a valid float or integer.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        target_antenna_threshold : str
+            The XML path to the `target_antenna_threshold` parameter.
+
+        Returns
+        -------
+        float
+            The validated `target_antenna_threshold` value as a float.
+            Returns `9.0` if the value is missing or empty.
+
+        Raises
+        ------
+        ValueError
+            If `target_antenna_threshold` is not a valid numeric value.
+
+        Notes
+        -----
+        - If `target_antenna_threshold` is missing or empty, it defaults to `9.0`.
+        - If provided, the value must be convertible to a float.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><target_antenna_threshold>9.5</target_antenna_threshold></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_target_antenna_threshold(config_object, "ReGridderParams/target_antenna_threshold")
+        9.5
+        """
+
         value = config_object.find(target_antenna_threshold).text
 
         if value is None or value.strip() == "":
@@ -1433,7 +2230,7 @@ class ConfigFile:
 
         try:
             return float(value)
-        except:
+        except ValueError:
             raise ValueError(
                 f"Invalid antenna threshold: {value}. Check Configuration File."
                 f" Antenna threshold must be a float or integer"
@@ -1441,6 +2238,41 @@ class ConfigFile:
 
     @staticmethod
     def validate_max_theta_antenna_patterns(config_object, max_theta_antenna_patterns):
+        """
+        Validates the `max_theta_antenna_patterns` parameter and ensures it is a valid float or integer.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        max_theta_antenna_patterns : str
+            The XML path to the `max_theta_antenna_patterns` parameter.
+
+        Returns
+        -------
+        float or None
+            The validated `max_theta_antenna_patterns` value as a float.
+            Returns `None` if the value is missing or empty.
+
+        Raises
+        ------
+        ValueError
+            If `max_theta_antenna_patterns` is not a valid numeric value.
+
+        Notes
+        -----
+        - If `max_theta_antenna_patterns` is missing or empty, it defaults to `None`.
+        - If provided, the value must be convertible to a float.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><max_theta_antenna_patterns>40.0</max_theta_antenna_patterns></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_max_theta_antenna_patterns(config_object, "ReGridderParams/max_theta_antenna_patterns")
+        40.0
+        """
+
         value = config_object.find(max_theta_antenna_patterns).text
 
         if value is None or value.strip() == "":
@@ -1450,8 +2282,7 @@ class ConfigFile:
 
         try:
             return float(value)
-
-        except:
+        except ValueError:
             raise ValueError(
                 f"Invalid max theta for antenna patterns: {value}. Check Configuration File."
                 f"Max theta for antenna patterns must be a float or integer"
@@ -1459,6 +2290,41 @@ class ConfigFile:
 
     @staticmethod
     def validate_polarisation_method(config_object, polarisation_method):
+        """
+        Validates the `polarisation_method` parameter and ensures it is a valid string input.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        polarisation_method : str
+            The XML path to the `polarisation_method` parameter.
+
+        Returns
+        -------
+        str
+            The validated `polarisation_method` value.
+            Defaults to `'scalar'` if the value is missing or empty.
+
+        Raises
+        ------
+        ValueError
+            If `polarisation_method` is not a recognized valid method.
+
+        Notes
+        -----
+        - If `polarisation_method` is missing or empty, it defaults to `'scalar'`.
+        - Recognized valid values include `'scalar'` and `'mueller'`.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><polarisation_method>mueller</polarisation_method></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_polarisation_method(config_object, "ReGridderParams/polarisation_method")
+        'mueller'
+        """
+
         valid_input = ["scalar", "mueller"]
 
         value = config_object.find(polarisation_method).text
@@ -1476,25 +2342,66 @@ class ConfigFile:
 
     @staticmethod
     def validate_boresight_shift(config_object, boresight_shift, input_data_type):
+        """
+        Validates the `boresight_shift` parameter and ensures it is case insensitive.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        boresight_shift : str
+            The XML path to the `boresight_shift` parameter.
+        input_data_type : str
+            The type of input data being processed.
+
+        Returns
+        -------
+        bool
+            `True` if boresight shift is enabled, `False` otherwise.
+
+        Raises
+        ------
+        ValueError
+            If `boresight_shift` is not a recognized boolean value.
+
+        Notes
+        -----
+        - The function ensures case insensitivity by converting input values to lowercase.
+        - If `boresight_shift` is missing or empty, it defaults to `False`.
+        - Recognized valid values include `'true'` and `'false'`.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><boresight_shift>TRUE</boresight_shift></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_boresight_shift(config_object, "ReGridderParams/boresight_shift", "SMAP")
+        True
+        """
+
         if input_data_type != "SMAP":
             return False
 
         value = config_object.find(boresight_shift).text
-        valid_input = ["True", "False"]
+        valid_input = ["true", "false"]
 
         if value is None or value.strip() == "":
             return False
 
-        elif value not in valid_input:
-            raise ValueError(
-                f"Invalid boresight shift: `{value}`. Check Configuration File."
-                f" Valid boresight shift are: `{valid_input}`."
-            )
+        value = value.strip().lower()
+
+        if value in valid_input:
+            # returns either True or False
+            return value == "true"
+            # if value == "true":
+            #     return True
+            # else:
+            #     return False
         else:
-            if value == "True":
-                return True
-            else:
-                return False
+            raise ValueError(
+                f"Invalid boresight shift: `{value}`. Check Configuration File. "
+                f"Valid boresight shift values are: `{valid_input}`."
+            )
 
     # TODO:
     # - Add a proper validation to check if the indices actually fall
@@ -1502,7 +2409,46 @@ class ConfigFile:
     # - Also need to add L1r
     @staticmethod
     def validate_reduced_grid_inds(config_object, reduced_grid_inds):
+        """
+        Validates the `reduced_grid_inds` parameter and ensures it follows the expected format.
+
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        reduced_grid_inds : str
+            The XML path to the `reduced_grid_inds` parameter.
+
+        Returns
+        -------
+        list of int or None
+            A list of four integers `[row_min, row_max, col_min, col_max]` if valid.
+            Returns `None` if the value is missing or empty.
+
+        Raises
+        ------
+        ValueError
+            If `reduced_grid_inds` does not contain exactly four valid integers.
+            If any grid indices are negative.
+            If `row_min` > `row_max` or `col_min` > `col_max`.
+
+        Notes
+        -----
+        - The expected format is four space-separated integers.
+        - If `reduced_grid_inds` is missing or empty, it defaults to `None`.
+        - Grid indices must be non-negative integers, and row/column minimums must not exceed maximums.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><GridParams><reduced_grid_inds>0 10 0 10</reduced_grid_inds></GridParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_reduced_grid_inds(config_object, "GridParams/reduced_grid_inds")
+        [0, 10, 0, 10]
+        """
+
         value = config_object.find(reduced_grid_inds).text
+
         if value is None or value.strip() == "":
             return None
         else:
@@ -1543,313 +2489,501 @@ class ConfigFile:
 
     @staticmethod
     def validate_source_gaussian_params(config_object, source_gaussian_params):
-        # We should add default values.
-        value = config_object.find(source_gaussian_params).text
+        """
+        Validates the `source_gaussian_params` parameter and ensures it consists of exactly two numeric values.
 
-        # TODO: Do we need this check here?
-        if value is None or value.strip() == "":
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        source_gaussian_params : str
+            The XML path to the `source_gaussian_params` parameter.
+
+        Returns
+        -------
+        list of float
+            A list containing two float values representing the source Gaussian parameters.
+
+        Raises
+        ------
+        ValueError
+            If `source_gaussian_params` is missing, empty, or does not contain exactly two valid numbers.
+
+        Notes
+        -----
+        - The function ensures that only two numeric values are provided.
+        - If `source_gaussian_params` is missing or empty, an exception is raised.
+        - Non-numeric values will also trigger a `ValueError`.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><source_gaussian_params>1.5 2.5</source_gaussian_params></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_source_gaussian_params(config_object, "ReGridderParams/source_gaussian_params")
+        [1.5, 2.5]
+        """
+        element = config_object.find(source_gaussian_params)
+        if element is None or element.text is None or element.text.strip() == "":
             raise ValueError(
                 "Missing source Gaussian parameters in the configuration file."
             )
 
-        params = value.split()
+        params = element.text.split()
 
-        # Check we only have 2 params
         if len(params) != 2:
             raise ValueError(
-                f"Invalid source gaussian parameters. Check Configuration File."
-                f" There should be 2 parameters for the source gaussian"
+                "Invalid source gaussian parameters. Check Configuration File. "
+                "There should be exactly 2 parameters for the source gaussian."
             )
 
         try:
             float_params = [float(param) for param in params]
-
-        except ValueError as e:
+        except ValueError:
             raise ValueError(
                 "Invalid parameter: All parameters must be valid numbers (int or float)."
-            ) from e
+            )
 
         return float_params
 
-    # TODO: Addd default values
     @staticmethod
     def validate_target_gaussian_params(config_object, target_gaussian_params):
-        # We should add default values.
-        value = config_object.find(target_gaussian_params).text
+        """
+        Validates the `target_gaussian_params` parameter and ensures it consists of exactly two numeric values.
 
-        if value is None or value.strip() == "":
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        target_gaussian_params : str
+            The XML path to the `target_gaussian_params` parameter.
+
+        Returns
+        -------
+        list of float
+            A list containing two float values representing the target Gaussian parameters.
+
+        Raises
+        ------
+        ValueError
+            If `target_gaussian_params` is missing, empty, or does not contain exactly two valid numbers.
+
+        Notes
+        -----
+        - The function ensures that only two numeric values are provided.
+        - If `target_gaussian_params` is missing or empty, an exception is raised.
+        - Non-numeric values will also trigger a `ValueError`.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><target_gaussian_params>1.5 2.5</target_gaussian_params></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_target_gaussian_params(config_object, "ReGridderParams/target_gaussian_params")
+        [1.5, 2.5]
+        """
+
+        element = config_object.find(target_gaussian_params)
+        if element is None or element.text is None or element.text.strip() == "":
             raise ValueError(
                 "Missing target Gaussian parameters in the configuration file."
             )
 
-        params = value.split()
+        params = element.text.split()
 
-        # Check we only have 2 params
         if len(params) != 2:
             raise ValueError(
-                f"Invalid target gaussian parameters. Check Configuration File."
-                f" There should be 2 parameters for the target gaussian"
+                "Invalid target gaussian parameters. Check Configuration File. "
+                "There should be exactly 2 parameters for the target gaussian."
             )
 
         try:
             float_params = [float(param) for param in params]
-        except ValueError as e:
+        except ValueError:
             raise ValueError(
                 "Invalid parameter: All parameters must be valid numbers (int or float)."
-            ) from e
+            )
 
         return float_params
 
     @staticmethod
     def validate_rsir_iteration(config_object, rsir_iteration):
         """
-        Validates rSIR iteration count.
+        Validates the rSIR iteration count.
 
-        Parameters:
-        - config_object: XML configuration object.
-        - rsir_iteration: Path to the rsir_iteration parameter in the configuration.
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        rsir_iteration : str
+            The XML path to the `rsir_iteration` parameter.
 
-        Returns:
-        - An integer representing the RSIR iteration count.
+        Returns
+        -------
+        int
+            A non-negative integer representing the RSIR iteration count.
 
-        Raises:
-        - ValueError: If the value is missing, not a valid integer, or negative.
+        Raises
+        ------
+        ValueError
+            If the value is missing, not a valid integer, or negative.
+
+        Notes
+        -----
+        - The function ensures the iteration count is a non-negative integer.
+        - If `rsir_iteration` is missing or empty, an exception is raised.
+        - Float or non-numeric values will also trigger a `ValueError`.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><rsir_iteration>10</rsir_iteration></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_rsir_iteration(config_object, "ReGridderParams/rsir_iteration")
+        10
         """
+        element = config_object.find(rsir_iteration)
+        if element is None or element.text is None or element.text.strip() == "":
+            raise ValueError("Missing rSIR iteration value in the configuration file.")
 
         try:
-            value = config_object.find(rsir_iteration).text
+            iteration = int(element.text.strip())
+        except ValueError:
+            raise ValueError("Invalid rSIR iteration value. It must be an integer.")
 
-            if value is None or value.strip() == "":
-                raise ValueError(
-                    "Missing rSIR iteration value in the configuration file."
-                )
+        if iteration < 0:
+            raise ValueError("rSIR iteration value must be a non-negative integer.")
 
-            iteration = int(value)
-
-            if iteration < 0:
-                raise ValueError("rSIR iteration value must be a non-negative integer.")
-
-            return iteration
-
-        except ValueError as e:
-            raise ValueError(
-                "Invalid rSIR iteration value. It must be an integer."
-            ) from e
+        return iteration
 
     @staticmethod
     def validate_max_iterations(config_object, max_iterations):
         """
         Validates the maximum number of iterations.
 
-        Parameters:
-        - config_object: XML configuration object.
-        - max_iterations: Path to the max_iterations parameter in the configuration.
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        max_iterations : str
+            The XML path to the `max_number_iteration` parameter.
 
-        Returns:
-        - An integer representing the maximum number of iterations.
+        Returns
+        -------
+        int
+            A non-negative integer representing the maximum number of iterations.
 
-        Raises:
-        - ValueError: If the value is missing, not a valid integer, or negative.
+        Raises
+        ------
+        ValueError
+            If the value is missing, not a valid integer, or negative.
+
+        Notes
+        -----
+        - The function ensures the iteration count is a non-negative integer.
+        - If `max_iterations` is missing or empty, an exception is raised.
+        - Float or non-numeric values will also trigger a `ValueError`.
+
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><max_iterations>10</max_iterations></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_iterations(config_object, "ReGridderParams/max_iterations")
+        10
         """
+        element = config_object.find(max_iterations)
+        if element is None or element.text is None or element.text.strip() == "":
+            raise ValueError(
+                "Missing maximum number of iteration value in the configuration file."
+            )
 
         try:
-            value = config_object.find(max_iterations).text
-            if value is None:
-                raise ValueError(
-                    "Missing maximum number of iteration value in the configuration file."
-                )
-
-            max_iterations = int(value)
-            if max_iterations < 0:
-                raise ValueError(
-                    "Maximum number of iterations must be a non-negative integer."
-                )
-
-            return max_iterations
-        except ValueError as e:
+            max_iterations = int(element.text.strip())
+        except ValueError:
             raise ValueError(
                 "Invalid maximum number of iteration value. It must be a non-negative integer."
-            ) from e
+            )
+
+        if max_iterations < 0:
+            raise ValueError(
+                "Maximum number of iterations must be a non-negative integer."
+            )
+
+        return max_iterations
 
     @staticmethod
     def validate_relative_tolerance(config_object, relative_tolerance):
         """
         Validates the relative tolerance value.
 
-        Parameters:
-        - config_object: XML configuration object.
-        - relative_tolerance: Path to the relative_tolerance parameter in the configuration.
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        relative_tolerance : str
+            The XML path to the `relative_tolerance` parameter.
 
-        Returns:
-        - A float representing the relative tolerance.
+        Returns
+        -------
+        float
+            A non-negative float representing the relative tolerance.
 
-        Raises:
-        - ValueError: If the value is missing, not a valid float, or negative.
+        Raises
+        ------
+        ValueError
+            If the value is missing, not a valid float, or negative.
+
+        Notes
+        -----
+        - The function ensures the tolerance value is a non-negative float.
+        - If `relative_tolerance` is missing or empty, an exception is raised.
+        - Non-numeric or negative values will also trigger a `ValueError`.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><relative_tolerance>0.01</relative_tolerance></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_relative_tolerance(config_object, "ReGridderParams/relative_tolerance")
+        0.01
         """
 
+        element = config_object.find(relative_tolerance)
+        if element is None or element.text is None or element.text.strip() == "":
+            raise ValueError(
+                "Missing relative tolerance value in the configuration file."
+            )
+
         try:
-            value = config_object.find(relative_tolerance).text
-            if value is None:
-                raise ValueError(
-                    "Missing relative tolerance value in the configuration file."
-                )
-
-            tolerance = float(value)
-            if tolerance < 0:
-                raise ValueError("Relative tolerance must be a non-negative float.")
-
-            return tolerance
-        except ValueError as e:
+            tolerance = float(element.text.strip())
+        except ValueError:
             raise ValueError(
                 "Invalid relative tolerance value. It must be a non-negative float."
-            ) from e
+            )
+
+        if tolerance < 0:
+            raise ValueError("Relative tolerance must be a non-negative float.")
+
+        return tolerance
 
     @staticmethod
     def validate_regularisation_parameter(config_object, regularisation_parameter):
         """
         Validates the regularisation parameter value.
 
-        Parameters:
-        - config_object: XML configuration object.
-        - regularisation_parameter: Path to the regularisation_parameter in the configuration.
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        regularization_parameter : str
+            The XML path to the `regularization_parameter` parameter.
 
-        Returns:
-        - A float representing the regularisation parameter.
+        Returns
+        -------
+        float
+            A float representing the regularization parameter.
 
-        Raises:
-        - ValueError: If the value is missing or not a valid float.
+        Raises
+        ------
+        ValueError
+            If the value is missing or not a valid float.
+
+        Notes
+        -----
+        - The function ensures the parameter is a valid float.
+        - If `regularisation_parameter` is missing or empty, an exception is raised.
+        - Non-numeric values will also trigger a `ValueError`.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><regularisation_parameter>0.1</regularisation_parameter></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_regularisation_parameter(config_object, "ReGridderParams/regularisation_parameter")
+        0.1
         """
 
-        try:
-            value = config_object.find(regularisation_parameter).text
-
-            if value is None:
-                raise ValueError(
-                    "Missing regularisation parameter value in the configuration file."
-                )
-
-            return float(value)
-
-        except ValueError as e:
-            value = config_object.find(regularisation_parameter).text
+        element = config_object.find(regularisation_parameter)
+        if element is None or element.text is None or element.text.strip() == "":
             raise ValueError(
-                f"Invalid regularisation parameter: {value}. It must be a valid float."
-            ) from e
+                "Missing regularisation parameter value in the configuration file."
+            )
 
-    # TODO: Figure out whether we need this try except statement
+        try:
+            return float(element.text.strip())
+        except ValueError:
+            raise ValueError(
+                f"Invalid regularisation parameter: {element.text}. It must be a valid float."
+            )
+
+
     @staticmethod
     def validate_MRF_grid_definition(config_object, MRF_grid_definition):
         """
         Validates the MRF grid definition parameter from the configuration file.
 
-        Parameters:
-        - config_object: XML configuration object.
-        - MRF_grid_definition: Path to the MRF grid definition parameter in the configuration.
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        MRF_grid_definition : str
+            The XML path to the `MRF_grid_definition` parameter.
 
-        Returns:
-        - A string representing a valid grid definition.
+        Returns
+        -------
+        str
+            A valid MRF grid definition.
 
-        Raises:
-        - ValueError: If the value is missing or not a valid grid definition.
+        Raises
+        ------
+        ValueError
+            If the value is missing or not a valid grid definition.
+
+        Notes
+        -----
+        - Ensures the provided `MRF_grid_definition` value is among the valid definitions.
+        - If `MRF_grid_definition` is missing or contains an invalid value, a `ValueError` is raised.
+        - Checks for an exact match without trailing spaces.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><MRF_grid_definition>EASE2_G3km</MRF_grid_definition></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_MRF_grid_definition(config_object, "ReGridderParams/MRF_grid_definition")
+        'EASE2_G3km'
         """
-
-        try:
-            value = config_object.find(MRF_grid_definition).text
-
-            valid_input = [
-                "EASE2_G3km",
-                "EASE2_G1km",
-                "EASE2_G9km",
-                "EASE2_N9km",
-                "EASE2_S9km",
-                "EASE2_G36km",
-                "EASE2_N36km",
-                "EASE2_S36km",
-                "STEREO_N25km",
-                "STEREO_S25km",
-                "EASE2_N3km",
-                "EASE2_S3km",
-            ]
-
-            if value in valid_input and value.strip() != "":
-                return value
-
+        
+        element = config_object.find(MRF_grid_definition)
+        if element is None or element.text is None or element.text.strip() == "":
             raise ValueError(
-                f"Invalid Grid Definition, check configuration file. "
-                f"Valid grid definitions are: {valid_input}"
+                "Missing MRF grid definition value in the configuration file."
             )
 
-        except AttributeError:
-            raise ValueError(
-                "Invalid XML structure. Ensure the MRF grid definition is correctly specified."
-            )
+        value = element.text.strip()
+        valid_input = [
+            "EASE2_G3km",
+            "EASE2_G1km",
+            "EASE2_G9km",
+            "EASE2_N9km",
+            "EASE2_S9km",
+            "EASE2_G36km",
+            "EASE2_N36km",
+            "EASE2_S36km",
+            "STEREO_N25km",
+            "STEREO_S25km",
+            "EASE2_N3km",
+            "EASE2_S3km",
+        ]
+
+        if value in valid_input:
+            return value
+
+        raise ValueError(
+            f"Invalid Grid Definition, check configuration file. "
+            f"Valid grid definitions are: {valid_input}"
+        )
 
     @staticmethod
     def validate_MRF_projection_definition(config_object, MRF_projection_definition):
         """
         Validates the MRF projection definition parameter from the configuration file.
 
-        Parameters:
-        - config_object: XML configuration object.
-          The root XML element containing the configuration.
-        - MRF_projection_definition: Path to the MRF projection definition parameter in the configuration.
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        MRF_projection_definition : str
+            The XML path to the `MRF_projection_definition` parameter.
 
-        Returns:
-        - A string representing a valid projection definition ('G', 'N', or 'S').
+        Returns
+        -------
+        str
+            A valid projection definition ('G', 'N', or 'S').
 
-        Raises:
-        - ValueError: If the value is missing, blank, or not in the list of valid projection definitions.
-          - Raises "Missing or blank MRF projection definition in the configuration file." if the value is None or empty.
-          - Raises "Invalid Projection Definition" if the value is not one of the valid definitions ('G', 'N', 'S').
+        Raises
+        ------
+        ValueError
+            If the value is missing, blank, or not in the list of valid projection definitions.
+
+        Notes
+        -----
+        - Ensures the provided `MRF_projection_definition` value is among the valid definitions ('G', 'N', 'S').
+        - If `MRF_projection_definition` is missing or contains an invalid value, a `ValueError` is raised.
+        - Leading/trailing spaces are stripped before validation.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><MRF_projection_definition>G</MRF_projection_definition></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_MRF_projection_definition(config_object, "ReGridderParams/MRF_projection_definition")
+        'G'
         """
 
-        value = config_object.find(MRF_projection_definition).text
-
         valid_input = ["G", "N", "S"]
-
-        if value is None or value.strip() == "":
+        element = config_object.find(MRF_projection_definition)
+        if element is None or element.text is None or element.text.strip() == "":
             raise ValueError(
-                "Missing or blank MRF projection definition in the configuration file. "
+                f"Missing or blank MRF projection definition in the configuration file. "
                 f"Ensure a valid projection is specified, i.e.: {valid_input}."
             )
 
-        value = value.strip()
+        value = element.text.strip()
 
         if value in valid_input:
             return value
 
         raise ValueError(
-            f"Invalid Projection Definition, check configuration file."
-            f" Valid projection definitions are: {valid_input}"
+            f"Invalid Projection Definition, check configuration file. "
+            f"Valid projection definitions are: {valid_input}"
         )
 
     @staticmethod
     def validate_bg_smoothing(config_object, bg_smoothing):
         """
-        Validates the bg_smoothing parameter from the configuration file.
+        Validates the `bg_smoothing` parameter from the configuration file.
 
-        Parameters:
-        - config_object: XML configuration object.
-          The root XML element containing the configuration.
-        - bg_smoothing: str value for bg_smoothing parameter (to be converted into float).
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        bg_smoothing : str
+            The XML path to the `bg_smoothing` parameter.
 
-        Returns:
-        - A float representing the bg_smoothing value. Defaults to 0 if the value is missing.
+        Returns
+        -------
+        float
+            A valid `bg_smoothing` value. Defaults to `0.0` if missing.
 
-        Raises:
-        - ValueError: If the value is not a valid float.
+        Raises
+        ------
+        ValueError
+            If the value is not a valid float.
+
+        Notes
+        -----
+        - If the value is missing, it defaults to `0.0`.
+        - Strips leading/trailing spaces before parsing.
+        - Raises `ValueError` for invalid numeric input.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><ReGridderParams><bg_smoothing>1.5</bg_smoothing></ReGridderParams></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_bg_smoothing(config_object, "ReGridderParams/bg_smoothing")
+        1.5
         """
 
+        element = config_object.find(bg_smoothing)
+        if element is None or element.text is None or element.text.strip() == "":
+            return 0.0
+
         try:
-            value = config_object.find(bg_smoothing).text
-
-            if value is not None:
-                value = float(value)
-            else:
-                value = 0
-
-            return value
-
+            return float(element.text.strip())
         except ValueError as e:
             raise ValueError(
                 "Invalid `bg_smoothing` value. It must be a valid float."
@@ -1860,74 +2994,106 @@ class ConfigFile:
         """
         Validates the `quality_control` parameter based on the input data type and configuration file.
 
-        Parameters:
-        - config_object: XML configuration object.
-          The root XML element containing the configuration.
-        - quality_control: value for `quality_control` parameter in the configuration file.
-        - input_data_type: The type of input data (i.e., 'AMSR2', 'CIMR', or SMAP).
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            Root element of the XML configuration file.
+        quality_control : str
+            The XML path to the `quality_control` parameter.
+        input_data_type : str
+            The type of input data (e.g., 'AMSR2', 'CIMR', or another type).
 
-        Returns:
-        - A boolean value (`True` or `False`) representing the `quality_control` setting.
-          - Always returns `False` for 'AMSR2' and 'CIMR' input data types.
-          - For other input data types, the method validates the value from the configuration file.
+        Returns
+        -------
+        bool
+            `False` for 'AMSR2' and 'CIMR'.
+            `True` or `False` based on the configuration file for other input data types.
 
-        Raises:
-        - ValueError: If the value in the configuration file is not 'True' or 'False'.
+        Raises
+        ------
+        ValueError
+            If the value is not 'True' or 'False' (case insensitive) for input data types other than 'AMSR2' and 'CIMR'.
+
+        Notes
+        -----
+        - If `input_data_type` is 'AMSR2' or 'CIMR', this method always returns `False`.
+        - For other data types, the method validates the value from the configuration file.
+        - If the value is missing or invalid, a `ValueError` is raised.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = '''<config><InputData><quality_control>true</quality_control></InputData></config>'''
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_quality_control(config_object, "InputData/quality_control", "Other")
+        True
         """
 
-        if input_data_type == "AMSR2":
+        if input_data_type in ["AMSR2", "CIMR"]:
             return False
 
-        elif input_data_type == "CIMR":
-            return False
+        valid_input = ["true", "false"]
 
-        else:
-            valid_input = ["True", "False"]
+        element = config_object.find(quality_control)
 
-            value = config_object.find(quality_control).text
-
-            if value in valid_input:
-                if value == "True":
-                    return True
-
-                else:
-                    return False
-
+        if element is None or element.text is None:
             raise ValueError(
-                f"Invalid `quality_control` value: {value}. Check Configuration File."
-                f" Valid inputs for `quality_control` parameter are: {valid_input}"
+                "Invalid `quality_control` value: None. Check Configuration File."
             )
+
+        value = element.text.strip().lower()
+        if value in valid_input:
+            return value == "true"
+
+        raise ValueError(
+            f"Invalid `quality_control` value: {value}. Check Configuration File. "
+            f"Valid inputs for `quality_control` parameter are: {valid_input}"
+        )
 
     @staticmethod
     def validate_antenna_pattern_uncertainty(
         config_object, antenna_pattern_uncertainty
     ):
         """
-        Validates the antenna_pattern_uncertainty parameter from the configuration file.
+        Validates the `antenna_pattern_uncertainty` parameter from the configuration file.
 
-        Parameters:
-        - config_object: XML configuration object.
-          The root XML element containing the configuration.
-        - antenna_pattern_uncertainty: str value for antenna_pattern_uncertainty parameter (to be converted into float).
+        Parameters
+        ----------
+        config_object : xml.etree.ElementTree.Element
+            The root XML element containing the configuration.
+        antenna_pattern_uncertainty : str
+            The XML path to the `antenna_pattern_uncertainty` parameter.
 
-        Returns:
-        - A float representing the antenna_pattern_uncertainty value. Defaults to 0 if the value is missing.
+        Returns
+        -------
+        float
+            A float representing the `antenna_pattern_uncertainty` value.
+            Defaults to `0.0` if the value is missing.
 
-        Raises:
-        - ValueError: If the value is not a valid float.
+        Raises
+        ------
+        ValueError
+            If the value is not a valid float.
+
+        Examples
+        --------
+        >>> import xml.etree.ElementTree as ET
+        >>> xml_data = "<config><Uncertainty><antenna_pattern_uncertainty>1.5</antenna_pattern_uncertainty></Uncertainty></config>"
+        >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
+        >>> ConfigFile.validate_antenna_pattern_uncertainty(config_object, "Uncertainty/antenna_pattern_uncertainty")
+        1.5
         """
 
+        element = config_object.find(antenna_pattern_uncertainty)
+
+        if element is None or element.text is None or element.text.strip() == "":
+            return 0.0  # Default to 0.0
+
         try:
-            value = config_object.find(antenna_pattern_uncertainty).text
-
-            if value is not None:
-                value = float(value)
-            else:
-                value = 0
-
-            return value
-
-        except ValueError as e:
+            return float(
+                element.text.strip()
+            )  # Convert to float after stripping whitespace
+        except ValueError:
             raise ValueError(
                 "Invalid `antenna_pattern_uncertainty` value. It must be a valid float."
             ) from e
@@ -1976,5 +3142,3 @@ class ConfigFile:
         else:
             raise ValueError("Missing chunk_buffer value in the configuration file.")
         return value
-
-
