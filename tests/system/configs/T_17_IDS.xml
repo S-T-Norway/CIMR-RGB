@@ -2,13 +2,11 @@
 <config>
   <InputData>
     <type>CIMR</type>
-    <path>
-      ./dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
+    <path>./dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc</path>
     <antenna_patterns_path>./dpr/antenna_patterns</antenna_patterns_path>
     <split_fore_aft>False</split_fore_aft>
     <source_band>C</source_band>
     <target_band>C</target_band>
-    <LMT>2200</LMT>
     <quality_control>True</quality_control>
   </InputData>
   <GridParams>
@@ -39,6 +37,16 @@
     <regularization_parameter>0.001</regularization_parameter>
     <max_number_iteration>1000</max_number_iteration>
     <relative_tolerance>0.0001</relative_tolerance>
+    <cimr_L_nedt>0.3</cimr_L_nedt>
+    <cimr_C_nedt>0.2</cimr_C_nedt>
+    <cimr_X_nedt>0.3</cimr_X_nedt>
+    <cimr_K_nedt>0.7</cimr_K_nedt>
+    <cimr_KA_nedt>0.4</cimr_KA_nedt>
+    <relative_tolerance>0.0011</relative_tolerance>
+    <max_iterations>1000</max_iterations>
+    <regularisation_parameter>0.0035</regularisation_parameter>
+    <max_chunk_size>100</max_chunk_size>
+    <chunk_buffer>1.2</chunk_buffer>
   </ReGridderParams>
   <OutputData>
     <save_to_disk>True</save_to_disk>
@@ -50,7 +58,7 @@
     <creator_email>test@email.com</creator_email>
     <creator_url>insert your url</creator_url>
     <creator_institution>insert your institution</creator_institution>
-    <timestamp>test</timestamp>
+    <suffix>test</suffix>
     <timestamp_fmt>%Y-%m-%d_%H-%M-%S</timestamp_fmt>
   </OutputData>
   <LoggingParams>
