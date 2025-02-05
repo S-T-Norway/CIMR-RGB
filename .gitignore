@@ -17,6 +17,7 @@ dpr/antenna_patterns/SMAP/*
 /src/*log 
 /*log 
 *log 
+tests/MS3_verification_tests
 
 # --------------------------------------
 # Python-specific ignores 

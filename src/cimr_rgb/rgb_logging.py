@@ -351,7 +351,6 @@ class RGBLogging:
         sys.excepthook = handle_exception
 
 
-    # Step 2: Define a custom function to redirect warnings
     @staticmethod
     def custom_warning_handler(logger, message, category, filename, lineno, file=None, line=None):
 

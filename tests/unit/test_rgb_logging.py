@@ -1,13 +1,14 @@
-import pathlib as pb 
-import time 
-import logging 
-import json 
-import tempfile 
+import pathlib as pb
+import time
+import logging
+import json
+import tempfile
 
-import pytest 
+import pytest
 
-from cimr_rgb.rgb_logging import RGBLogging # Assuming the class is saved in grid_generator.py
-
+from cimr_rgb.rgb_logging import (
+    RGBLogging,
+)  # Assuming the class is saved in grid_generator.py
 
 
 @pytest.fixture
@@ -25,9 +26,8 @@ def temp_log_dir():
         A temporary directory path for testing.
     """
 
-
     with tempfile.TemporaryDirectory() as tmp_dir:
-        yield pb.Path(tmp_dir) 
+        yield pb.Path(tmp_dir)
 
 
 @pytest.fixture
@@ -64,11 +64,10 @@ def sample_log_config():
     }
 
 
-
 @pytest.mark.parametrize("log_config_type", ["dict", "path"])
 def test_rgb_logging_init(temp_log_dir, sample_log_config, log_config_type):
     """
-    Unified test for initializing the `RGBLogging` class with a dictionary or a JSON file 
+    Unified test for initializing the `RGBLogging` class with a dictionary or a JSON file
     log configuration.
 
     This test validates:
@@ -96,22 +95,27 @@ def test_rgb_logging_init(temp_log_dir, sample_log_config, log_config_type):
     if log_config_type == "dict":
         # Test initialization with a dictionary log configuration
         rgb_logging = RGBLogging(logdir=temp_log_dir, log_config=sample_log_config)
-        assert rgb_logging.log_config is None, "Log configuration should be initialized without errors."
+        assert rgb_logging.log_config is None, (
+            "Log configuration should be initialized without errors."
+        )
 
     elif log_config_type == "path":
         # Write the log configuration to a temporary JSON file
         log_config_path = temp_log_dir / "log_config.json"
-        #print(log_config_path)
+        # print(log_config_path)
         with open(log_config_path, "w") as f:
             json.dump(sample_log_config, f)
 
         # Confirm the file exists before the test ends
-        assert log_config_path.exists(), "Temporary JSON file should exist during the test."
+        assert log_config_path.exists(), (
+            "Temporary JSON file should exist during the test."
+        )
 
         # Test initialization with a file path log configuration
         rgb_logging = RGBLogging(logdir=temp_log_dir, log_config=log_config_path)
-        assert rgb_logging.log_config is None, "Log configuration should load correctly from a JSON file."
-
+        assert rgb_logging.log_config is None, (
+            "Log configuration should load correctly from a JSON file."
+        )
 
 
 def test_get_logger():
@@ -128,17 +132,17 @@ def test_get_logger():
     """
 
     rgb_logging = RGBLogging(logdir=pb.Path("/tmp"))
-    
+
     logger = rgb_logging.get_logger("TestLogger")
 
-    assert logger.name == "TestLogger", "Logger should be initialized with the correct name."
+    assert logger.name == "TestLogger", (
+        "Logger should be initialized with the correct name."
+    )
 
 
-
-
-def test_rgb_decorated():
+def test_rgb_decorate_and_execute():
     """
-    Test the `rgb_decorated` method of the `RGBLogging` class with a mock configuration 
+    Test the `rgb_decorated` method of the `RGBLogging` class with a mock configuration
     and function.
 
     This test validates:
@@ -159,7 +163,7 @@ def test_rgb_decorated():
         return a + b
 
     config = MockConfig()
-    decorated_func = RGBLogging.rgb_decorated(
+    decorated_func = RGBLogging.rgb_decorate_and_execute(
         func=mock_function, rgb_config=config, decorator=RGBLogging.track_perf
     )
     result = decorated_func(2, 3)
@@ -167,10 +171,9 @@ def test_rgb_decorated():
     assert result == 5, "Decorated function should return the correct result."
 
 
-
 def test_track_perf(caplog):
     """
-    Tests the `track_perf` decorator from the `RGBLogging` class to ensure it correctly tracks 
+    Tests the `track_perf` decorator from the `RGBLogging` class to ensure it correctly tracks
     and logs performance metrics for a decorated function.
 
     This test validates the following:
@@ -181,7 +184,7 @@ def test_track_perf(caplog):
         - Other CPU and memory-related metrics (if included in the logger output).
     - Logging is captured correctly using the `caplog` fixture.
 
-    The test simulates a lightweight workload using the `test_function` function and asserts 
+    The test simulates a lightweight workload using the `test_function` function and asserts
     that the logs contain specific messages to confirm the expected behavior of `track_perf`.
 
     Parameters:
@@ -210,7 +213,6 @@ def test_track_perf(caplog):
     - The logs contain specific messages indicating function execution start and timing metrics.
     """
 
-
     logger = logging.getLogger("PerfLogger")
 
     def test_function():
@@ -218,13 +220,16 @@ def test_track_perf(caplog):
         return "Completed"
 
     with caplog.at_level(logging.INFO):
-        tracked_result = RGBLogging.track_perf(func = test_function, logger = logger)
+        tracked_result = RGBLogging.track_perf(func=test_function, logger=logger)
         result = tracked_result()
 
     assert result == "Completed", "Function should return the correct result."
-    assert any("Started Execution" in record.message for record in caplog.records), "Should log 'Started Execution'."
-    assert any("Executed in:" in record.message for record in caplog.records), "Should log execution time."
-
+    assert any("Started Execution" in record.message for record in caplog.records), (
+        "Should log 'Started Execution'."
+    )
+    assert any("Executed in:" in record.message for record in caplog.records), (
+        "Should log execution time."
+    )
 
 
 # Set up a basic logger for testing
@@ -267,7 +272,6 @@ def test_track_perf(caplog):
 #     assert result == message, "The decorator did not preserve the function's output."
 
 
-
 # @pytest.fixture
 # def rgb_logging_instance(temp_log_dir, sample_log_config):
 #     """
@@ -276,11 +280,10 @@ def test_track_perf(caplog):
 #     return RGBLogging(logdir=temp_log_dir, log_config=sample_log_config)
 
 
-
 # @pytest.mark.parametrize("decorate, logger", [
 #     (decorator, logger) for decorator in [True, False] for logger in [
-#         logging.getLogger(__name__), 
-#         test_logger 
+#         logging.getLogger(__name__),
+#         test_logger
 #         ]
 # ])
 # def test_rgb_decorate_and_execute(decorate, logger, caplog):
@@ -320,10 +323,10 @@ def test_rgb_decorate_and_execute(caplog):
     logger = logging.getLogger("DecorateLogger")
 
     @RGBLogging.rgb_decorate_and_execute(
-            decorate=True, #decorate, 
-            decorator=RGBLogging.track_perf, 
-            logger=logger
-            )
+        decorate=True,  # decorate,
+        decorator=RGBLogging.track_perf,
+        logger=logger,
+    )
     def test_function():
         sum(range(1000))  # Simulate workload
         return "Decorated"
@@ -332,12 +335,13 @@ def test_rgb_decorate_and_execute(caplog):
         result = test_function()
 
     assert result == "Decorated", "Decorated function should return the correct value."
-    assert any("Started Execution" in record.message for record in caplog.records), "Should log 'Started Execution'."
+    assert any("Started Execution" in record.message for record in caplog.records), (
+        "Should log 'Started Execution'."
+    )
 
     # Assert logs are generated only if decorate=True and a valid logger is provided
-    #if decorate:
+    # if decorate:
     #    assert any("Started Execution" in record.message for record in caplog.records), \
     #        "Should log 'Started Execution' when decorated with logging."
-    #else:
+    # else:
     #    assert len(caplog.records) == 0, "No logs should be recorded when decoration is disabled."
-
