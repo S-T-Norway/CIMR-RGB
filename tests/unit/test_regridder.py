@@ -227,7 +227,7 @@ def dummy_kd_tree_invalid_ndim(
         ),
     ],
 )
-def test_get_neighbours_parametrized(
+def test_get_neighbours(
     monkeypatch,
     test_case,
     grid_type,
