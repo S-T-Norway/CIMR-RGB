@@ -8,7 +8,21 @@ class NNInterp:
 
     @staticmethod
     def NN(samples_dict, variable):
-        print(samples_dict["indexes"].shape)
+
+        """
+        Returns the interpolated value on the target points.
+
+        Parameters:
+            samples_dict (dictionary of arrays with shape (# target points, 1)  - always 1D because self.config.max_neighbours is forced to be 1 for NN):
+                'distances': distance of a target point to the nearest neighbour
+                'indexes': index of the nearest neighbour in the flattened array of source points
+                'grid_1d_index': index of the target point in the flattened array of target points
+            variable (1D array_like): values of the variable to be regridded on the source points
+
+        Returns:
+            array with shape (# target points, 1): values of the regridded variables on the target data points
+        """
+
         if len(samples_dict["indexes"].shape) != 1:
             samples_dict["indexes"] = samples_dict["indexes"][:, 0]
         values = take(variable, samples_dict["indexes"])
@@ -19,11 +33,33 @@ class NNInterp:
         self,
         samples_dict,
         variable_dict,
-        target_grid,
+        target_grid=None,
         scan_direction=None,
         band=None,
         **args,
     ):
+
+        """
+        Returns the interpolated value on the target points, for all variables.
+
+        Parameters:
+            samples_dict (dictionary of arrays with shape (# target points, 1)  - always 1D because self.config.max_neighbours is forced to be 1 for NN):
+                'distances': distance of a target point to the nearest neighbour
+                'indexes': index of the nearest neighbour in the flattened array of source points
+                'grid_1d_index': index of the target point in the flattened array of target points
+            variable_dict (dictionary of arrays with shape (# source points, 1)): values of the variable to be regridded
+                keys are L1b variables names in the source data (with no suffix if split_fore_aft=True, otherwise with either _fore or _after suffix)
+                values are 1d arrays with the values of variables on the source points
+            target_grid (None): not used
+            scan_direction (None or str): None if split_fore_aft=False, eith 'fore' or 'aft' if split_fore_aft=True
+            band (None): not used
+
+        Returns:
+            dictionary of arrays with shape (# target points, 1): 
+                keys are the names of the regridded variables (with no suffix if split_fore_aft=True, otherwise with either _fore or _after suffix)
+                values are 1d arrays with the interpolated values of regridded variables on the target points 
+        """
+
         variable_dict_out = {}
 
         for variable in variable_dict:
