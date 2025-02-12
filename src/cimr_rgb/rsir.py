@@ -71,6 +71,27 @@ class rSIRInterp:
 
     def get_antenna_patterns(self, band, variable_dict, target_dict, target_lon, target_lat, source_inds, target_inds, target_cell_size):
 
+        """
+        Returns the projected antenna patterns relative to a target point, and to the source points that are its nearest neighbors
+
+        Parameters:
+            band (str): not used
+            variable_dict (dictionary of arrays with shape (# source points, 1)): values of the variable to be regridded
+                keys are L1b variables names in the source data (with no suffix if split_fore_aft=True, otherwise with either _fore or _after suffix)
+                values are 1d arrays with the values of variables on the source points
+            target_dict (dictionary of arrays with shape (# target points, 1), or None):
+                keys are variables needed to compute the BG weights
+            target_lon (array of shape (# target points, 1)): longitudes of target points
+            target_lat (array of shape (# target points, 1)): longitudes of target points
+            source_inds (array of shape (<= # self.config.max_neighbours, 1): array of source points that are neighrest neighbors to the target point (excluding invalid points)
+            target_inds (int): index of the target point in the flattened array of target points
+            target_cell_size (None, or list of size 2): resolution of the target cell in the 2 dimensions (only for L1c, None if L1R)
+
+        Returns:
+            list of 2d arrays: values of the antenna patterns on the integration grid, for all source points that are neighrest neighbors to the target point
+            2d array: values of the antenna pattern relative to the target point
+        """
+
         pattern_lons = array(variable_dict['longitude'][source_inds])
         pattern_lats = array(variable_dict['latitude'][source_inds])
         pattern_radii = []
@@ -230,6 +251,24 @@ class rSIRInterp:
 
     def rsir(self, band, variable, samples_dict, variable_dict, target_dict, target_grid):
 
+        """
+        Returns the interpolated values of a variable on the target points 
+        
+        Parameters:
+            band (str): band of the measured data to regrid
+            variable (1D array_like): values of the variable to be regridded on the source points
+            samples_dict (dictionary of arrays with shape (# target points, self.config.max_neighbours)):
+                'distances': distance of a target point to the nearest neighbours
+                'indexes': index of the nearest neighbours in the flattened array of source points
+                'grid_1d_index': index of the target point in the flattened array of target points
+            target_dict (dictionary of arrays with shape (# target points, 1), or None):
+                keys are variables needed to compute the BG weights
+            target_grid (list of size 2): [array of longitude of target points, array of latitudes of taget points]
+
+        Returns:
+            array with shape (# target points, 1): values of the regridded variable on the target points
+        """
+
         indexes = samples_dict['indexes']
         fill_value = len(variable_dict[f"longitude"])
 
@@ -335,6 +374,31 @@ class rSIRInterp:
         return nedt_out
 
     def interp_variable_dict(self, **kwargs):
+
+
+        """
+        Returns the interpolated value on the target points, for all variables.
+
+        Parameters:
+            kwargs: dictionary of parameters passed to the functions. The keys are detailed below.
+            samples_dict (dictionary of arrays with shape (# target points, self.config.max_neighbours)):
+                'distances': distance of a target point to the nearest neighbours
+                'indexes': index of the nearest neighbours in the flattened array of source points
+                'grid_1d_index': index of the target point in the flattened array of target points
+            variable_dict (dictionary of arrays with shape (# source points, 1)): values of the variable to be regridded
+                keys are L1b variables names in the source data (with no suffix if split_fore_aft=True, otherwise with either _fore or _after suffix)
+                values are 1d arrays with the values of variables on the source points
+            target_dict (dictionary of arrays with shape (# target points, 1), or None):
+                keys are variables needed to apply the RSIR algorithm
+            target_grid (list of size 2): [array of longitude of target points, array of latitudes of taget points]
+            scan_direction (None or str): None if split_fore_aft=False, eith 'fore' or 'aft' if split_fore_aft=True
+            band (None or str): not used
+
+        Returns:
+            dictionary of arrays with shape (# target points, 1): 
+                keys are the names of the regridded variables (with no suffix if split_fore_aft=True, otherwise with either _fore or _after suffix)
+                values are 1d arrays with the interpolated values of regridded variables on the target points 
+        """
 
         # Edit this once you know what you need
         if self.config.grid_type == 'L1C':
