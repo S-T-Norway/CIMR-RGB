@@ -535,7 +535,13 @@ class DataIngestion:
 
         for band in bands_to_open:
             with Dataset(self.config.input_data_path, "r") as data:
-                band_data = data[band + "_BAND"]
+                # Adding this line due to the discrepancy in the naming of "KU/K" band.
+                try:
+                    band_data = data[band + "_BAND"]
+                except:
+                    if band == 'K':
+                        band_data = data['KU_BAND']
+                        
                 variable_dict = {}
 
                 # Extract Feed offsets and u, v to add to config
