@@ -1,19 +1,19 @@
 from itertools import product
 import xml.etree.ElementTree as ET
-import pickle
 import sys
 import os
+import pickle
 import psutil
 import gc
 from numpy import full, nan, isnan, where, float16
+import numpy as np
 import csv
 from tqdm import tqdm
-# Add the path to your RGB scripts
-sys.path.append('/home/beywood/ST/CIMR_RGB/CIMR-RGB/src/cimr_rgb')
-from config_file import ConfigFile
-from data_ingestion import DataIngestion
-from regridder import ReGridder, GRIDS
+from cimr_rgb.config_file import ConfigFile
+from cimr_rgb.data_ingestion import DataIngestion
+from cimr_rgb.regridder import ReGridder, GRIDS
 import metrics
+import cimr_grasp.grasp_io as grasp_io
 
 
 # import matplotlib
@@ -22,73 +22,12 @@ import metrics
 # plt.ion()
 
 
-def get_valid_testing_configurations(search_radius, band, regridding_algorithm, grid_definition):
-    # Generate all combinations
-    testing_combinations = product(search_radius, band, regridding_algorithm, grid_definition)
-
-    # Filter out combinations we dont want (maybe a smarter way to do this?)
-    valid_combos = []
-    for SR, B, RA, GD in testing_combinations:
-        if B == 'L':
-            if SR < 15:
-                continue
-            if GD == 'EASE2_G3km':
-                continue
-        elif B == 'C':
-            if GD == 'EASE2_G36km':
-                continue
-            if SR > 30:
-                continue
-        elif B == 'X':
-            if GD == 'EASE2_G36km':
-                continue
-            if SR > 30:
-                continue
-        elif B == 'KA':
-            if GD != 'EASE2_G3km':
-                continue
-            if SR > 20:
-                continue
-        elif B == 'K':
-            if GD != 'EASE2_G3km':
-                continue
-            if SR > 20:
-                continue
-
-        valid_combos.append((SR, B, RA, GD))
-
-    # Turning into dict
-
-
-    return valid_combos
-
-def modify_config_params(config_path, search_radius, band, regridding_algorithm, grid_definition):
-    tree = ET.parse(config_path)
-    root = tree.getroot()
-
-    xml_params = {
-        "ReGridderParams/search_radius": search_radius,
-        "InputData/target_band": band,
-        "InputData/source_band": band,
-        "ReGridderParams/regridding_algorithm": regridding_algorithm,
-        "GridParams/grid_definition": grid_definition
-    }
-
-    for param_name, new_value in xml_params.items():
-        elem = root.find(param_name)
-        if elem is not None:
-            elem.text = str(new_value)
-        else:
-            print(f"Couldnt find {param_name} in config")
-
-    # Write the new config
-    tree.write(config_path)
-
 def run_RGB(config_path):
     config_object = ConfigFile(config_path)
     data_dict = DataIngestion(config_object).ingest_data()
     data_dict_out = ReGridder(config_object).regrid_data(data_dict)
     return data_dict_out
+
 
 def open_reference_data(reference_data_id, grid_resolution, test_card_folder, band):
     reference_data_file = (f"{test_card_folder}/{reference_data_id}/"
@@ -96,6 +35,7 @@ def open_reference_data(reference_data_id, grid_resolution, test_card_folder, ba
     with open(reference_data_file, 'rb') as f:
         truth_data_dict = pickle.load(f)
     return truth_data_dict[f'{band}_BAND']
+
 
 def RGB_dict_to_ease(data_dict, variables, grid_definition):
     data_dict_ease = {}
@@ -116,95 +56,242 @@ def RGB_dict_to_ease(data_dict, variables, grid_definition):
         data_dict_ease[band] = data_dict_band
     return data_dict_ease
 
+
+class TestCase(object):
+
+    def __init__(self, algorithm, band, grid, **params):
+
+        self.algorithm = algorithm
+        self.band = band
+        self.grid = grid
+        self.params = params
+        self.testID = None #the ID will be assigned by the TestRunner
+        
+
+    def rewrite_config(self, config_path, input_data_path, reduced_grid_inds=None):
+
+        tree = ET.parse(config_path)
+        root = tree.getroot()
+
+        xml_params = dict()
+        xml_params["InputData/path"] = input_data_path
+        xml_params["ReGridderParams/regridding_algorithm"] = self.algorithm
+        xml_params["InputData/target_band"] = self.band
+        xml_params["InputData/source_band"] = self.band
+        xml_params["GridParams/grid_definition"] = self.grid
+        xml_params["GridParams/projection_definition"] = self.grid[6]
+
+        if reduced_grid_inds is None:
+            xml_params["GridParams/reduced_grid_inds"] = ''
+        else:
+            xml_params["GridParams/reduced_grid_inds"] = ' '.join(map(str, list(reduced_grid_inds)))
+        
+        for param in self.params:
+            xml_params["ReGridderParams/"+str(param)]= self.params[param]
+
+        for param_name, new_value in xml_params.items():
+
+            elem = root.find(param_name)
+            if elem is not None:
+                elem.text = str(new_value)
+            else:
+                raise Exception(f"Couldn't find {param_name} in config")
+
+        tree.write(config_path)
+
+
+class TestRunner(object):
+
+    base_headers = ['testID', 'scene', 'band', 'grid']
+    test_count = 0
+
+    def __init__(self, config_path, test_data_folder, output_results_path, reset_results_data=False):
+
+        self.config_path = config_path
+        self.test_data_folder = test_data_folder
+        self.output_results_csv = os.path.join(output_results_path, 'results.csv')
+        self.output_results_img = os.path.join(output_results_path, 'results_images.npz')
+
+        if reset_results_data or not os.path.isfile(self.output_results_csv):
+            if os.path.isfile(self.output_results_img):
+                os.remove(self.output_results_img)
+            with open(self.output_results_csv, mode='w+', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(TestRunner.base_headers)
+        else:
+            with open(self.output_results_csv, mode='r', newline='', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                last_row = None
+                for row in reader:
+                    last_row = row
+                if last_row:
+                    TestRunner.test_count = int(last_row[0])
+                else:
+                    TestRunner.test_count = 0
+            
+    def run_tests(self, list_tests, list_metrics, reference_data_id, input_data_path, reduce_grid_inds=None):
+
+        """
+        Function running the RGB for the test cases, computing the metrics that compare with the reference images. 
+        Metrics results are added to a csv file, while images are saved in an npz file. 
+
+        Parameters:
+            list_tests (list of TestCase instances)
+            list_metrics (list of functions, each taking two arrays as input)
+        
+        Returns:
+            nothing
+        """
+
+        # convert to list if it's just one instance
+        try:
+            len(list_tests)
+            list_tests = list(list_tests)
+        except:
+            list_tests = [list_tests]
+
+        if os.path.isfile(self.output_results_img):
+            results_images_dict = dict(np.load(self.output_results_img))
+        else:
+            results_images_dict = {}
+
+        list_params = list(map(str, np.unique(np.concatenate([list(test.params.keys()) for test in list_tests]))))
+        list_metrics_names = [metric.__name__ for metric in list_metrics]
+        
+        root = ET.parse(self.config_path).getroot()
+        for param in list_params:
+            elem = root.find(f"ReGridderParams/{param}")
+            if elem is None:
+                raise Exception(f"Couldn't find {param} in config")
+
+        with open(self.output_results_csv, 'r') as f:
+            headers = next(csv.reader(f)) 
+
+        missing_params  = [header for header in list_params if header not in headers]
+        missing_metrics = [header for header in list_metrics_names if header not in headers]
+        missing_headers = missing_params + missing_metrics
+        current_params_and_metrics = headers[len(TestRunner.base_headers):]
+
+        headers = TestRunner.base_headers + missing_params + current_params_and_metrics + missing_metrics
+
+        print(list_params)
+        print(headers)
+
+        if missing_headers:
+            rows = []
+            with open(self.output_results_csv, "r", newline="") as f:
+                reader = csv.DictReader(f)
+                X = reader.fieldnames  # Extract original headers
+                for row in reader:
+                    rows.append(row)
+            with open(self.output_results_csv, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=headers)
+                writer.writeheader()
+                for row in rows:
+                    writer.writerow({key: row[key] if key in row else "" for key in headers})       
+        
+        with (open(self.output_results_csv, mode='a', newline='', encoding='utf-8') as f):
+
+            writer = csv.writer(f)
+
+            for test in list_tests:
+
+                TestRunner.test_count +=1 
+                test.testID = TestRunner.test_count
+
+                print(f"Running test {self.test_count} on {reference_data_id} with the following parameters:")
+                print(f"algorithm = {test.algorithm}")
+                print(f"band = {test.band}")
+                print(f"grid = {test.grid}")
+                for param in test.params:
+                    print(f"{param} = {test.params[param]}")
+                print("----------------------------------------------------")
+
+                test.rewrite_config(self.config_path, input_data_path, reduce_grid_inds)
+
+                # Run the RGB
+                rgb_dict = run_RGB(self.config_path)
+
+                # Convert RGB Data to an EASE grid
+                rgb_image = RGB_dict_to_ease(rgb_dict, ['bt_h'], test.grid)[test.band]['bt_h']
+
+                # Open the reference data
+                ref_image = open_reference_data(reference_data_id, test.grid, test_data_folder, test.band)['bt']
+
+                # Add test configs and performance metrics to CSV
+                row = [test.testID, reference_data_id, test.band, test.grid]
+
+                for header in headers[len(TestRunner.base_headers):]:
+                    if header in test.params:
+                        row.append(test.params[param])
+                    elif header in list_metrics_names:
+                        imetric = list_metrics_names.index(header)
+                        row.append(list_metrics[imetric](rgb_image, ref_image))
+                    else:
+                        row.append('')
+
+                writer.writerow(row)
+
+                # Add reduced images to dictionary
+                valid_mask = ~isnan(ref_image) & ~isnan(rgb_image)
+                valid_inds = where(valid_mask)
+                results_images_dict[str(test.testID)] = rgb_image[min(valid_inds[0]):max(valid_inds[0]), min(valid_inds[1]):max(valid_inds[1])].astype(float16)
+                size_gb = sys.getsizeof(results_images_dict) / (1024 ** 3)
+                process = psutil.Process(os.getpid())
+                mem_gb = process.memory_info().rss / (1024 ** 3)  # Convert to GB
+                del rgb_image, ref_image, valid_mask, valid_inds
+                gc.collect()
+
+        # Save the image results dict
+        np.savez(self.output_results_img, **results_images_dict)
+
+        return
+
+
+###################################################
+
+
 if __name__ == "__main__":
 
+    #TODO: split_fore_aft = ['True', 'False'] # Todo: Think about how to do this
+
+    repo_root = grasp_io.find_repo_root()
+
     # Base configuration file path
-    config_path = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/Performance_Assesment/performance_assessment_base.xml'
+    config_path = repo_root.joinpath('tests/Performance_Assesment/performance_assessment_base.xml')
 
     # Test data folder
-    test_data_folder = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/Test_cards'
-    reference_data_id = 'SCEPS_central_america'
+    test_data_folder = repo_root.joinpath('dpr/Test_cards')
 
     # Output results path
-    output_results_path = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/Performance_Assesment/results'
+    output_results_path = repo_root.joinpath('tests/Performance_Assesment/results')
 
-    # Values to be tested
-    search_radius = [5, 10, 15, 20, 30, 40, 50]
-    band = ["L", "C", "X", "K", "KA"]
-    regridding_algorithm = ["NN", "DIB", "IDS"]
-    grid_definition = ['EASE2_G36km', 'EASE2_G9km', 'EASE2_G3km']
-    # split_fore_aft = ['True', 'False'] # Todo: Think about how to do this
-
-
-    # Get a list of different configurations to be tested
-    test_configs = get_valid_testing_configurations(
-        search_radius=search_radius,
-        band=band,
-        regridding_algorithm=regridding_algorithm,
-        grid_definition=grid_definition
-    )
-
-    # I went with the following solution for saving the results. (Open to other ideas).
-    # The images are saved in a dictionary, with a certain test_ID, then the test configurations
-    # and performance metrics are output to a CSV file with the same test_ID.
-    results_images_dict = {}
-    with (open(os.path.join(output_results_path, 'results.csv'),mode='w', newline='', encoding='utf-8') as f):
-        writer = csv.writer(f)
-        writer.writerow(['test_ID', 'search_radius', 'band', 'regridding_algorithm', 'grid_definition', 'ND', 'MAE', 'RMS', 'SDE', 'PC'])
-
-        for test_ID, test_config in tqdm(enumerate(test_configs), total=len(test_configs)):
-            search_radius = test_config[0]
-            band = test_config[1]
-            regridding_algorithm = test_config[2]
-            grid_definition = test_config[3]
-
-            print(f"""Running test {test_ID} with config:"
-                  band = {band}
-                  grid_definition = {grid_definition}
-                  search_radius = {search_radius}
-                  regridding_algorithm = {regridding_algorithm}""")
+    tests = []
+    tests += [TestCase('NN', 'L',  'EASE2_G36km', search_radius=r)  for r in [20, 30, 40, 50]]
+    # tests += [TestCase('IDS', 'L',  'EASE2_G36km',  search_radius=r)  for r in [20, 30, 40, 50]]
+    # tests += [TestCase('NN', 'C',  'EASE2_G9km',  search_radius=r)  for r in [5, 10, 15, 20]]
+    # tests += [TestCase('NN', 'C',  'EASE2_G3km',  search_radius=r)  for r in [5, 10, 15, 20]]
+    # tests += [TestCase('NN', 'X',  'EASE2_G36km', search_radius=r)  for r in [5, 10, 15, 20]]
+    # tests += [TestCase('NN', 'X',  'EASE2_G36km', search_radius=r)  for r in [5, 10, 15, 20]]
+    # tests += [TestCase('NN', 'KA', 'EASE2_G3km',  search_radius=r)  for r in [5, 10, 15]]
+    # tests += [TestCase('NN', 'K',  'EASE2_G3km',  search_radius=r)  for r in [5, 10, 15]]
 
 
-            # Edit the base configuration file with the new combinations
-            modify_config_params(config_path, search_radius, band, regridding_algorithm, grid_definition)
+    ### test set: central america   
+    
+    input_data_path   = repo_root.joinpath("dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc") 
+    reference_data_id = 'SCEPS_central_america' 
 
-            # Run the RGB
-            rgb_dict = run_RGB(config_path)
+    list_metrics = [metrics.normalised_difference, metrics.mean_absolute_error, metrics.root_mean_square_error, 
+               metrics.standard_deviation_error, metrics.pointwise_correlation, metrics.valid_pixel_overlap]
 
-            # Convert RGB Data to an EASE grid
-            rgb_image = RGB_dict_to_ease(rgb_dict, ['bt_h'], grid_definition)[band]['bt_h']
+    runner = TestRunner(config_path, test_data_folder, output_results_path, reset_results_data=False)
 
-            # Open the reference data
-            ref_image = open_reference_data(reference_data_id, grid_definition, test_data_folder, band)['bt']
+    runner.run_tests(tests, list_metrics, reference_data_id, input_data_path, reduce_grid_inds=None)
 
-            # # Compare images/ Apply performance metrics
-            # Todo: We need to apply a metric that analyses how many output cells are actually filled
-            # For example, 36km grid with 5km SR will only have a few output.
+    ### test set: point-like discontinuity
 
-            ND = metrics.normalised_difference(rgb_image, ref_image)
-            MAE = metrics.mean_absolute_error(rgb_image, ref_image)
-            RMS = metrics.root_mean_square_error(rgb_image, ref_image)
-            SDE = metrics.standard_deviation_error(rgb_image, ref_image)
-            PC = metrics.pointwise_correlation(rgb_image, ref_image)
-
-            # Add test configs nad performance metrics to CSV
-            writer.writerow([test_ID, search_radius, band, regridding_algorithm, grid_definition, ND, MAE, RMS, SDE, PC])
-
-            # Add reduced images to dictionary
-            valid_mask = ~isnan(ref_image) & ~isnan(rgb_image)
-            valid_inds = where(valid_mask)
-            results_images_dict[test_ID] = rgb_image[min(valid_inds[0]):max(valid_inds[0]), min(valid_inds[1]):max(valid_inds[1])].astype(float16)
-            size_gb = sys.getsizeof(results_images_dict) / (1024 ** 3)
-            process = psutil.Process(os.getpid())
-            mem_gb = process.memory_info().rss / (1024 ** 3)  # Convert to GB
-            del rgb_image, ref_image, valid_mask, valid_inds
-            gc.collect()
-
-
-    # Save the image results dict
-    with open(os.path.join(output_results_path, 'results_images.pkl'), 'wb') as f:
-        pickle.dump(results_images_dict, f)
-
+    # ..... 
 
 
 

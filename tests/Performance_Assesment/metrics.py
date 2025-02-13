@@ -1,10 +1,10 @@
 import numpy as np
 import cv2
 
-import matplotlib
-tkagg = matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-plt.ion()
+# import matplotlib
+# tkagg = matplotlib.use('TkAgg')
+# import matplotlib.pyplot as plt
+# plt.ion()
 
 
 def _validate_arrays(X, Xref, check_2d=False):
@@ -22,13 +22,10 @@ def _validate_arrays(X, Xref, check_2d=False):
 
 
 def normalised_difference(X, Xref):
-    # Davide, I have renames this function from "relative_root_mean_square_error" to
-    # "normalised_distance" as I think the original name is incorrect. I got the current name
-    # from the LW paper. (Delete comment if you agree)
-
     _validate_arrays(X, Xref)
     valid_mask = ~np.isnan(Xref) & ~np.isnan(X)
     return np.linalg.norm(X[valid_mask]-Xref[valid_mask]) / np.linalg.norm(Xref[valid_mask])
+
 
 def root_mean_square_error(X, Xref):
     _validate_arrays(X, Xref)
@@ -39,6 +36,7 @@ def root_mean_square_error(X, Xref):
 
     return np.sqrt(mse)
 
+
 def standard_deviation_error(X, Xref):
     _validate_arrays(X, Xref)
     valid_mask = ~np.isnan(Xref) & ~np.isnan(X)
@@ -47,13 +45,11 @@ def standard_deviation_error(X, Xref):
 
     return np.std(diff)
 
+
 def pointwise_correlation(X, Xref):
     _validate_arrays(X, Xref)
     valid_mask = ~np.isnan(Xref) & ~np.isnan(X)
     return np.corrcoef(X[valid_mask].flatten(), Xref[valid_mask].flatten())[0, 1]
-
-
-
 
 
 def relative_global_error(X, Xref):
@@ -87,7 +83,6 @@ def peak_error(X, Xref):
 
 
 def sharpening_factor(X, Xref):
-    import matplotlib.pyplot as plt
 
     _validate_arrays(X, Xref, check_2d=True)
 
@@ -104,4 +99,16 @@ def sharpening_factor(X, Xref):
         raise ValueError("Reference image has no gradient, i.e. is a constant image")
 
     return Xgrad / Xrefgrad
+
+
+def valid_pixel_overlap(X, Xref):
+
+    _validate_arrays(X, Xref, check_2d=True)
+    valid_mask = ~np.isnan(Xref) & ~np.isnan(X)
+    min_nan_mask = np.minimum(np.sum(~np.isnan(X)), np.sum(~np.isnan(Xref)))
+    # return np.sum(valid_mask) / (0.5 * (np.sum(~np.isnan(X)) + np.sum(~np.isnan(Xref))))
+    return np.sum(valid_mask) /  min_nan_mask
+
+
+
     
