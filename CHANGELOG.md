@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [1.0.0rc2] - 2025-02-17
+
+### Added
+
+- More unit tests.
+
+### Changed
+
+- Refactored unit test code for `config_file.py`.
+- Refactored `product_generator.py`.
+- (Partially) changed the docstrings description into `scipy/numpy` format (suitable for numerical codes).
+
+### Removed
+
+- `dpr` folder.
+
 ## [1.0.0rc1] - 2024-12-08
 
 ### Added
