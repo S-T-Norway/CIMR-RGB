@@ -2,7 +2,6 @@
 Utility functions for the RGB.
 """
 
-# from numpy import delete, r_, array, linalg, column_stack, cos, sin, radians, arccos
 import numpy as np
 
 EARTH_RADIUS = 6378000
@@ -328,5 +327,33 @@ def great_circle_distance(
         np.sin(phi1) * np.sin(phi2)
         + np.cos(phi1) * np.cos(phi2) * np.cos(lambda2 - lambda1)
     )
-    return EARTH_RADIUS * delta_sigma
+    distance = EARTH_RADIUS * delta_sigma
+    return distance
 
+
+def intersection_with_sphere(alpha, R, H):
+    """
+    Finds the closest intersection of a line passing through P(0,H) with angle alpha
+    with a circle of radius R centered at (0,0). The solution with positive x is returned.
+    
+    Parameters:
+    R     : float  - Radius of the circle
+    H     : float  - Height of point P
+    alpha : float  - Angle with nadir in radians
+    
+    Returns:
+    (x, y) : tuple - Coordinates of the closest intersection point
+    """
+    cos_alpha = np.cos(alpha)
+    sin_alpha = np.sin(alpha)
+    
+    discriminant = (R+H)**2 * np.cos(alpha)**2 - ((R+H)**2 - R**2)
+    if discriminant < 0:
+        raise ValueError("No real intersection found (line misses the circle).")
+    
+    lambda_closest = (R+H) * cos_alpha - np.sqrt(discriminant)
+
+    x = lambda_closest * sin_alpha
+    y = R+H - lambda_closest * cos_alpha
+
+    return x, y

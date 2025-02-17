@@ -487,8 +487,8 @@ def interp_beamdata_into_uv(cimr:           dict,
     """
 
     # New grid 
-    grid_points_theta = int(grid_max_theta  / grid_res_theta) 
-    grid_points_phi   = int(360. / grid_res_phi) 
+    grid_points_theta = int(grid_max_theta  / grid_res_theta) + 1 #+1 added to include the endpoint
+    grid_points_phi   = int(360. / grid_res_phi) + 1 
 
     theta = np.linspace(0, np.deg2rad(grid_max_theta), grid_points_theta)
     phi   = np.linspace(0, 2*np.pi, grid_points_phi)

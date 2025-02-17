@@ -14,15 +14,16 @@ def landweber(A, Y, lambda_param=1e-4, alpha=None, n_iter=1000, rtol=1e-5):
     Perform Landweber iteration with Tikhonov regularisation to solve AX = Y.
     
     Parameters:
-    - A: 2D numpy array, the system matrix.
-    - Y: 1D or 2D numpy array, the observed data.
-    - lambda_param: float, regularisation parameter for Tikhonov regularisation.
-    - alpha: float, step size.
-    - n_iter: int, maximum number of iterations.
-    - rtol: float, tolerance for the relative error stopping criterion.
+        A (2D numpy array): matrix A in the equation AX=Y
+        Y (1D or 2D numpy array): the observed data in the equation AX=Y
+        lambda_param (float) regularisation parameter for Tikhonov regularisation.
+        alpha (float): step size
+        n_iter (int): maximum number of iterations.
+        rtol (float): tolerance for the relative error stopping criterion.
     
     Returns:
-    - X: numpy array, the estimated solution.
+        numpy array: the estimated solution
+        int: number of iterations
     """
 
     X = np.ones(A.shape[1])*1e-20
@@ -77,14 +78,15 @@ def conjugate_gradient_ne(A, Y, lambda_param=1e-4, n_iter=1000, rtol=1e-5):
     Perform Conjugate Gradient iteration with Tikhonov regularisation to solve AX = Y.
     
     Parameters:
-    - A: 2D numpy array, the system matrix.
-    - Y: 1D or 2D numpy array, the observed data.
-    - lambda_param: float, regularisation parameter for Tikhonov regularisation.
-    - n_iter: int, maximum number of iterations.
-    - rtol: float, tolerance for the relative error stopping criterion.
+        A (2D numpy array): matrix A in the equation AX=Y
+        Y (1D pr 2D numpy array): the observed data in the equation AX=Y
+        lambda_param (float) regularisation parameter for Tikhonov regularisation.
+        n_iter (int): maximum number of iterations.
+        rtol (float): tolerance for the relative error stopping criterion.
     
     Returns:
-    - X: numpy array, the estimated solution.
+        numpy array: the estimated solution.
+        int: number of iterations
     """
 
     AtA  = A.T @ A
@@ -148,6 +150,25 @@ class MIIinterp:
 
 
     def apply_inversion(self, variable_dict, samples_dict, target_grid):
+
+        """
+        Returns the interpolated value on the target points, for all variables.
+
+        Parameters:
+            samples_dict (dictionary of arrays with shape (# target points, self.config.max_neighbours)):
+                'distances': distance of a target point to the nearest neighbours
+                'indexes': index of the nearest neighbours in the flattened array of source points
+                'grid_1d_index': index of the target point in the flattened array of target points
+            variable_dict (dictionary of arrays with shape (# source points, 1)): values of the variable to be regridded
+                keys are L1b variables names in the source data (with no suffix if split_fore_aft=True, otherwise with either _fore or _after suffix)
+                values are 1d arrays with the values of variables on the source points
+            target_grid (list of size 2): [array of longitude of target points, array of latitudes of taget points]
+
+        Returns:
+            dictionary of arrays with shape (# target points, 1): 
+                keys are the names of the regridded variables (with no suffix if split_fore_aft=True, otherwise with either _fore or _after suffix)
+                values are 1d arrays with the interpolated values of regridded variables on the target points    
+        """
 
         output_grid = GridGenerator(self.config, self.config.projection_definition, self.config.grid_definition)
 
