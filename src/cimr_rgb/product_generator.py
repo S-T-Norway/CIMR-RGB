@@ -936,8 +936,6 @@ class ProductGenerator:
             "geospatial_lon_resolution": lon_res,
         }
 
-    # TODO: Method to get a list of antenna patterns used in processing
-    #       to populate metadata in the nc file
     def get_cimr_antenna_patterns_list(self) -> str:
         """
         Retrieves a list of antenna patterns used in processing and formats them as a single string.
@@ -1050,7 +1048,7 @@ class ProductGenerator:
         glob_dims_dict["n_l1b_scans"] = None
 
         if self.config.grid_type == "L1C":
-            # # Creating Dimentions according to cdl
+            # Creating Dimentions according to cdl
             glob_dims_dict["time"] = None
             glob_dims_dict["y"] = None
             glob_dims_dict["x"] = None

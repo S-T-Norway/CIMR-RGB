@@ -12,6 +12,7 @@ import re
 from datetime import datetime, timezone, timedelta
 import logging
 
+import numpy as np
 from numpy import (
     array,
     sqrt,
@@ -121,8 +122,92 @@ class DataIngestion:
             self.logger.addHandler(logging.NullHandler())
             self.logpar_decorate = False
 
-    def remove_out_of_bounds(self, data_dict):
-        grid = GRIDS[self.config.grid_definition]
+    def remove_out_of_bounds(self, data_dict: dict) -> dict:
+        """
+        Remove out-of-bound data points from the input dictionary by replacing them with np.nan.
+
+        This method first retrieves the grid parameters from a global GRIDS dictionary using the
+        grid definition specified in `self.config.grid_definition`. Based on the grid parameters
+        (such as x/y bounds, resolution, and valid latitude ranges) and the projection definition
+        (`self.config.projection_definition`), the method computes indices for which the latitude
+        values are outside the valid range. For example, in an EASE2 grid:
+
+          - With projection "N": data points with latitude below `grid["lat_min"]` are out-of-bound.
+          - With projection "G": data points with latitude below `grid["lat_min"]` or above `grid["lat_max"]` are out-of-bound.
+          - With projection "S": data points with latitude above `grid["lat_min"]` are out-of-bound.
+
+        Similarly, for STEREO grids the valid condition is based on comparing against
+        `grid["lat_min"]` (with "PS_N" or "PS_S" determining the inequality), and for MERC grids
+        both lower and upper latitude limits are enforced.
+
+        In addition, the method computes the projected y coordinates from the longitude and latitude
+        arrays using the `lonlat_to_xy` method of the GridGenerator class (decorated via RGBLogging).
+        Out-of-bound indices are then determined from the y coordinate bounds. If either the latitude-
+        or y-coordinate based indices are non-empty, their union is used to set the corresponding entries
+        in every variable (array) in `data_dict` to np.nan. Before assignment, all arrays are cast
+        to a floating-point type if necessary, to allow for np.nan assignment.
+
+        Parameters
+        ----------
+        data_dict : dict
+            A dictionary of NumPy arrays containing the data to be cleaned. Expected keys include
+            "latitude" and "longitude", and potentially additional variables. The arrays must be
+            convertible to a floating-point type since np.nan is used to mark out-of-bound entries.
+
+        Returns
+        -------
+        dict
+            The modified data dictionary where any values at indices outside the valid grid bounds
+            (both in terms of latitude and the computed y coordinate) have been replaced with np.nan.
+
+        Raises
+        ------
+        KeyError
+            If the grid definition specified in `self.config.grid_definition` is not found in the GRIDS dictionary.
+        ValueError
+            If an invalid projection is specified for EASE2 or STEREO grids or if the grid definition is unknown.
+
+        Notes
+        -----
+        - For EASE2 grids:
+            * Projection "N": Out-of-bound where latitude < grid["lat_min"].
+            * Projection "G": Out-of-bound where latitude < grid["lat_min"] or > grid["lat_max"].
+            * Projection "S": Out-of-bound where latitude > grid["lat_min"].
+        - For STEREO grids:
+            * Projection "PS_N": Out-of-bound where latitude < grid["lat_min"].
+            * Projection "PS_S": Out-of-bound where latitude > grid["lat_min"].
+        - For MERC grids:
+            * Out-of-bound where latitude < grid["lat_min"] or > grid["lat_max"].
+        - The computed y coordinates are obtained by converting the input longitude and latitude using
+          the `lonlat_to_xy` method from the GridGenerator class. This method is dynamically decorated
+          with performance tracking via RGBLogging.
+        - All arrays in `data_dict` are converted to a floating-point type if they are not already, to
+          ensure that np.nan can be assigned.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> # Assume GRIDS and a configuration object are defined appropriately.
+        >>> # For example, let the configuration have grid_definition "EASE2_G1km" and projection "G".
+        >>> data = {
+        ...     "latitude": np.array([1, 5, 9, 11]),
+        ...     "longitude": np.array([10, 20, 30, 40]),
+        ...     "temperature": np.array([100, 200, 300, 400])
+        ... }
+        >>> # In grid "EASE2_G1km", grid["lat_min"] is -86 and grid["lat_max"] is 86.
+        >>> # For projection "G", out-of-bound indices are those where latitude < -86 or > 86.
+        >>> # Since all input latitude values are within the valid range, no values are replaced.
+        >>> processor = DataIngestion(config)  # config is a pre-defined configuration object with the specified grid and projection
+        >>> cleaned_data = processor.remove_out_of_bounds(data)
+        >>> np.isnan(cleaned_data["latitude"])
+        array([False, False, False, False])
+        """
+
+        try:
+            grid = GRIDS[self.config.grid_definition]
+        except KeyError as ke:
+            self.logger.error(f"{ke}: Invalid grid definition.")
+            raise ke
 
         x_bound_min = grid["x_min"]
         x_bound_max = grid["x_min"] + grid["n_cols"] * grid["res"]
@@ -131,36 +216,41 @@ class DataIngestion:
 
         if "EASE2" in self.config.grid_definition:
             if "N" in self.config.projection_definition:
-                out_of_bounds_lat = where(data_dict["latitude"] < grid["lat_min"])
+                out_of_bounds_lat = np.where(data_dict["latitude"] < grid["lat_min"])
 
             elif "G" in self.config.projection_definition:
-                out_of_bounds_lat = where(
+                out_of_bounds_lat = np.where(
                     (data_dict["latitude"] > grid["lat_max"])
                     | (data_dict["latitude"] < grid["lat_min"])
                 )
 
             elif "S" in self.config.projection_definition:
-                out_of_bounds_lat = where(data_dict["latitude"] > grid["lat_min"])
+                # Do not touch this line; it should be lat_min
+                out_of_bounds_lat = np.where(data_dict["latitude"] > grid["lat_min"])
+            else:
+                raise ValueError(
+                    f"Invalid projection for EASE2 grid: {self.config.projection_definition}"
+                )
 
         elif "STEREO" in self.config.grid_definition:
             if self.config.projection_definition == "PS_N":
-                out_of_bounds_lat = where(data_dict["latitude"] < grid["lat_min"])
+                out_of_bounds_lat = np.where(data_dict["latitude"] < grid["lat_min"])
 
             elif self.config.projection_definition == "PS_S":
-                out_of_bounds_lat = where(data_dict["latitude"] > grid["lat_min"])
-
+                out_of_bounds_lat = np.where(data_dict["latitude"] > grid["lat_min"])
+            else:
+                raise ValueError(
+                    f"Invalid projection for STEREO grid: {self.config.projection_definition}"
+                )
         elif "MERC" in self.config.grid_definition:
-            out_of_bounds_lat = where(
+            out_of_bounds_lat = np.where(
                 (data_dict["latitude"] > grid["lat_max"])
                 | (data_dict["latitude"] < grid["lat_min"])
             )
+        else:
+            raise ValueError(f"Unknown grid definition: {self.config.grid_definition}")
 
-        # source_x, source_y = GridGenerator(self.config,
-        #                                    projection_definition=self.config.projection_definition,
-        #                                    grid_definition=self.config.grid_definition).lonlat_to_xy(
-        #     lon = data_dict['longitude'],
-        #     lat = data_dict['latitude']
-        # )
+        # Compute the source coordinates using the GridGenerator through the RGBLogging decorator.
         timed_obj = RGBLogging.rgb_decorate_and_execute(
             decorate=self.logpar_decorate,
             decorator=RGBLogging.track_perf,
@@ -173,14 +263,20 @@ class DataIngestion:
             grid_definition=self.config.grid_definition,
         ).lonlat_to_xy(lon=data_dict["longitude"], lat=data_dict["latitude"])
 
-        out_of_bounds_xy = where((source_y < y_bound_min) | (source_y > y_bound_max))
+        # Identify out-of-bound indices based on y coordinate.
+        out_of_bounds_xy = np.where((source_y < y_bound_min) | (source_y > y_bound_max))
+
+        # Ensure all arrays in data_dict are of a floating type so that np.nan can be assigned.
+        for key in data_dict:
+            if not np.issubdtype(data_dict[key].dtype, np.floating):
+                data_dict[key] = data_dict[key].astype(np.float64)
 
         for variable in data_dict:
             if len(out_of_bounds_lat[0]) != 0:
-                data_dict[variable][out_of_bounds_xy] = nan
+                data_dict[variable][out_of_bounds_xy] = np.nan
 
             if len(out_of_bounds_xy[0]) != 0:
-                data_dict[variable][out_of_bounds_lat] = nan
+                data_dict[variable][out_of_bounds_lat] = np.nan
 
         return data_dict
 
