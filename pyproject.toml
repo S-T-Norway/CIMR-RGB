@@ -39,7 +39,10 @@ dependencies = [
 
 
 [project.optional-dependencies]
-tests = ["pytest"] 
+tests = [
+  "pytest", 
+  "pytest-mock"
+] 
 
 
 [tool.pytest.ini_options]

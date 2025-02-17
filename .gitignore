@@ -7,7 +7,7 @@ dpr/L1C/CIMR/RGB/*
 dpr/L1B/CIMR/*   
 # Removed the data directory in order to conserve space
 # (Look into user manual and README.md for details how to download the data) 
-# dpr 
+dpr 
 # The file is too big to put it in the repo 
 dpr/L1B/SMAP/RadiometerAntPattern_170830_v011.h5 
 dpr/antenna_patterns/CIMR/*

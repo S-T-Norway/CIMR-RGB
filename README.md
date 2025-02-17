@@ -97,11 +97,40 @@ $ pytest -v
 
 from within the root of the repo.
 
-[**Note**]: The test data set is available via by following [this
+## Data
+
+The test data (together with processed antenna patterns) is available via by following [this
 link](https://drive.google.com/drive/folders/1Yo7If-nE-xMHwJSU3QL5HzSvp9Yzpj98?usp=sharing).
 Inside that folder you can find downloadable archive and the hash some to check
-archive's integrity. To run the test, unpack the archive inside the root and
-run the test from the root of the repo.
+archive's integrity.
+
+To check for archive's integrity, download the archive and generate the hash:
+
+```
+$ sha256sum dpr_v1.0.0.tar.gz
+```
+
+Use the prepared hash file for automated verification
+
+```
+$ sha256sum -c dpr_v1.0.0.tar.gz.sha256
+```
+
+The output should read like this:
+
+```
+dpr_v1.0.0.tar.gz: OK
+```
+
+If it doesn't then redownload the archive and repeat the procedure again.
+
+If everything is working, unpack the archive (in the root of the repo, if you want to run the tests):
+
+```
+$ tar -xzvf dpr_v1.0.0.tar.gz
+```
+
+and run the tests.
 
 ## Tutorials
 
