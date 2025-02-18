@@ -10,11 +10,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
-- More unit tests.
 - Addition of configuration parameters ("antenna_pattern_uncertainty", "cimr_[L/C/X/K/KA]_nedts", "relative_tolerance", regularisation_parameter", "max_chunk_size")
 - Use of 1km Global EASE2 output grids (currently unstable due to memory issues)
 - Use of 3km Global, North, South EASE2 output grids
-- 
+- Maximum polar angle for antenna patterns added as configuration parameter
+- Added more unit tests for antenna pattern projection module, interpolation algorithms, data ingestion and regridder modules
+- Added docstrings for functions in algorithms functions
+
 ### Changed
 
 - Refactored unit test code for `config_file.py`.
