@@ -11,16 +11,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 
 - More unit tests.
-
+- Addition of configuration parameters ("antenna_pattern_uncertainty", "cimr_[L/C/X/K/KA]_nedts", "relative_tolerance", regularisation_parameter", "max_chunk_size")
+- Use of 1km Global EASE2 output grids (currently unstable due to memory issues)
+- Use of 3km Global, North, South EASE2 output grids
+- 
 ### Changed
 
 - Refactored unit test code for `config_file.py`.
 - Refactored `product_generator.py`.
 - (Partially) changed the docstrings description into `scipy/numpy` format (suitable for numerical codes).
+- Changed the name of antenna pattern configuration from "real" to "instrument"
+- Enforced that for L1C, that the same source_band and target_band should be defined (as opposed to just target_band)
+- Refactor of "iterative_methods.py"
 
 ### Removed
 
 - `dpr` folder.
+- LMT config parameter
 
 ## [1.0.0rc1] - 2024-12-08
 
