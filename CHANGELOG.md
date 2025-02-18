@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Use of 3km Global, North, South EASE2 output grids
 - Maximum polar angle for antenna patterns added as configuration parameter
 - Added more unit tests for antenna pattern projection module, interpolation algorithms, data ingestion and regridder modules
-- Added docstrings for functions in algorithms functions
+- Added docstrings in functions for interpolation algorithms 
 
 ### Changed
 
