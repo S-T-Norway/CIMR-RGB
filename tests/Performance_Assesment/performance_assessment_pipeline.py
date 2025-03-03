@@ -155,7 +155,7 @@ class TestRunner(object):
             except:
                 raise EOFError("Error in parsing existing results.csv file. Either delete it or set reset_results_data=True")
 
-    def run_tests(self, list_tests, list_metrics, reference_data_id, input_data_path, grid, reduce_grid_inds=None):
+    def run_tests(self, list_tests, list_metrics, list_reference_data_ids, list_input_data_paths, list_grids, reduce_grid_inds=None):
 
         """
         Function running the RGB for the test cases, computing the metrics that compare with the reference images. 
@@ -164,9 +164,9 @@ class TestRunner(object):
         Parameters:
             list_tests (list of TestCase instances)
             list_metrics (list of functions, each taking two arrays as input)
-            reference_data_id (list of strings, corresponding to the file name of reference data)
-            input_data_path (string, path to the L1B data)
-            grid (string defining the output grid)
+            list_reference_data_ids (list of strings, corresponding to the file names of reference data)
+            list_input_data_paths (list of strings, corresponding to the paths to the L1B data)
+            list_grids (list of strings defining the output grids)
             reduced_grid_inds (list of integers, defining the indexes of a subgrid of the output grid)
         
         Returns:
@@ -174,11 +174,13 @@ class TestRunner(object):
         """
 
         # convert to list if it's just one instance
-        try:
-            len(list_tests)
-            list_tests = list(list_tests)
-        except:
-            list_tests = [list_tests]
+        list_tests = np.atleast_1d(list_tests)
+        list_metrics = np.atleast_1d(list_metrics)
+        list_reference_data_ids = np.atleast_1d(list_reference_data_ids)
+        list_input_data_paths = np.atleast_1d(list_input_data_paths)
+        list_grids = np.atleast_1d(list_grids)
+        if len(list_reference_data_ids) != len(list_input_data_paths):
+            raise ValueError(f"The number of reference data IDs and input_data_paths should be the same (now, {len(list_reference_data_ids)} and {len(list_input_data_paths)})")
 
         if os.path.isfile(self.output_results_img):
             results_images_dict = dict(np.load(self.output_results_img))
@@ -211,67 +213,69 @@ class TestRunner(object):
                 for row in rows:
                     writer.writerow({key: row[key] if key in row else "" for key in headers})       
         
-        for test in list_tests:
+        for reference_data_id,input_data_path in zip(list_reference_data_ids, list_input_data_paths):
+            for test in list_tests:
+                for grid in list_grids:
 
-            TestRunner.test_count +=1 
-            test.testID = TestRunner.test_count
+                    TestRunner.test_count +=1 
+                    test.testID = TestRunner.test_count
 
-            print(f"Running test {self.test_count} on {reference_data_id} with the following parameters:")
-            print(f"algorithm = {test.algorithm}")
-            print(f"band = {test.band}")
-            print(f"grid = {grid}")
-            for param in test.params:
-                print(f"{param} = {test.params[param]}")
+                    print(f"Running test {self.test_count} on {reference_data_id} with the following parameters:")
+                    print(f"algorithm = {test.algorithm}")
+                    print(f"band = {test.band}")
+                    print(f"grid = {grid}")
+                    for param in test.params:
+                        print(f"{param} = {test.params[param]}")
 
-            test.rewrite_config(self.config_path, self.antenna_patterns_path, input_data_path, grid, reduce_grid_inds)
+                    test.rewrite_config(self.config_path, self.antenna_patterns_path, input_data_path, grid, reduce_grid_inds)
 
-            t0 = time.time()
-            tracemalloc.start()
-            # Run the RGB
-            rgb_dict = run_RGB(self.config_path)
-            current, peak = tracemalloc.get_traced_memory()
-            tracemalloc.stop()
-            t1 = time.time()
-            print(f"Regridding time = {(t1-t0):.1f} s")
-            print(f"Peak memory usage = {(peak/1024**2):.2f} MB")
-            print("----------------------------------------------------")
+                    t0 = time.time()
+                    tracemalloc.start()
+                    # Run the RGB
+                    rgb_dict = run_RGB(self.config_path)
+                    current, peak = tracemalloc.get_traced_memory()
+                    tracemalloc.stop()
+                    t1 = time.time()
+                    print(f"Regridding time = {(t1-t0):.1f} s")
+                    print(f"Peak memory usage = {(peak/1024**2):.2f} MB")
+                    print("----------------------------------------------------")
 
-            # Convert RGB Data to an EASE grid
-            rgb_image = RGB_dict_to_ease(rgb_dict, ['bt_h'], grid)[test.band]['bt_h']
+                    # Convert RGB Data to an EASE grid
+                    rgb_image = RGB_dict_to_ease(rgb_dict, ['bt_h'], grid)[test.band]['bt_h']
 
-            # Open the reference data
-            ref_image = open_reference_data(reference_data_id, grid, self.test_data_folder, test.band)
+                    # Open the reference data
+                    ref_image = open_reference_data(reference_data_id, grid, self.test_data_folder, test.band)
 
-            # Add test configs and performance metrics to CSV
-            row = [test.testID, reference_data_id, test.algorithm, test.band, grid, t1-t0, peak/1024**2]
+                    # Add test configs and performance metrics to CSV
+                    row = [test.testID, reference_data_id, test.algorithm, test.band, grid, t1-t0, peak/1024**2]
 
-            with (open(self.output_results_csv, mode='a', newline='', encoding='utf-8') as f):
-                writer = csv.writer(f)
-                for header in headers[len(TestRunner.base_headers):]:
-                    if header in test.params:
-                        row.append(test.params[header])
-                    elif header in list_metrics_names:
-                        imetric = list_metrics_names.index(header)
-                        row.append(list_metrics[imetric](rgb_image, ref_image))
-                    else:
-                        row.append('')
-                writer.writerow(row)
+                    with (open(self.output_results_csv, mode='a', newline='', encoding='utf-8') as f):
+                        writer = csv.writer(f)
+                        for header in headers[len(TestRunner.base_headers):]:
+                            if header in test.params:
+                                row.append(test.params[header])
+                            elif header in list_metrics_names:
+                                imetric = list_metrics_names.index(header)
+                                row.append(list_metrics[imetric](rgb_image, ref_image))
+                            else:
+                                row.append('')
+                        writer.writerow(row)
 
-            # Add reduced images to dictionary
-            valid_mask = ~isnan(ref_image) & ~isnan(rgb_image)
-            valid_inds = where(valid_mask)
-            new_result_image = rgb_image[min(valid_inds[0]):max(valid_inds[0]), min(valid_inds[1]):max(valid_inds[1])].astype(float16)
-            size_gb = sys.getsizeof(results_images_dict) / (1024 ** 3)
-            process = psutil.Process(os.getpid())
-            mem_gb = process.memory_info().rss / (1024 ** 3)  # Convert to GB
-            del rgb_image, ref_image, valid_mask, valid_inds
-            gc.collect()
+                    # Add reduced images to dictionary
+                    valid_mask = ~isnan(ref_image) & ~isnan(rgb_image)
+                    valid_inds = where(valid_mask)
+                    new_result_image = rgb_image[min(valid_inds[0]):max(valid_inds[0]), min(valid_inds[1]):max(valid_inds[1])].astype(float16)
+                    size_gb = sys.getsizeof(results_images_dict) / (1024 ** 3)
+                    process = psutil.Process(os.getpid())
+                    mem_gb = process.memory_info().rss / (1024 ** 3)  # Convert to GB
+                    del rgb_image, ref_image, valid_mask, valid_inds
+                    gc.collect()
 
-            # Save the image results dict
-            results_images = np.load(self.output_results_img)
-            results_images_dict = {key: results_images[key] for key in results_images.files}
-            results_images_dict[str(test.testID)] = new_result_image
-            np.savez_compressed(self.output_results_img, **results_images_dict)
+                    # Save the image results dict
+                    results_images = np.load(self.output_results_img)
+                    results_images_dict = {key: results_images[key] for key in results_images.files}
+                    results_images_dict[str(test.testID)] = new_result_image
+                    np.savez_compressed(self.output_results_img, **results_images_dict)
 
         return
 
@@ -298,14 +302,34 @@ if __name__ == "__main__":
     antenna_patterns_path = repo_root.joinpath('dpr/antenna_patterns')
 
     # define TestRunner object
-    runner = TestRunner(config_path, antenna_patterns_path, test_data_folder, output_results_path, reset_results_data=True)
+    runner = TestRunner(config_path, antenna_patterns_path, test_data_folder, output_results_path, reset_results_data=False)
 
     #define test cases
 
     tests_L = []
-    tests_L += [TestCase('NN' , 'L', search_radius=r)  for r in [20, 30]]
+    tests_L += [TestCase('NN' , 'L', search_radius=20)]
     tests_L += [TestCase('IDS', 'L', search_radius=50, max_neighbours=n)  for n in [5, 10, 20, 30]]
     tests_L += [TestCase('DIB', 'L', search_radius=50, max_neighbours=n)  for n in [5, 10, 20, 30]]
+
+    tests_C = []
+    tests_C += [TestCase('NN' , 'C', search_radius=20)]
+    tests_C += [TestCase('IDS', 'C', search_radius=50, max_neighbours=n)  for n in [5, 10, 15]]
+    tests_C += [TestCase('DIB', 'C', search_radius=50, max_neighbours=n)  for n in [5, 10, 15]]
+
+    tests_X = []
+    tests_X += [TestCase('NN' , 'X', search_radius=20)]
+    tests_X += [TestCase('IDS', 'X', search_radius=50, max_neighbours=n)  for n in [5, 10, 15]]
+    tests_X += [TestCase('DIB', 'X', search_radius=50, max_neighbours=n)  for n in [5, 10, 15]]
+
+    tests_K = []
+    tests_K += [TestCase('NN' , 'K', search_radius=20)]
+    tests_K += [TestCase('IDS', 'K', search_radius=50, max_neighbours=n)  for n in [5, 10, 15]]
+    tests_K += [TestCase('DIB', 'K', search_radius=50, max_neighbours=n)  for n in [5, 10, 15]]   
+
+    tests_KA = []
+    tests_KA += [TestCase('NN' , 'KA', search_radius=20)]
+    tests_KA += [TestCase('IDS', 'KA', search_radius=50, max_neighbours=n)  for n in [5, 10, 15]]
+    tests_KA += [TestCase('DIB', 'KA', search_radius=50, max_neighbours=n)  for n in [5, 10, 15]]    
 
     # tests_L += [TestCase('BG', 'L', search_radius=10, max_neighbours=10, 
                                     # source_antenna_threshold=0.1, target_antenna_threshold=0.1, 
@@ -320,16 +344,9 @@ if __name__ == "__main__":
                                     # MRF_grid_resolution="9km", 
                                     # relative_tolerance=1e-5, regularisation_parameter=0.001, 
                                     # max_chunk_size=100, chunk_buffer=1.2)]
-
-    # tests += [TestCase('NN', 'C',  search_radius=r)  for r in [5, 10, 15, 20]]
-    # tests += [TestCase('NN', 'C',  search_radius=r)  for r in [5, 10, 15, 20]]
-    # tests += [TestCase('NN', 'X',  search_radius=r)  for r in [5, 10, 15, 20]]
-    # tests += [TestCase('NN', 'X',  search_radius=r)  for r in [5, 10, 15, 20]]
-    # tests += [TestCase('NN', 'KA', search_radius=r)  for r in [5, 10, 15]]
-    # tests += [TestCase('NN', 'K',  search_radius=r)  for r in [5, 10, 15]]
     
     input_central_america = repo_root.joinpath("dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_central_america_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc") 
-    input_polar_scene     = repo_root.joinpath("dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_polar_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1") 
+    input_polar_scene     = repo_root.joinpath("dpr/L1B/CIMR/SCEPS_l1b_sceps_geo_polar_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc") 
     input_test_scene_1    = repo_root.joinpath("dpr/L1B/CIMR/SCEPS_l1b_devalgo_test_scene_1_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc") 
     input_test_scene_2    = repo_root.joinpath("dpr/L1B/CIMR/SCEPS_l1b_devalgo_test_scene_2_unfiltered_tot_minimal_nom_nedt_apc_tot_v2p1.nc") 
     input_test_scene_3    = repo_root.joinpath("dpr/L1B/CIMR/SCEPS_l1b_devalgo_test_scene_3_unfiltered_asc_tot_minimal_nom_nedt_apc_tot_v2p1.nc") 
@@ -346,17 +363,23 @@ if __name__ == "__main__":
     list_metrics = [metrics.normalised_difference, metrics.mean_absolute_error, metrics.root_mean_square_error, 
                metrics.standard_deviation_error, metrics.pointwise_correlation, metrics.valid_pixel_overlap]
 
+    # runner.run_tests(tests_L,  list_metrics, id_central_america, input_central_america, ['EASE2_G9km', 'EASE2_G36km'], reduce_grid_inds=None)
+    # runner.run_tests(tests_C,  list_metrics, id_central_america, input_central_america, ['EASE2_G3km', 'EASE2_G9km'], reduce_grid_inds=None)
+    # runner.run_tests(tests_X,  list_metrics, id_central_america, input_central_america, ['EASE2_G3km', 'EASE2_G9km'], reduce_grid_inds=None)
+    # runner.run_tests(tests_K,  list_metrics, id_central_america, input_central_america, ['EASE2_G3km'], reduce_grid_inds=None)
+    # runner.run_tests(tests_KA, list_metrics, id_central_america, input_central_america, ['EASE2_G3km'], reduce_grid_inds=None)
 
-    for grid in global_grids:
-        runner.run_tests(tests_L, list_metrics, id_central_america, input_central_america, grid, reduce_grid_inds=None)
-        runner.run_tests(tests_L, list_metrics, id_test_scene_3, input_test_scene_3, grid, reduce_grid_inds=None)
+    runner.run_tests(tests_L,  list_metrics, id_polar_scene, input_polar_scene, ['EASE2_N9km', 'EASE2_N36km'], reduce_grid_inds=None)
+    runner.run_tests(tests_C,  list_metrics, id_polar_scene, input_polar_scene, ['EASE2_N3km', 'EASE2_N9km'], reduce_grid_inds=None)
+    runner.run_tests(tests_X,  list_metrics, id_polar_scene, input_polar_scene, ['EASE2_N3km', 'EASE2_N9km'], reduce_grid_inds=None)
+    runner.run_tests(tests_K,  list_metrics, id_polar_scene, input_polar_scene, ['EASE2_N3km'], reduce_grid_inds=None)
+    runner.run_tests(tests_KA, list_metrics, id_polar_scene, input_polar_scene, ['EASE2_N3km'], reduce_grid_inds=None)
+    
 
-    # for grid in polar_grids:
-        # runner.run_tests(tests, list_metrics, id_polar_scene, input_polar_scene, grid, reduce_grid_inds=None)
-        # runner.run_tests(tests, list_metrics, id_test_scene_1, input_test_scene_1, grid, reduce_grid_inds=None)
-        # runner.run_tests(tests, list_metrics, id_test_scene_2, input_test_scene_2, grid, reduce_grid_inds=None)
-
-
+    # runner.run_tests(tests_L, list_metrics, [id_polar_scene, id_test_scene_1, id_test_scene_2], 
+    #                                         [input_polar_scene, input_test_scene_1, input_test_scene_2],
+    #                                         ['EASE2_G9km', 'EASE2_G36km'], 
+    #                                         reduce_grid_inds=None)   
 
 
 
