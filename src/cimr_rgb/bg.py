@@ -299,36 +299,48 @@ class BGInterp:
         fill_value = len(variable_dict["longitude"])
         weights = full((indexes.shape[0], indexes.shape[1]), nan)
 
+        if self.config.grid_type == "L1C":
+
+            grid_area = GridGenerator(
+                self.config,
+                self.config.projection_definition,
+                self.config.grid_definition,
+            ).get_grid_area()
+
+            target_lons = take(target_grid[0].flatten("C"), samples_dict["grid_1d_index"][:indexes.shape[0]])
+            target_lats = take(target_grid[1].flatten("C"), samples_dict["grid_1d_index"][:indexes.shape[0]])
+            cell_areas  = take(grid_area.flatten("C")     , samples_dict["grid_1d_index"][:indexes.shape[0]])
+
+        elif self.config.grid_type == "L1R":
+
+            target_lons = take(target_grid[0], samples_dict["grid_1d_index"][:indexes.shape[0]])
+            target_lats = take(target_grid[0], samples_dict["grid_1d_index"][:indexes.shape[1]])
+
         for target_cell in tqdm(range(indexes.shape[0])):
+
+            import time
+            t0=time.time()
+
+            target_lon = target_lons[target_cell]
+            target_lat = target_lats[target_cell]
+
             # Getting the target lon, lat
             if self.config.grid_type == "L1C":
-                grid_area = GridGenerator(
-                    self.config,
-                    self.config.projection_definition,
-                    self.config.grid_definition,
-                ).get_grid_area()
 
-                target_lon, target_lat = (
-                    target_grid[0].flatten("C")[
-                        samples_dict["grid_1d_index"][target_cell]
-                    ],
-                    target_grid[1].flatten("C")[
-                        samples_dict["grid_1d_index"][target_cell]
-                    ],
-                )
+                t=time.time()
+                print('time to get target lon and lat:', t-t0)
+                t0=t
 
-                cell_area = grid_area.flatten("C")[
-                    samples_dict["grid_1d_index"][target_cell]
-                ]
+                cell_area = cell_areas[target_cell]
                 resolution = sqrt(cell_area)
                 target_cell_size = [resolution, resolution]
 
+                t=time.time()
+                print('time to get cell resolution:', t-t0)
+                t0=t
+
             elif self.config.grid_type == "L1R":
                 target_cell_size = None
-                target_lon, target_lat = (
-                    target_grid[0][samples_dict["grid_1d_index"][target_cell]],
-                    target_grid[1][samples_dict["grid_1d_index"][target_cell]],
-                )
 
             # Get Antenna Patterns
             samples = indexes[target_cell, :]
@@ -351,6 +363,10 @@ class BGInterp:
                 weights[target_cell, : len(input_samples)] = nan
                 continue
 
+            t=time.time()
+            print('time to get antenna patterns at location:', t-t0)
+            t0=t
+
             # BG algorithm
             num_input_samples = len(input_samples)
             g = zeros((num_input_samples, num_input_samples))
@@ -363,6 +379,10 @@ class BGInterp:
                 for j in range(num_input_samples):
                     g[i, j] = sum(source_ant_patterns[i] * source_ant_patterns[j])
 
+            t=time.time()
+            print('time to compute BG integrals:', t-t0)
+            t0=t
+
             # Regularisation Factor
             k = self.config.bg_smoothing
             # Error Covariance Matrix
@@ -371,9 +391,17 @@ class BGInterp:
             g = g + k * E
             ginv = inv(g)
 
+            t=time.time()
+            print('time to invert BG matrix:', t-t0)
+            t0=t
+
             # Weights
             a = ginv @ (v + (1 - u.T @ (ginv @ v)) / (u.T @ (ginv @ u)) * u)
             weights[target_cell, : len(input_samples)] = a
+
+            t=time.time()
+            print('time to compute BG weights:', t-t0)
+            t0=t
 
         return weights
 
