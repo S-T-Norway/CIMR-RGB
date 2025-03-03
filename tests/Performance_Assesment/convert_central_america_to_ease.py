@@ -132,7 +132,7 @@ if __name__ == '__main__':
         for band in EASE_BTs:
             image, x, y = resample_ease_grids(EASE_BTs[band], x_1km, y_1km, resolution)
             image_out  = {}
-            image_out['bt'] = image
+            image_out['bt_h'] = image
             image_out['x'] = x
             image_out['y'] = y
             output_dict[band] = image_out
