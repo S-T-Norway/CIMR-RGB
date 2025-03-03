@@ -142,16 +142,19 @@ class TestRunner(object):
                 writer.writerow(TestRunner.base_headers)
             np.savez(self.output_results_img)
         else:
-            with open(self.output_results_csv, mode='r', newline='', encoding='utf-8') as f:
-                reader = csv.reader(f)
-                last_row = None
-                for row in reader:
-                    last_row = row
-                if last_row:
-                    TestRunner.test_count = int(last_row[0])
-                else:
-                    TestRunner.test_count = 0
-            
+            try:
+                with open(self.output_results_csv, mode='r', newline='', encoding='utf-8') as f:
+                    reader = csv.reader(f)
+                    last_row = None
+                    for row in reader:
+                        last_row = row
+                    if last_row:
+                        TestRunner.test_count = int(last_row[0])
+                    else:
+                        TestRunner.test_count = 0
+            except:
+                raise EOFError("Error in parsing existing results.csv file. Either delete it or set reset_results_data=True")
+
     def run_tests(self, list_tests, list_metrics, reference_data_id, input_data_path, grid, reduce_grid_inds=None):
 
         """
@@ -266,7 +269,7 @@ class TestRunner(object):
 
             # Save the image results dict
             results_images = np.load(self.output_results_img)
-            results_images_dict = {key: data[key] for key in results_images.files}
+            results_images_dict = {key: results_images[key] for key in results_images.files}
             results_images_dict[str(test.testID)] = new_result_image
             np.savez_compressed(self.output_results_img, **results_images_dict)
 
@@ -295,12 +298,12 @@ if __name__ == "__main__":
     antenna_patterns_path = repo_root.joinpath('dpr/antenna_patterns')
 
     # define TestRunner object
-    runner = TestRunner(config_path, antenna_patterns_path, test_data_folder, output_results_path, reset_results_data=False)
+    runner = TestRunner(config_path, antenna_patterns_path, test_data_folder, output_results_path, reset_results_data=True)
 
     #define test cases
 
     tests_L = []
-    tests_L += [TestCase('NN' , 'L', search_radius=r)  for r in [20, 30, 40, 50]]
+    tests_L += [TestCase('NN' , 'L', search_radius=r)  for r in [20, 30]]
     tests_L += [TestCase('IDS', 'L', search_radius=50, max_neighbours=n)  for n in [5, 10, 20, 30]]
     tests_L += [TestCase('DIB', 'L', search_radius=50, max_neighbours=n)  for n in [5, 10, 20, 30]]
 
