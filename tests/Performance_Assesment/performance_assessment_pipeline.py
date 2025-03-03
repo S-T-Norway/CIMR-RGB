@@ -61,32 +61,52 @@ class TestCase(object):
 
     def __init__(self, algorithm, band, **params):
 
+        """
+        Initializing a test case, which is a configuration for a specific algorithm
+
+        Parameters:
+            algorithm (string defining the regridding algorithm)
+            band (string defining the band to regrid)
+            params (keyword arguments, they need to be parameters in the RGB config file or "MRF_grid_resolution")
+
+        Returns:
+            an instance of the TestCase class
+        """
+
         self.algorithm = algorithm
         self.band = band
         self.params = params
         self.testID = None #the ID will be assigned by the TestRunner
         
 
-    def rewrite_config(self, config_path, input_data_path, grid, reduced_grid_inds=None):
+    def rewrite_config(self, config_path, antenna_patterns_path, input_data_path, grid, reduced_grid_inds=None):
 
         tree = ET.parse(config_path)
         root = tree.getroot()
 
         xml_params = dict()
         xml_params["InputData/path"] = input_data_path
+        xml_params["InputData/antenna_patterns_path"] = antenna_patterns_path
         xml_params["ReGridderParams/regridding_algorithm"] = self.algorithm
         xml_params["InputData/target_band"] = self.band
         xml_params["InputData/source_band"] = self.band
         xml_params["GridParams/grid_definition"] = grid
-        xml_params["GridParams/projection_definition"] = grid[6]
+        xml_params["GridParams/projection_definition"] = grid[grid.rfind('_')+1] #the projection definition is the character after "_"
 
         if reduced_grid_inds is None:
             xml_params["GridParams/reduced_grid_inds"] = ''
         else:
             xml_params["GridParams/reduced_grid_inds"] = ' '.join(map(str, list(reduced_grid_inds)))
-        
+
         for param in self.params:
-            xml_params["ReGridderParams/"+str(param)]= self.params[param]
+            if param == 'MRF_grid_resolution':        # this is needed since actually only the MRF resolution is a parameter of the algorithm,
+                mrf_proj = grid[grid.rfind('_')+1]    # while the MRF projection has to be forced to be the same as the output grid
+                mrf_grid = grid                       # (and that's the param needed in the config)
+                mrf_grid = grid[:grid.rfind('_')+2] + str(self.params[param])
+                xml_params["ReGridderParams/MRF_grid_definition"] = mrf_grid
+                xml_params["ReGridderParams/MRF_projection_definition"] = mrf_proj
+            else:
+                xml_params["ReGridderParams/"+str(param)]= self.params[param]
 
         for param_name, new_value in xml_params.items():
 
@@ -104,12 +124,15 @@ class TestRunner(object):
     base_headers = ['testID', 'scene', 'algorithm', 'band', 'grid', 'regridding_time_s', 'memory_usage_MB']
     test_count = 0
 
-    def __init__(self, config_path, test_data_folder, output_results_path, reset_results_data=False):
+    def __init__(self, config_path, antenna_patterns_path, test_data_folder, output_results_path, reset_results_data=False):
 
         self.config_path = config_path
+        self.antenna_patterns_path = antenna_patterns_path
         self.test_data_folder = test_data_folder
         self.output_results_csv = os.path.join(output_results_path, 'results.csv')
         self.output_results_img = os.path.join(output_results_path, 'results_images.npz')
+
+        os.makedirs(output_results_path, exist_ok=True)
 
         if reset_results_data or not os.path.isfile(self.output_results_csv):
             if os.path.isfile(self.output_results_img):
@@ -117,6 +140,7 @@ class TestRunner(object):
             with open(self.output_results_csv, mode='w+', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 writer.writerow(TestRunner.base_headers)
+            np.savez(self.output_results_img)
         else:
             with open(self.output_results_csv, mode='r', newline='', encoding='utf-8') as f:
                 reader = csv.reader(f)
@@ -137,6 +161,10 @@ class TestRunner(object):
         Parameters:
             list_tests (list of TestCase instances)
             list_metrics (list of functions, each taking two arrays as input)
+            reference_data_id (list of strings, corresponding to the file name of reference data)
+            input_data_path (string, path to the L1B data)
+            grid (string defining the output grid)
+            reduced_grid_inds (list of integers, defining the indexes of a subgrid of the output grid)
         
         Returns:
             nothing
@@ -156,12 +184,6 @@ class TestRunner(object):
 
         list_params = list(map(str, np.unique(np.concatenate([list(test.params.keys()) for test in list_tests]))))
         list_metrics_names = [metric.__name__ for metric in list_metrics]
-        
-        root = ET.parse(self.config_path).getroot()
-        for param in list_params:
-            elem = root.find(f"ReGridderParams/{param}")
-            if elem is None:
-                raise Exception(f"Couldn't find {param} in config")
 
         with open(self.output_results_csv, 'r') as f:
             headers = next(csv.reader(f)) 
@@ -198,7 +220,7 @@ class TestRunner(object):
             for param in test.params:
                 print(f"{param} = {test.params[param]}")
 
-            test.rewrite_config(self.config_path, input_data_path, grid, reduce_grid_inds)
+            test.rewrite_config(self.config_path, self.antenna_patterns_path, input_data_path, grid, reduce_grid_inds)
 
             t0 = time.time()
             tracemalloc.start()
@@ -235,15 +257,18 @@ class TestRunner(object):
             # Add reduced images to dictionary
             valid_mask = ~isnan(ref_image) & ~isnan(rgb_image)
             valid_inds = where(valid_mask)
-            results_images_dict[str(test.testID)] = rgb_image[min(valid_inds[0]):max(valid_inds[0]), min(valid_inds[1]):max(valid_inds[1])].astype(float16)
+            new_result_image = rgb_image[min(valid_inds[0]):max(valid_inds[0]), min(valid_inds[1]):max(valid_inds[1])].astype(float16)
             size_gb = sys.getsizeof(results_images_dict) / (1024 ** 3)
             process = psutil.Process(os.getpid())
             mem_gb = process.memory_info().rss / (1024 ** 3)  # Convert to GB
             del rgb_image, ref_image, valid_mask, valid_inds
             gc.collect()
 
-        # Save the image results dict
-        np.savez_compressed(self.output_results_img, **results_images_dict)
+            # Save the image results dict
+            results_images = np.load(self.output_results_img)
+            results_images_dict = {key: data[key] for key in results_images.files}
+            results_images_dict[str(test.testID)] = new_result_image
+            np.savez_compressed(self.output_results_img, **results_images_dict)
 
         return
 
@@ -266,12 +291,32 @@ if __name__ == "__main__":
     # Output results path
     output_results_path = repo_root.joinpath('tests/Performance_Assesment/results')
 
+    # Antenna patterns path
+    antenna_patterns_path = repo_root.joinpath('dpr/antenna_patterns')
+
+    # define TestRunner object
+    runner = TestRunner(config_path, antenna_patterns_path, test_data_folder, output_results_path, reset_results_data=False)
+
+    #define test cases
+
     tests_L = []
     tests_L += [TestCase('NN' , 'L', search_radius=r)  for r in [20, 30, 40, 50]]
-    tests_L += [TestCase('IDS', 'L', search_radius=r)  for r in [20, 30, 40, 50]]
-    tests_L += [TestCase('DIB', 'L', search_radius=r)  for r in [20, 30, 40, 50]]
-    tests_L += [TestCase('IDS', 'L', search_radius=50, max_neighbours=n)  for n in [5, 10, 20, 50]]
-    tests_L += [TestCase('DIB', 'L', search_radius=50, max_neighbours=n)  for n in [5, 10, 20, 50]]
+    tests_L += [TestCase('IDS', 'L', search_radius=50, max_neighbours=n)  for n in [5, 10, 20, 30]]
+    tests_L += [TestCase('DIB', 'L', search_radius=50, max_neighbours=n)  for n in [5, 10, 20, 30]]
+
+    # tests_L += [TestCase('BG', 'L', search_radius=10, max_neighbours=10, 
+                                    # source_antenna_threshold=0.1, target_antenna_threshold=0.1, 
+                                    # MRF_grid_resolution="3km", bg_smoothing=0.001)] 
+
+    # tests_L += [TestCase('RSIR', 'L', search_radius=10, max_neighbours=10, 
+    #                                 source_antenna_threshold=0.1, target_antenna_threshold=0.1, 
+    #                                 MRF_grid_resolution="3km", rsir_iteration=15)] 
+
+    # tests_L += [TestCase('LW', 'L', search_radius=10, max_neighbours=10, 
+                                    # source_antenna_threshold=0.1, target_antenna_threshold=0.1, 
+                                    # MRF_grid_resolution="9km", 
+                                    # relative_tolerance=1e-5, regularisation_parameter=0.001, 
+                                    # max_chunk_size=100, chunk_buffer=1.2)]
 
     # tests += [TestCase('NN', 'C',  search_radius=r)  for r in [5, 10, 15, 20]]
     # tests += [TestCase('NN', 'C',  search_radius=r)  for r in [5, 10, 15, 20]]
@@ -298,7 +343,6 @@ if __name__ == "__main__":
     list_metrics = [metrics.normalised_difference, metrics.mean_absolute_error, metrics.root_mean_square_error, 
                metrics.standard_deviation_error, metrics.pointwise_correlation, metrics.valid_pixel_overlap]
 
-    runner = TestRunner(config_path, test_data_folder, output_results_path, reset_results_data=True)
 
     for grid in global_grids:
         runner.run_tests(tests_L, list_metrics, id_central_america, input_central_america, grid, reduce_grid_inds=None)
