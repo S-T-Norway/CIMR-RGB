@@ -179,7 +179,7 @@ def map_compare(dib_data, ids_data, band, imgname):
     )
     repo_root = grasp_io.find_repo_root()
     img_path = repo_root.joinpath(
-        f"output/MS3_verification_tests/T_14/{imgname}"  # T_14_difference1.png"
+        f"output/system/T_14/{imgname}"  # T_14_difference1.png"
     )  # ""
     plt.savefig(img_path, dpi=300)
 
@@ -245,7 +245,7 @@ def plot_all_results(results, imgname="T_14_scatter_combined.png"):
 
     # Save the combined plot
     repo_root = grasp_io.find_repo_root()
-    img_path = repo_root.joinpath(f"output/MS3_verification_tests/T_14/{imgname}")
+    img_path = repo_root.joinpath(f"output/system/T_14/{imgname}")
     plt.savefig(img_path, dpi=300)
 
 
