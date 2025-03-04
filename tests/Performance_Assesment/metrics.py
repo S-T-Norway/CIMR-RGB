@@ -67,6 +67,11 @@ def mean_absolute_error(X, Xref):
     valid_mask = ~np.isnan(Xref) & ~np.isnan(X)
     return np.mean(np.abs(X[valid_mask]-Xref[valid_mask]))
 
+def mean_absolute_percentage_error(X, Xref):
+    _validate_arrays(X, Xref)
+    valid_mask = ~np.isnan(Xref) & ~np.isnan(X)
+    return 100*np.mean(np.abs((X[valid_mask]-Xref[valid_mask])/Xref[valid_mask]))
+
 
 def improvement_factor(X, Xref, threshold_dB=-3):
     print("Note: The improvement factor should be calculated only on spot images")
