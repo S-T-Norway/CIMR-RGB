@@ -123,9 +123,9 @@ if __name__ == '__main__':
     target_G_ease_grids = ["EASE2_G3km", "EASE2_G9km", "EASE2_G36km"]
     target_N_ease_grids = ["EASE2_N3km", "EASE2_N9km", "EASE2_N36km"]
 
-    # save_scene_on_ease(test_scene_central_america, target_G_ease_grids, 'SCEPS_central_america')
-    # save_scene_on_ease(test_scene_polar, target_N_ease_grids, 'SCEPS_polar_scene')
-    # save_scene_on_ease(test_scene_1, target_N_ease_grids, 'SCEPS_test_scene_1')
+    save_scene_on_ease(test_scene_central_america, target_G_ease_grids, 'SCEPS_central_america')
+    save_scene_on_ease(test_scene_polar, target_N_ease_grids, 'SCEPS_polar_scene')
+    save_scene_on_ease(test_scene_1, target_N_ease_grids, 'SCEPS_test_scene_1')
     save_scene_on_ease(test_scene_2, target_N_ease_grids, 'SCEPS_test_scene_2')
     save_scene_on_ease(test_scene_3, target_G_ease_grids, 'SCEPS_test_scene_3')
 

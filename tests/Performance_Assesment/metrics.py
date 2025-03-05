@@ -76,15 +76,22 @@ def mean_absolute_percentage_error(X, Xref):
 def improvement_factor(X, Xref, threshold_dB=-3):
     print("Note: The improvement factor should be calculated only on spot images")
     _validate_arrays(X, Xref)
+    valid_mask = ~np.isnan(Xref) & ~np.isnan(X)
+    X = X[valid_mask]
+    Xref = Xref[valid_mask]
     Xmax = X.max()
     Xrefmax = Xref.max()
-    return np.sqrt(X[10*np.log10(X/Xmax)>=threshold_dB].size / Xref[10*np.log10(Xref/Xrefmax)>=threshold_dB].size)
+    if not (10*np.log10(Xref/Xrefmax)>=threshold_dB).any():
+        return np.nan
+    else:
+        return np.sqrt(X[10*np.log10(X/Xmax)>=threshold_dB].size / Xref[10*np.log10(Xref/Xrefmax)>=threshold_dB].size)
 
 
 def peak_error(X, Xref):
     print("Note: The peak error should be calculated only on spot images")
     _validate_arrays(X, Xref)
-    return Xref.max() - X.max()
+    valid_mask = ~np.isnan(Xref) & ~np.isnan(X)
+    return Xref[valid_mask].max() - X[valid_mask].max()
 
 
 def sharpening_factor(X, Xref):
