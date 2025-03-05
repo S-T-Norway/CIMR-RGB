@@ -90,6 +90,8 @@ class TestCase(object):
         xml_params["ReGridderParams/regridding_algorithm"] = self.algorithm
         xml_params["InputData/target_band"] = self.band
         xml_params["InputData/source_band"] = self.band
+        xml_params["OutputData/save_to_disk"] = False
+        xml_params["OutputData/output_path"] = '.'
         xml_params["GridParams/grid_definition"] = grid
         xml_params["GridParams/projection_definition"] = grid[grid.rfind('_')+1] #the projection definition is the character after "_"
 
@@ -129,10 +131,12 @@ class TestRunner(object):
         self.config_path = config_path
         self.antenna_patterns_path = antenna_patterns_path
         self.test_data_folder = test_data_folder
-        self.output_results_csv = os.path.join(output_results_path, 'BG_36km_bg_smoothing.csv')
-        self.output_results_img = os.path.join(output_results_path, 'results_imagesBG_36km_bg_smoothing.csv.npz')
+        parent_folder = os.path.dirname(output_results_path)
+        filename_no_ext, _ = os.path.splitext(os.path.basename(output_results_path))
+        self.output_results_csv = os.path.join(parent_folder, filename_no_ext+'.csv')
+        self.output_results_img = os.path.join(parent_folder, filename_no_ext+'.npz')
 
-        os.makedirs(output_results_path, exist_ok=True)
+        os.makedirs(parent_folder, exist_ok=True)
 
         if reset_results_data or not os.path.isfile(self.output_results_csv):
             if os.path.isfile(self.output_results_img):
