@@ -328,7 +328,7 @@ class BGInterp:
             if self.config.grid_type == "L1C":
 
                 t=time.time()
-                print('time to get target lon and lat:', t-t0)
+                # print('time to get target lon and lat:', t-t0)
                 t0=t
 
                 cell_area = cell_areas[target_cell]
@@ -336,7 +336,7 @@ class BGInterp:
                 target_cell_size = [resolution, resolution]
 
                 t=time.time()
-                print('time to get cell resolution:', t-t0)
+                # print('time to get cell resolution:', t-t0)
                 t0=t
 
             elif self.config.grid_type == "L1R":
@@ -364,7 +364,7 @@ class BGInterp:
                 continue
 
             t=time.time()
-            print('time to get antenna patterns at location:', t-t0)
+            # print('time to get antenna patterns at location:', t-t0)
             t0=t
 
             # BG algorithm
@@ -380,7 +380,7 @@ class BGInterp:
                     g[i, j] = sum(source_ant_patterns[i] * source_ant_patterns[j])
 
             t=time.time()
-            print('time to compute BG integrals:', t-t0)
+            # print('time to compute BG integrals:', t-t0)
             t0=t
 
             # Regularisation Factor
@@ -392,7 +392,7 @@ class BGInterp:
             ginv = inv(g)
 
             t=time.time()
-            print('time to invert BG matrix:', t-t0)
+            # print('time to invert BG matrix:', t-t0)
             t0=t
 
             # Weights
@@ -400,7 +400,7 @@ class BGInterp:
             weights[target_cell, : len(input_samples)] = a
 
             t=time.time()
-            print('time to compute BG weights:', t-t0)
+            # print('time to compute BG weights:', t-t0)
             t0=t
 
         return weights

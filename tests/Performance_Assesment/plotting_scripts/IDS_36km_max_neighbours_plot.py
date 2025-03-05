@@ -3,7 +3,7 @@ tkagg = matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 plt.ion()
 
-results_file = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/Performance_Assesment/results/results.csv'
+results_file = '/tests/Performance_Assesment/saved_results/BG_36km_bg_smoothing/BG_36km_bg_smoothing.csv'
 
 
 
@@ -43,5 +43,9 @@ axs[3].set_title('K BAND', fontsize=fontsize)
 axs[2].set_xlabel('max_neighbours [-]', fontsize = 14)
 axs[4].plot(KA_BAND['max_neighbours'], KA_BAND['mean_absolute_percentage_error'], lw=lw)
 axs[4].set_title('KA BAND', fontsize=fontsize)
-plt.suptitle('IDS max_neighbour vs MAPE (EASE2_G36km)', fontsize=16)
+plt.suptitle('IDS max_neighbour vs MAPE (EASE2_G3km)', fontsize=16)
 plt.show()
+
+
+plt.figure()
+plt.plot(L_BAND['bg_smoothing'], L_BAND['mean_absolute_percentage_error'])
