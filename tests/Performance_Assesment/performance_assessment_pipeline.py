@@ -157,9 +157,9 @@ class TestRunner(object):
                     else:
                         TestRunner.test_count = 0
             except:
-                raise EOFError("Error in parsing existing BG_36km_bg_smoothing.csv file. Either delete it or set reset_results_data=True")
+                raise EOFError(f"Error in parsing {self.output_results_csv} Either delete it or set reset_results_data=True")
 
-    def run_tests(self, list_tests, list_metrics, list_reference_data_ids, list_input_data_paths, list_grids, reduce_grid_inds=None):
+    def run_tests(self, list_tests, list_metrics, list_reference_data_ids, list_input_data_paths, list_grids, reduced_grid_inds=None):
 
         """
         Function running the RGB for the test cases, computing the metrics that compare with the reference images. 
@@ -237,7 +237,7 @@ class TestRunner(object):
                     for param in test.params:
                         print(f"{param} = {test.params[param]}")
 
-                    test.rewrite_config(self.config_path, self.antenna_patterns_path, input_data_path, grid, reduce_grid_inds)
+                    test.rewrite_config(self.config_path, self.antenna_patterns_path, input_data_path, grid, reduced_grid_inds)
 
                     t0 = time.time()
                     tracemalloc.start()

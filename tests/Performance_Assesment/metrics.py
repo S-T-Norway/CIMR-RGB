@@ -67,6 +67,7 @@ def mean_absolute_error(X, Xref):
     valid_mask = ~np.isnan(Xref) & ~np.isnan(X)
     return np.mean(np.abs(X[valid_mask]-Xref[valid_mask]))
 
+
 def mean_absolute_percentage_error(X, Xref):
     _validate_arrays(X, Xref)
     valid_mask = ~np.isnan(Xref) & ~np.isnan(X)
@@ -94,18 +95,36 @@ def peak_error(X, Xref):
     return Xref[valid_mask].max() - X[valid_mask].max()
 
 
+def average_peak_error(X, Xref, threshold_dB=-3):
+    print("Note: The average peak error should be calculated only on spot images")
+    _validate_arrays(X, Xref)
+    valid_mask = ~np.isnan(Xref) & ~np.isnan(X)
+    X = X[valid_mask]
+    Xref = Xref[valid_mask]
+    Xmax = X.max()
+    Xrefmax = Xref.max()
+    if not (10*np.log10(Xref/Xrefmax)>=threshold_dB).any():
+        return np.nan
+    else:
+        return np.average(Xref[10*np.log10(Xref/Xrefmax)>=threshold_dB]) - np.average(X[10*np.log10(X/Xmax)>=threshold_dB])
+
+
 def sharpening_factor(X, Xref):
 
     _validate_arrays(X, Xref, check_2d=True)
+    valid_mask = ~np.isnan(Xref) & ~np.isnan(X)
 
     def gradient_magnitude(image):
+        image = image.astype(np.float64)
         grad_x = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=3)
         grad_y = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=3)
         magnitude = np.sqrt(grad_x**2 + grad_y**2)
         return np.sum(magnitude)
 
-    Xgrad    = gradient_magnitude(X)
-    Xrefgrad = gradient_magnitude(Xref)
+    Xgrad    = gradient_magnitude(X[valid_mask])
+    Xrefgrad = gradient_magnitude(Xref[valid_mask])
+
+    print('=================', Xgrad, Xrefgrad)
 
     if not np.any(Xrefgrad):
         raise ValueError("Reference image has no gradient, i.e. is a constant image")

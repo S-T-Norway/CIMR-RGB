@@ -272,24 +272,38 @@ class rSIRInterp:
         indexes = samples_dict['indexes']
         fill_value = len(variable_dict[f"longitude"])
 
+        if self.config.grid_type == "L1C":
+
+            grid_area = GridGenerator(
+                self.config,
+                self.config.projection_definition,
+                self.config.grid_definition,
+            ).get_grid_area()
+
+            target_lons = take(target_grid[0].flatten("C"), samples_dict["grid_1d_index"][:indexes.shape[0]])
+            target_lats = take(target_grid[1].flatten("C"), samples_dict["grid_1d_index"][:indexes.shape[0]])
+            cell_areas  = take(grid_area.flatten("C")     , samples_dict["grid_1d_index"][:indexes.shape[0]])
+
+        elif self.config.grid_type == "L1R":
+
+            target_lons = take(target_grid[0], samples_dict["grid_1d_index"][:indexes.shape[0]])
+            target_lats = take(target_grid[0], samples_dict["grid_1d_index"][:indexes.shape[1]])
+
         T_out = []
+
         for target_cell in tqdm(range(indexes.shape[0])):
+
+            target_lon = target_lons[target_cell]
+            target_lat = target_lats[target_cell]
 
             # Getting the target lon, lat
             if self.config.grid_type == 'L1C':
-                grid_area = GridGenerator(self.config, self.config.projection_definition,
-                                          self.config.grid_definition).get_grid_area()
-
-                target_lon, target_lat = (target_grid[0].flatten('C')[samples_dict['grid_1d_index'][target_cell]],
-                                                    target_grid[1].flatten('C')[samples_dict['grid_1d_index'][target_cell]])
-
-                cell_area = grid_area.flatten('C')[samples_dict['grid_1d_index'][target_cell]]
+                
+                cell_area = cell_areas[target_cell]
                 resolution = sqrt(cell_area)
                 target_cell_size = [resolution, resolution]
 
             elif self.config.grid_type == 'L1R':
-                target_lon, target_lat = (target_grid[0][samples_dict['grid_1d_index'][target_cell]],
-                                          target_grid[1][samples_dict['grid_1d_index'][target_cell]])
                 target_cell_size = None
 
             # Get Antenna Patterns
