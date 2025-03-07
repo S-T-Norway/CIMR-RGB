@@ -291,7 +291,7 @@ class rSIRInterp:
         elif self.config.grid_type == "L1R":
 
             target_lons = take(target_grid[0], samples_dict["grid_1d_index"][:indexes.shape[0]])
-            target_lats = take(target_grid[0], samples_dict["grid_1d_index"][:indexes.shape[1]])
+            target_lats = take(target_grid[1], samples_dict["grid_1d_index"][:indexes.shape[0]])
 
         integration_grid = GridGenerator(
             config_object = None,
