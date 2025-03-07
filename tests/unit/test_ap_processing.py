@@ -86,7 +86,12 @@ lat5 = np.array([[86.9334288 , 86.9334288 ],
 )
 def test_make_integration_grid(int_projection_definition, int_grid_definition, longitude, latitude, ap_radii, expected):
 
-    lon, lat = ap.make_integration_grid(int_projection_definition, int_grid_definition, longitude, latitude, ap_radii)
+    grid_generator = gg.GridGenerator(None, int_projection_definition, int_grid_definition)
+    xs, ys = grid_generator.generate_grid_xy()
+    xs = xs[:, 0]
+    ys = ys[::-1, 0]
+
+    lon, lat = ap.make_integration_grid(grid_generator, xs, ys, int_projection_definition, int_grid_definition, longitude, latitude, ap_radii)
     lonexp, latexp = expected
 
     assert(lon.shape == lonexp.shape), f"Expected size of longitude grid {lonexp.shape}, got {lon.shape}"
@@ -149,7 +154,12 @@ def test_estimate_max_ap_radius(mocker, tilt_angle, max_altitude, max_theta_ante
 # test: antenna_pattern_to_earth
 ######################################################################
 
-lon1, lat1 = ap.make_integration_grid("G", "EASE2_G3km", 0., 0., 10000.)
+grid_generator = gg.GridGenerator(None, "G", "EASE2_G3km")
+xs, ys = grid_generator.generate_grid_xy()
+xs = xs[:, 0]
+ys = ys[::-1, 0]
+
+lon1, lat1 = ap.make_integration_grid(grid_generator, xs, ys, "G", "EASE2_G3km", 0., 0., 10000.)
 pos1 = [6378137.0+500000., 0., 0]
 vel1 = [1., 0., 0.]
 exp1 = np.zeros_like(lon1)

@@ -69,12 +69,16 @@ class rSIRInterp:
         self.ids_weights = None
 
 
-    def get_antenna_patterns(self, band, variable_dict, target_dict, target_lon, target_lat, source_inds, target_inds, target_cell_size):
+    def get_antenna_patterns(self, grid_generator, x_earth_grid, y_earth_grid, band, variable_dict, target_dict, 
+                             target_lon, target_lat, source_inds, target_inds, target_cell_size):
 
         """
         Returns the projected antenna patterns relative to a target point, and to the source points that are its nearest neighbors
 
         Parameters:
+            grid_generator (GridGenerator object): object representing the integration grid type, with methods for converting from x,y to lon,lat
+            x_earth_grid (array_like): x coordinates of the entire grid, in ascending order
+            x_earth_grid (array_like): y coordinates of the entire grid, in ascending order            
             band (str): not used
             variable_dict (dictionary of arrays with shape (# source points, 1)): values of the variable to be regridded
                 keys are L1b variables names in the source data (with no suffix if split_fore_aft=True, otherwise with either _fore or _after suffix)
@@ -118,9 +122,9 @@ class rSIRInterp:
         else:
             pattern_radii = concatenate((pattern_radii, [self.target_ap.max_ap_radius[int(target_dict['feed_horn_number'][target_inds])]]))
 
-
         # Make integration grid
         int_dom_lons, int_dom_lats = make_integration_grid(
+            grid_generator, x_earth_grid, y_earth_grid,
             int_projection_definition=self.config.MRF_projection_definition,
             int_grid_definition=self.config.MRF_grid_definition,
             longitude=pattern_lons,
@@ -289,6 +293,16 @@ class rSIRInterp:
             target_lons = take(target_grid[0], samples_dict["grid_1d_index"][:indexes.shape[0]])
             target_lats = take(target_grid[0], samples_dict["grid_1d_index"][:indexes.shape[1]])
 
+        integration_grid = GridGenerator(
+            config_object = None,
+            projection_definition=self.config.MRF_projection_definition,
+            grid_definition=self.config.MRF_grid_definition
+        )
+
+        xs, ys = integration_grid.generate_grid_xy()
+        xs = xs[:, 0]
+        ys = ys[::-1, 0]
+
         T_out = []
 
         for target_cell in tqdm(range(indexes.shape[0])):
@@ -314,6 +328,7 @@ class rSIRInterp:
                 T_out.append(nan)
                 continue
             source_ant_patterns, target_ant_pattern = self.get_antenna_patterns(
+                integration_grid, xs, ys,
                 band=band,
                 variable_dict=variable_dict,
                 target_dict=target_dict,

@@ -95,6 +95,7 @@ class BGInterp:
 
     def get_antenna_patterns(
         self,
+        grid_generator, x_earth_grid, y_earth_grid,
         variable_dict,
         target_dict,
         target_lon,
@@ -108,6 +109,9 @@ class BGInterp:
         Returns the projected antenna patterns relative to a target point, and to the source points that are its nearest neighbors
 
         Parameters:
+            grid_generator (GridGenerator object): object representing the integration grid type, with methods for converting from x,y to lon,lat
+            x_earth_grid (array_like): x coordinates of the entire grid, in ascending order
+            x_earth_grid (array_like): y coordinates of the entire grid, in ascending order  
             variable_dict (dictionary of arrays with shape (# source points, 1)): values of the variable to be regridded
                 keys are L1b variables names in the source data (with no suffix if split_fore_aft=True, otherwise with either _fore or _after suffix)
                 values are 1d arrays with the values of variables on the source points
@@ -170,6 +174,7 @@ class BGInterp:
             ))
 
         int_dom_lons, int_dom_lats = make_integration_grid(
+            grid_generator, x_earth_grid, y_earth_grid,
             int_projection_definition=self.config.MRF_projection_definition,
             int_grid_definition=self.config.MRF_grid_definition,
             longitude=pattern_lons,
@@ -316,6 +321,16 @@ class BGInterp:
             target_lons = take(target_grid[0], samples_dict["grid_1d_index"][:indexes.shape[0]])
             target_lats = take(target_grid[0], samples_dict["grid_1d_index"][:indexes.shape[1]])
 
+        integration_grid = GridGenerator(
+            config_object = None,
+            projection_definition=self.config.MRF_projection_definition,
+            grid_definition=self.config.MRF_grid_definition
+        )
+
+        xs, ys = integration_grid.generate_grid_xy()
+        xs = xs[:, 0]
+        ys = ys[::-1, 0]
+
         for target_cell in tqdm(range(indexes.shape[0])):
 
             import time
@@ -327,17 +342,9 @@ class BGInterp:
             # Getting the target lon, lat
             if self.config.grid_type == "L1C":
 
-                t=time.time()
-                # print('time to get target lon and lat:', t-t0)
-                t0=t
-
                 cell_area = cell_areas[target_cell]
                 resolution = sqrt(cell_area)
                 target_cell_size = [resolution, resolution]
-
-                t=time.time()
-                # print('time to get cell resolution:', t-t0)
-                t0=t
 
             elif self.config.grid_type == "L1R":
                 target_cell_size = None
@@ -347,6 +354,7 @@ class BGInterp:
             input_samples = samples[samples != fill_value]
             # print(f"input_samples: {input_samples}")
             source_ant_patterns, target_ant_pattern = self.get_antenna_patterns(
+                integration_grid, xs, ys,
                 variable_dict=variable_dict,
                 target_dict=target_dict,
                 target_lon=target_lon,
@@ -363,10 +371,6 @@ class BGInterp:
                 weights[target_cell, : len(input_samples)] = nan
                 continue
 
-            t=time.time()
-            # print('time to get antenna patterns at location:', t-t0)
-            t0=t
-
             # BG algorithm
             num_input_samples = len(input_samples)
             g = zeros((num_input_samples, num_input_samples))
@@ -379,29 +383,19 @@ class BGInterp:
                 for j in range(num_input_samples):
                     g[i, j] = sum(source_ant_patterns[i] * source_ant_patterns[j])
 
-            t=time.time()
-            # print('time to compute BG integrals:', t-t0)
-            t0=t
-
             # Regularisation Factor
             k = self.config.bg_smoothing
             # Error Covariance Matrix
             E = identity(num_input_samples)
 
             g = g + k * E
-            ginv = inv(g)
-
-            t=time.time()
-            # print('time to invert BG matrix:', t-t0)
-            t0=t
-
-            # Weights
-            a = ginv @ (v + (1 - u.T @ (ginv @ v)) / (u.T @ (ginv @ u)) * u)
-            weights[target_cell, : len(input_samples)] = a
-
-            t=time.time()
-            # print('time to compute BG weights:', t-t0)
-            t0=t
+            try:
+                ginv = inv(g)
+                a = ginv @ (v + (1 - u.T @ (ginv @ v)) / (u.T @ (ginv @ u)) * u)
+                weights[target_cell, :len(input_samples)] = a
+            except:
+                print("Warning: singular matrix encountered in BG")
+                weights[target_cell, :len(input_samples)] = nan
 
         return weights
 
