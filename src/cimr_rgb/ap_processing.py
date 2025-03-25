@@ -392,9 +392,9 @@ class AntennaPattern:
             x_pos (float): x coordinate in ECEF of the satellite position
             y_pos (float): y coordinate in ECEF of the satellite position
             z_pos (float): z coordinate in ECEF of the satellite position
-            x_pos (float): x coordinate in ECEF of the satellite velocity
-            y_pos (float): y coordinate in ECEF of the satellite velocity
-            z_pos (float): z coordinate in ECEF of the satellite velocity
+            x_vel (float): x component in ECEF of the satellite velocity
+            y_vel (float): y component in ECEF of the satellite velocity
+            z_vel (float): z component in ECEF of the satellite velocity
             processing_scan_angle (float): scan angle, measured from velocity vector in clock-wise direction looking down to the Earth surface
             feed_horn_number (integer): feedhorn number 
             attitude (array_like of shape (3,3)): attitude matrix (passed for CIMR, None for SMAP since it will be computed from the velocity vector)
@@ -521,7 +521,8 @@ class AntennaPattern:
         Ginterp=self.scalar_gain[int(feed_horn_number)](phi, theta)
         Ginterp *= cos_angle_proj
 
-        Ginterp /= np.sum(Ginterp)
+        if Ginterp.any():
+            Ginterp /= np.sum(Ginterp)
 
         return Ginterp 
 

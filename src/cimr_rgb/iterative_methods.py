@@ -325,12 +325,11 @@ class MIIinterp:
                             lat_l1b = variable_dict['latitude'][mask][isample]
                             )
 
-                        # fraction_above_threshold = 1.- self.source_ap.fraction_below_threshold[int(variable_dict['feed_horn_number'][mask][isample])]
+                        fraction_above_threshold = 1.- self.source_ap.fraction_below_threshold[int(variable_dict['feed_horn_number'][mask][isample])]
 
-                    # projected_pattern /= (fraction_above_threshold*sum(projected_pattern))
-
-                    if projected_pattern.any():
-                        projected_pattern /= sum(projected_pattern)
+                        if projected_pattern.any():
+                            # projected_pattern /= (fraction_above_threshold*sum(projected_pattern))
+                            projected_pattern /= sum(projected_pattern)
 
                     A[irow] = projected_pattern.flatten()
 
