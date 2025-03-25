@@ -141,7 +141,7 @@ def test_estimate_max_ap_radius(mocker, tilt_angle, max_altitude, max_theta_ante
     config = mocker.patch("cimr_rgb.config_file.ConfigFile").return_value
     config.antenna_tilt_angle = tilt_angle
     config.input_data_type = "CIMR" #not relevant here, but using CIMR avoids a -pi
-    config.antenna_patterns_path = './mock_antenna_patterns'
+    config.antenna_patterns_path = './tests/unit/mock_antenna_patterns'
     config.max_altitude = max_altitude
     config.max_theta_antenna_patterns = max_theta_antenna_patterns
 
@@ -188,9 +188,9 @@ def test_antenna_pattern_to_earth(mocker, instrument, tilt_angle, int_dom_lons, 
     config.antenna_tilt_angle = tilt_angle
     config.input_data_type = instrument
     if instrument == "SMAP":
-        config.antenna_patterns_path = './mock_antenna_patterns/L/CIMR-PAP-FR-L0-TPv1.0.0.h5'
+        config.antenna_patterns_path = './tests/unit/mock_antenna_patterns/L/CIMR-PAP-FR-L0-TPv1.0.0.h5'
     else:
-        config.antenna_patterns_path = './mock_antenna_patterns'
+        config.antenna_patterns_path = './tests/unit/mock_antenna_patterns'
     config.max_altitude = 100000.
     config.max_theta_antenna_patterns = 10.
     config.scan_angle_feed_offset = {"L": {0 : 0.}}
