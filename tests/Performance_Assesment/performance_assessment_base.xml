@@ -45,8 +45,8 @@
     <chunk_buffer>1.2</chunk_buffer>
   </ReGridderParams>
   <OutputData>
-    <save_to_disk>True</save_to_disk>
-    <output_path>/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/Performance_Assesment/test_output</output_path>
+    <save_to_disk>False</save_to_disk>
+    <output_path>.</output_path>
     <version>1.0.0</version>
     <creator_name>insert your name</creator_name>
     <creator_email>test@email.com</creator_email>
