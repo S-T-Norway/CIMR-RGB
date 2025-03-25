@@ -538,6 +538,7 @@ class ConfigFile:
     def read_config(config_file_path):
         """
         Reads the configuration file and returns the root element
+
         Parameters
         ----------
         config_file_path: str
@@ -893,29 +894,11 @@ class ConfigFile:
 
     @staticmethod
     def validate_grid_type(config_object, grid_type, input_data_type):
-        """
-        Validates the grid type and returns the value if valid
-
-        Parameters
-        ----------
-        config_object: xml.etree.ElementTree.Element
-            Root element of the configuration file
-        grid_type: str
-            User selected Grid Type in the configuration file
-        input_data_type: str
-            User selected Input Data Type in the configuration file
-
-        Returns
-        -------
-        str
-            Validated grid type
-        """
-
         r"""
         Validate the grid type parameter from the XML configuration.
 
-        This method verifies if the grid type exists in the XML configuration 
-        and ensures it matches a predefined set of acceptable grid types 
+        This method verifies if the grid type exists in the XML configuration
+        and ensures it matches a predefined set of acceptable grid types
         based on the selected input data type.
 
         Parameters
@@ -930,23 +913,23 @@ class ConfigFile:
         Returns
         -------
         str
-            The validated grid type if it is found and matches one of the 
+            The validated grid type if it is found and matches one of the
             predefined valid values for the given `input_data_type`.
 
         Raises
         ------
         AttributeError
-            If the required XML tag for `grid_type` is missing or incorrectly 
+            If the required XML tag for `grid_type` is missing or incorrectly
             specified in the configuration file.
         ValueError
             If the extracted grid type is not in the list of valid grid types.
 
         Notes
         -----
-        - The function searches for the `<GridParams><grid_type>` tag in the 
+        - The function searches for the `<GridParams><grid_type>` tag in the
           XML file and validates its value against predefined grid types.
         - Valid grid types depend on the input data type:
-          
+
           - If `input_data_type` is `SMAP`: `['L1C']`
           - Otherwise: `['L1C', 'L1R']`
         - Grid type values are case-insensitive and converted to uppercase.
@@ -966,7 +949,7 @@ class ConfigFile:
             ...
         ValueError: Invalid Grid Type. Check Configuration File. Valid grid types are: ['L1C', 'L1R'] for GridParams/grid_type data.
 
-        >>> xml_data = '''<config><GridParams><otherTag>L1C</otherTag></GridParams></config>''' 
+        >>> xml_data = '''<config><GridParams><otherTag>L1C</otherTag></GridParams></config>'''
         >>> config_object = ET.ElementTree(ET.fromstring(xml_data)).getroot()
         >>> ConfigFile.validate_grid_type(config_object, "GridParams/grid_type", "SMAP")
         Traceback (most recent call last):

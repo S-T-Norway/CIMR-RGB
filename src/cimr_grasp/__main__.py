@@ -102,11 +102,11 @@ def get_beamdata(
         )
         if igrid == 1:
             logger.info(
-                f"Antenna patterns are provided in the (u,v) coordinates and will be converted into (theta,phi)"
+                "Antenna patterns are provided in the (u,v) coordinates and will be converted into (theta,phi)"
             )
         else:
             raise NotImplementedError(
-                f"The module functionality is implemented only for IGRID value = 1 since CIMR patterns were provided in this format."
+                "The module functionality is implemented only for IGRID value = 1 since CIMR patterns were provided in this format."
             )
 
         # The following lines are repeated NSET of times (as per GRASP manual instructions)
@@ -191,7 +191,7 @@ def get_beamdata(
                     # It is IS in GRASP manual --- the column number of 1st datapoint
                     is_ = 1
                     # It is IN in GRASP manual --- the # of datapoints in row J (j_)
-                    in_ = nx
+                    in_ = nx - 1
                 elif klimit == 1:
                     is_ = int(line_numbers[0])
                     in_ = int(line_numbers[1])
@@ -234,6 +234,8 @@ def get_beamdata(
 
                 # To go to the next block of points within the file we need to
                 # increase the line counter
+                # if klimit == 1:
+                #     line_shift = line_shift + in_
                 line_shift = line_shift + in_
 
     u_grid, v_grid = utils.generate_uv_grid(xcen, ycen, xs, ys, nx, ny, dx, dy)
@@ -247,6 +249,19 @@ def get_beamdata(
     # Mandatory Parameters
     cimr["Grid"]["u"] = u
     cimr["Grid"]["v"] = v
+
+    print(u_grid.shape)
+    print(u_grid[500][500])
+    # print(u_grid[501][501])
+    print(u.shape)
+    # print(u[499])
+    # print(u[500])
+    # exit()
+
+    # print(G1h.shape)
+    # print(G2h.shape)
+    # print(G3h.shape)
+    # print(G4h.shape)
 
     cimr["Gain"]["G1h"] = G1h
     cimr["Gain"]["G2h"] = G2h
@@ -580,6 +595,9 @@ def run_cimr_grasp(
 
                     cimr = utils.construct_complete_gains(cimr)
 
+                    print(f"Shape the of the Ghh: {np.shape(cimr['temp']['Ghh'])}")
+                    # exit()
+
                     cimr["Grid"]["u_grid"], cimr["Grid"]["v_grid"] = (
                         utils.generate_uv_grid(
                             xcen=cimr["Grid"]["xcen"],
@@ -607,6 +625,9 @@ def run_cimr_grasp(
 
                         end_time_recen = time.perf_counter() - start_time_recen
                         logger.info(f"Finished Recentering in: {end_time_recen:.2f}s")
+
+                    print(f"Shape the of the Ghh: {np.shape(cimr['temp']['Ghh'])}")
+                    # exit()
 
                     logger.info("------------------------------")
                     logger.info("Interpolating")
@@ -794,11 +815,11 @@ def main():
     # Creating a logger object based on the user preference
     if use_rgb_logging and logger_config is not None:
         rgb_logging = RGBLogging(logdir=logdir, log_config=logger_config)
-        rgb_logger = rgb_logging.get_logger("rgb")
+        rgb_logger = rgb_logging.get_logger("rgb-logger")
 
     # -----------------------------
 
-    rgb_logger.debug(f"Starting the script using the following libraries:")
+    rgb_logger.debug("Starting the script using the following libraries:")
     rgb_logger.debug(f"numpy      {np.__version__}")
     rgb_logger.debug(f"scipy      {sp.__version__}")
     rgb_logger.debug(f"h5py       {h5py.__version__}")
