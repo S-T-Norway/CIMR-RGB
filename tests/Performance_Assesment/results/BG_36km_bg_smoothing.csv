@@ -1,3 +1,0 @@
-testID,scene,algorithm,band,grid,regridding_time_s,memory_usage_MB,bg_smoothing,max_neighbours,search_radius,normalised_difference,mean_absolute_error,mean_absolute_percentage_error,root_mean_square_error,standard_deviation_error,pointwise_correlation,valid_pixel_overlap
-1,SCEPS_central_america,BG,L,EASE2_G36km,1222.4642581939697,66.85040092468262,4,3,1000,0.06562987381979545,5.896471893227634,6.5757263910791925,11.174214961501876,10.990195977767563,0.9941411482760172,1.0
-2,SCEPS_central_america,BG,L,EASE2_G36km,1218.0036170482635,66.47914409637451,5,3,1000,0.06562988048071905,5.896472369064872,6.575726836964124,11.174216095598103,10.990197145225208,0.9941411466376076,1.0
