@@ -3,6 +3,7 @@
 result
 output/ 
 output/* 
+dpr
 dpr/L1C/CIMR/RGB/*   
 dpr/L1B/CIMR/*   
 # Removed the data directory in order to conserve space
