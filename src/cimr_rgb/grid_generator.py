@@ -30,6 +30,8 @@ GRIDS = {'EASE2_G1km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83
                         'res': 3002.69, 'n_cols': 11568, 'n_rows': 4872, 'lat_min': -86, 'lat_max': 86},
          'EASE2_G9km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83,
                         'res': 9008.05, 'n_cols': 3856, 'n_rows': 1624, 'lat_min': -86, 'lat_max': 86},
+         'EASE2_N1km': {'epsg': 6931, 'x_min': -9000000.0, 'y_max': 9000000.0,
+                        'res': 1000, 'n_cols': 18000, 'n_rows': 18000, 'lat_min': 0},
          'EASE2_N3km': {'epsg': 6931, 'x_min': -9000000.0, 'y_max': 9000000.0,
                         'res': 3000, 'n_cols': 6000, 'n_rows': 6000, 'lat_min': 0},
          'EASE2_N9km': {'epsg': 6931, 'x_min': -9000000.0, 'y_max': 9000000.0,

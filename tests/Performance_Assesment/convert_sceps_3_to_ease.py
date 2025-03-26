@@ -11,8 +11,8 @@ import pickle
 
 import sys
 sys.path.append('/cimr_rgb')
-from cimr_rgb.grid_generator import GridGenerator
-from cimr_rgb.config_file import ConfigFile
+from grid_generator import GridGenerator
+from config_file import ConfigFile
 
 import matplotlib
 tkagg = matplotlib.use('TkAgg')
@@ -20,9 +20,9 @@ import matplotlib.pyplot as plt
 plt.ion()
 
 # Configuration
-config_path = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/tests/Performance_Assesment/quick_config.xml'
+config_path = '/CIMR-RGB/tests/Performance_Assesment/quick_config.xml'
 central_america_truth_scene = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/Test_cards/SCEPS_central_america/cimr_sceps_toa_card_central_america_20161217_v2p0_aa_000.nc'
-sceps_3_truth_scene = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/Test_cards/SCEPS_3/DEVALGO_testcard_soil_moisture.nc'
+sceps_3_truth_scene = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/Test_cards/DEVALGO_testcard_soil_moisture.nc'
 output_folder = '/home/beywood/ST/CIMR_RGB/CIMR-RGB/dpr/Test_cards/SCEPS_3/EASE_grids'
 output_file_tag = 'SCEPS_3'
 output_grid_resolutions = [3, 9, 36]
@@ -154,7 +154,7 @@ if __name__ == '__main__':
         for band in EASE_BTs:
             image, x, y = resample_ease_grids(EASE_BTs[band], x_1km, y_1km, resolution)
             image_out  = {}
-            image_out['bt_h'] = image
+            image_out['bt'] = image
             image_out['x'] = x
             image_out['y'] = y
             output_dict[band] = image_out

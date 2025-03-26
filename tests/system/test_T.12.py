@@ -427,7 +427,7 @@ def map_compare(data1, data2):
     )
     repo_root = grasp_io.find_repo_root()
     img_path = repo_root.joinpath(
-        "output/MS3_verification_tests/T_12/T_12_difference1.png"
+        "output/system/T_12/T_12_difference1.png"
     )  # ""
     plt.savefig(img_path, dpi=300)
     # plt.show()
@@ -566,8 +566,9 @@ def scatter_compare(data1, data2):
     axs[1, 1].set_ylabel("NASA BT [K]")
 
     repo_root = grasp_io.find_repo_root()
+    print(repo_root)
     img_path = repo_root.joinpath(
-        "output/MS3_verification_tests/T_12/T_12_scatter.png"
+        "output/system/T_12/T_12_scatter.png"
     )  # ""
     plt.savefig(img_path, dpi=300)
 

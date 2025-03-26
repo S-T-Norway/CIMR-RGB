@@ -161,7 +161,7 @@ def map_compare(bg_data, ids_data):
     )
     repo_root = grasp_io.find_repo_root()
     img_path = repo_root.joinpath(
-        "output/MS3_verification_tests/T_16/T_16_difference1.png"
+        "output/system/T_16/T_16_difference1.png"
     )  # ""
     plt.savefig(img_path, dpi=300)
     # plt.show()
@@ -210,7 +210,7 @@ def scatter_compare(bg_data, ids_data):
 
     repo_root = grasp_io.find_repo_root()
     img_path = repo_root.joinpath(
-        "output/MS3_verification_tests/T_16/T_16_scatter.png"
+        "output/system/T_16/T_16_scatter.png"
     )  # ""
     plt.savefig(img_path, dpi=300)
 

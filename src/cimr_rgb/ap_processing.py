@@ -392,9 +392,9 @@ class AntennaPattern:
             x_pos (float): x coordinate in ECEF of the satellite position
             y_pos (float): y coordinate in ECEF of the satellite position
             z_pos (float): z coordinate in ECEF of the satellite position
-            x_pos (float): x coordinate in ECEF of the satellite velocity
-            y_pos (float): y coordinate in ECEF of the satellite velocity
-            z_pos (float): z coordinate in ECEF of the satellite velocity
+            x_vel (float): x component in ECEF of the satellite velocity
+            y_vel (float): y component in ECEF of the satellite velocity
+            z_vel (float): z component in ECEF of the satellite velocity
             processing_scan_angle (float): scan angle, measured from velocity vector in clock-wise direction looking down to the Earth surface
             feed_horn_number (integer): feedhorn number 
             attitude (array_like of shape (3,3)): attitude matrix (passed for CIMR, None for SMAP since it will be computed from the velocity vector)
@@ -521,7 +521,8 @@ class AntennaPattern:
         Ginterp=self.scalar_gain[int(feed_horn_number)](phi, theta)
         Ginterp *= cos_angle_proj
 
-        Ginterp /= np.sum(Ginterp)
+        if Ginterp.any():
+            Ginterp /= np.sum(Ginterp)
 
         return Ginterp 
 
@@ -709,12 +710,15 @@ def vincenty_sphere_distance(lon1, lat1, lon2, lat2):
     return distance
 
 
-def make_integration_grid(int_projection_definition, int_grid_definition, longitude, latitude, ap_radii):
+def make_integration_grid(grid_generator, x_earth_grid, y_earth_grid, int_projection_definition, int_grid_definition, longitude, latitude, ap_radii):
 
     """
     Defines the smallest grid on Earth surface that encloses a set of points, for a given map projection
 
     Parameters:
+        grid_generator (GridGenerator object): object representing the integration grid type, with methods for converting from x,y to lon,lat
+        x_earth_grid (array_like): x coordinates of the entire grid, in ascending order
+        x_earth_grid (array_like): y coordinates of the entire grid, in ascending order
         int_projection_definition (str): projection type ('G', 'N', 'S') of the grid to use
         int_grid_definition (str): string defining the grid (see grid_generator.py)
         longitude (array_like of floats): longitude of the points that should be enclosed by the grid
@@ -737,16 +741,6 @@ def make_integration_grid(int_projection_definition, int_grid_definition, longit
     Rpattern = max(ap_radii)
     ap_angle = np.rad2deg(Rpattern/Rearth)
 
-    integration_grid = GridGenerator(
-        config_object = None,
-        projection_definition=int_projection_definition,
-        grid_definition=int_grid_definition
-    )
-
-    xs, ys = integration_grid.generate_grid_xy()
-    xs = xs[:, 0]
-    ys = ys[::-1, 0]
-
     #for each point, generate 4 points by adding ap_radii in the 4 directions
     
     lons = concatenate((lons+ap_angle, lons, lons-ap_angle, lons))
@@ -763,6 +757,9 @@ def make_integration_grid(int_projection_definition, int_grid_definition, longit
     lons[lons>180.]  -= 360.
     lons[lons<-180.] += 360.
 
+    xs = x_earth_grid
+    ys = y_earth_grid
+
     if int_projection_definition == 'G':
 
         max1 = np.max(180 - lons[lons > 0]) if np.any(lons > 0) else 0
@@ -775,8 +772,8 @@ def make_integration_grid(int_projection_definition, int_grid_definition, longit
             lonmax = np.max(lons)
             latmin = np.min(lats)
             latmax = np.max(lats)
-            xmin, ymin = integration_grid.lonlat_to_xy(lonmin, latmin)
-            xmax, ymax = integration_grid.lonlat_to_xy(lonmax, latmax)
+            xmin, ymin = grid_generator.lonlat_to_xy(lonmin, latmin)
+            xmax, ymax = grid_generator.lonlat_to_xy(lonmax, latmax)
             imin = np.searchsorted(xs, xmin) - 1
             imax = np.searchsorted(xs, xmax)
             jmin = np.searchsorted(ys, ymin) - 1
@@ -789,8 +786,8 @@ def make_integration_grid(int_projection_definition, int_grid_definition, longit
             lonmin = np.min(lons[lons>0]) #further point from IDL with lon > 0
             latmin = np.min(lats)
             latmax = np.max(lats)
-            xmin, ymin = integration_grid.lonlat_to_xy(lonmin, latmin)
-            xmax, ymax = integration_grid.lonlat_to_xy(lonmax, latmax)
+            xmin, ymin = grid_generator.lonlat_to_xy(lonmin, latmin)
+            xmax, ymax = grid_generator.lonlat_to_xy(lonmax, latmax)
             imin = np.searchsorted(xs, xmin, side='right') - 1
             imax = np.searchsorted(xs, xmax, side='left')
             jmin = np.searchsorted(ys, ymin) - 1
@@ -800,7 +797,7 @@ def make_integration_grid(int_projection_definition, int_grid_definition, longit
 
     elif int_projection_definition in ['N', 'S']:
 
-        xx, yy = integration_grid.lonlat_to_xy(lons, lats)
+        xx, yy = grid_generator.lonlat_to_xy(lons, lats)
 
         imin = np.searchsorted(xs, xx.min()) - 1
         imax = np.searchsorted(xs, xx.max())
@@ -810,6 +807,6 @@ def make_integration_grid(int_projection_definition, int_grid_definition, longit
         ys = ys[jmin:jmax+1][::-1]
 
     Xs, Ys = meshgrid(xs, ys)
-    lons, lats = integration_grid.xy_to_lonlat(Xs, Ys)
+    lons, lats = grid_generator.xy_to_lonlat(Xs, Ys)
 
     return lons, lats

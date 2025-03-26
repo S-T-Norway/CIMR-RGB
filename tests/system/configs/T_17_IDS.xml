@@ -50,7 +50,7 @@
   </ReGridderParams>
   <OutputData>
     <save_to_disk>True</save_to_disk>
-    <output_path>./output/MS3_verification_tests/T_17</output_path>
+    <output_path>./output/system/T_17</output_path>
     <version>1.0.0</version>
     <creator_name>insert your name</creator_name>
     <!-- email is not an optional parameter, format

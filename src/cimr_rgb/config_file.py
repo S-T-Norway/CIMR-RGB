@@ -1152,6 +1152,7 @@ class ConfigFile:
             "EASE2_G1km",
             "EASE2_G3km",
             "EASE2_G9km",
+            "EASE2_N1km",
             "EASE2_N3km",
             "EASE2_N9km",
             "EASE2_S9km",
@@ -1184,7 +1185,7 @@ class ConfigFile:
             return grid_definition
 
         raise ValueError(
-            f"Invalid Grid Definition, check configuration file. "
+            f"Invalid Grid Definition ({grid_definition}), check configuration file. "
             f"Valid grid definitions are: {valid_input}"
         )
 
@@ -2844,6 +2845,7 @@ class ConfigFile:
             "EASE2_G3km",
             "EASE2_G1km",
             "EASE2_G9km",
+            "EASE2_N1km",
             "EASE2_N9km",
             "EASE2_S9km",
             "EASE2_G36km",

@@ -207,10 +207,14 @@ class MIIinterp:
             variable_dict_out[variable] = np.zeros((output_grid.n_rows, output_grid.n_cols))
             variable_dict_int[variable] = np.zeros((integration_grid.n_rows, integration_grid.n_cols))
 
-        #TODO: set max_chunk_size as a parameter
         max_chunk_size = self.config.max_chunk_size
         nchunkx = (imax - imin) // max_chunk_size #number of "full" chunks (so it can be zero)
         nchunky = (jmax - jmin) // max_chunk_size
+
+        #generating coordinates on the whole grid, to pass to make_integration_grid
+        xs, ys = integration_grid.generate_grid_xy()
+        xs = xs[:, 0]
+        ys = ys[::-1, 0]
 
         #loop over chunks
         for i in range(nchunkx+1): #i = column index
@@ -241,6 +245,7 @@ class MIIinterp:
 
                 #create an integration grid (slightly larger than the chunks)
                 int_dom_lons, int_dom_lats = make_integration_grid(
+                    integration_grid, xs, ys,
                     int_projection_definition=self.config.MRF_projection_definition,
                     int_grid_definition=self.config.MRF_grid_definition,
                     longitude=[chunklon1, chunklon2, chunklon3, chunklon4],
@@ -320,12 +325,11 @@ class MIIinterp:
                             lat_l1b = variable_dict['latitude'][mask][isample]
                             )
 
-                        # fraction_above_threshold = 1.- self.source_ap.fraction_below_threshold[int(variable_dict['feed_horn_number'][mask][isample])]
+                        fraction_above_threshold = 1.- self.source_ap.fraction_below_threshold[int(variable_dict['feed_horn_number'][mask][isample])]
 
-                    # projected_pattern /= (fraction_above_threshold*sum(projected_pattern))
-
-                    if projected_pattern.any():
-                        projected_pattern /= sum(projected_pattern)
+                        if projected_pattern.any():
+                            # projected_pattern /= (fraction_above_threshold*sum(projected_pattern))
+                            projected_pattern /= sum(projected_pattern)
 
                     A[irow] = projected_pattern.flatten()
 
