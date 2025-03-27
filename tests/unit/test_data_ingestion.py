@@ -335,8 +335,9 @@ def test_remove_out_of_bounds(
     # monkeypatch.setattr(ReGridder, "remove_out_of_bounds", remove_out_of_bounds)
     # monkeypatch.setattr(DataIngestion, "remove_out_of_bounds", remove_out_of_bounds)
 
-    # For valid cases, add the dummy grid to GRIDS.
+    # For valid cases, use the dummy_grid instead of the real GRIDS
     if expected_exception is None:
+        original_grid = GRIDS[grid_def]
         GRIDS[grid_def] = dummy_grid
 
     # Monkey-patch RGBLogging.rgb_decorate_and_execute to return our dummy grid generator.
@@ -360,3 +361,7 @@ def test_remove_out_of_bounds(
         result = instance.remove_out_of_bounds(data_in)
         for key in expected_output:
             np.testing.assert_array_equal(result[key], expected_output[key])
+
+    #set back the GRIDS to the original one, for later tests that use it
+    if expected_exception is None:
+        GRIDS[grid_def] = original_grid
