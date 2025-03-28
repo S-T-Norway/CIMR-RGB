@@ -1,17 +1,17 @@
-import sys 
-import pathlib as pb 
-import time, datetime  
-import json 
-import logging.config   
-import functools 
-import typing 
+import sys
+import pathlib as pb
+import time, datetime
+import json
+import logging.config
+import functools
+import typing
 
-import psutil 
+import psutil
 
 
 class RGBLogging:
     """
-    A utility class for configuring and managing logging in applications, 
+    A utility class for configuring and managing logging in applications,
     with support for performance tracking and dynamic function decoration.
 
     Features:
@@ -36,14 +36,15 @@ class RGBLogging:
     >>>     pass
     """
 
-    def __init__(self, logdir: pb.Path, 
-                 log_config = None, 
-                 filename = "cimr", 
-                 #name_prefix = "cimr", 
-                 #name_suffix = f"{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')}", 
-                 file_extension = ".log"
-                 ) -> None: 
-
+    def __init__(
+        self,
+        logdir: pb.Path,
+        log_config=None,
+        filename="cimr",
+        # name_prefix = "cimr",
+        # name_suffix = f"{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')}",
+        file_extension=".log",
+    ) -> None:
         """
         Initializes the logging configuration.
 
@@ -80,55 +81,51 @@ class RGBLogging:
         >>> rgb_logging = RGBLogging(logdir, log_config)
         """
 
-        # log_file can be either dictionary, or json file  
+        # log_file can be either dictionary, or json file
 
-        if log_config is not None: 
+        if log_config is not None:
+            if isinstance(log_config, pb.Path):
+                with open(log_config, "r") as file:
+                    log_config = json.load(file)
 
-            if isinstance(log_config, pb.Path): 
-                with open(log_config, "r") as file: 
-                    log_config = json.load(file) 
-
-            elif isinstance(log_config, str): 
-
+            elif isinstance(log_config, str):
                 # Convert to Path to check if the string represents a file path
                 log_config = pb.Path(log_config)
-                with open(log_config, "r") as json_file: 
-                    log_config = json.load(json_file) 
+                with open(log_config, "r") as json_file:
+                    log_config = json.load(json_file)
 
-            elif isinstance(log_config, dict): 
-                #print(log_config) 
-                pass  
-            else: 
+            elif isinstance(log_config, dict):
+                # print(log_config)
+                pass
+            else:
                 raise TypeError("`log_config` can be str, Path or dictionary.")
 
-            #print(log_config['handlers']['file']['filename'])
-            # Getting the name of log file 
-            #modified_config_name = pb.Path(log_config['handlers']['file']['filename']).name  
-            # Modifying it to include time signature 
-            modified_config_name = filename + file_extension 
-            #modified_config_name = name_prefix + \
-            #                    f"_{name_suffix}" + f"{file_extension}" 
-            #                    f"_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')}" + ".log" 
-            # Creating absolute path for the log config file 
+            # print(log_config['handlers']['file']['filename'])
+            # Getting the name of log file
+            # modified_config_name = pb.Path(log_config['handlers']['file']['filename']).name
+            # Modifying it to include time signature
+            modified_config_name = filename + file_extension
+            # modified_config_name = name_prefix + \
+            #                    f"_{name_suffix}" + f"{file_extension}"
+            #                    f"_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')}" + ".log"
+            # Creating absolute path for the log config file
             modified_config_name = logdir.joinpath(modified_config_name)
 
-            log_config['handlers']['file']['filename'] = modified_config_name 
-            
-            # Setting up RGB Logger configuration based on the provided file 
-            self.log_config = logging.config.dictConfig(log_config) 
+            log_config["handlers"]["file"]["filename"] = modified_config_name
 
-            # TODO: figure out this Queue handler and queue listener stuff 
-            # Setting up the thread for Queue Handler 
-            #queue_handler = logging.getHandlerByName("queue_handler")
-            #if queue_handler is not None: 
-            #    queue_handler.listener.start() 
-            #    atexit.register(queue_handler.listener.stop) 
+            # Setting up RGB Logger configuration based on the provided file
+            self.log_config = logging.config.dictConfig(log_config)
 
-        else: 
-            # TODO: make this into an error of sorts? 
-            self.log_config = None 
+            # TODO: figure out this Queue handler and queue listener stuff
+            # Setting up the thread for Queue Handler
+            # queue_handler = logging.getHandlerByName("queue_handler")
+            # if queue_handler is not None:
+            #    queue_handler.listener.start()
+            #    atexit.register(queue_handler.listener.stop)
 
-
+        else:
+            # TODO: make this into an error of sorts?
+            self.log_config = None
 
     def get_logger(self, name: str):
         """
@@ -154,20 +151,18 @@ class RGBLogging:
         logger = logging.getLogger(name)
         logger.debug(f"Getting logger named {name}")
 
-        return logger 
-
-
+        return logger
 
     @staticmethod
-    #def rgb_decorated(decorate: bool = False, 
-    #                  decorator: typing.Optional[typing.Callable] = None, 
+    # def rgb_decorated(decorate: bool = False,
+    #                  decorator: typing.Optional[typing.Callable] = None,
     #                  logger: typing.Optional[logging.Logger] = None
-    #                  ):  
-    def rgb_decorate_and_execute(decorate: bool = False, 
-                      decorator: typing.Optional[typing.Callable] = None, 
-                      logger: typing.Optional[logging.Logger] = None
-                      ):  
-
+    #                  ):
+    def rgb_decorate_and_execute(
+        decorate: bool = False,
+        decorator: typing.Optional[typing.Callable] = None,
+        logger: typing.Optional[logging.Logger] = None,
+    ):
         """
         Conditionally decorates a function with the provided decorator.
 
@@ -193,21 +188,17 @@ class RGBLogging:
         >>>     pass
         """
 
-        def outer_wrapper(func: typing.Callable): 
-            if decorate and decorator is not None and logger is not None: 
-
-                #logger.info("---------------------")
+        def outer_wrapper(func: typing.Callable):
+            if decorate and decorator is not None and logger is not None:
+                # logger.info("---------------------")
                 logger.info(f"`{func.__name__}`")
 
-                return decorator(func, logger) 
+                return decorator(func, logger)
             return func
 
-            
         return outer_wrapper
-    
 
-
-    @staticmethod 
+    @staticmethod
     def track_perf(func: typing.Callable, logger: logging.Logger):
         """
         Decorates a function to log its performance metrics, including execution time, CPU usage, and memory usage.
@@ -241,63 +232,70 @@ class RGBLogging:
 
         @functools.wraps(func)
         def perf_wrapper(*args, **kwargs):
-
             logger.info("---------------------")
 
-            logger.info(f"`{func.__name__}` -- Started Execution") 
+            logger.info(f"`{func.__name__}` -- Started Execution")
 
-            # Get the current process 
-            process = psutil.Process() 
+            # Get the current process
+            process = psutil.Process()
 
             # Record the start time and resource usage
-            start_time   = time.perf_counter()
+            start_time = time.perf_counter()
 
-            cpu_time_start = process.cpu_times() 
-            cpu_usage_start = process.cpu_percent(interval=None) 
+            cpu_time_start = process.cpu_times()
+            cpu_usage_start = process.cpu_percent(interval=None)
 
-            # Memory size in bytes / 1024**2 = memory size in MB 
-            memory_usage_start = process.memory_info().rss / 1024**2 
+            # Memory size in bytes / 1024**2 = memory size in MB
+            memory_usage_start = process.memory_info().rss / 1024**2
 
-            # Execute the function 
-            result       = func(*args, **kwargs)
+            # Execute the function
+            result = func(*args, **kwargs)
 
             # Record the end time and resource usage
-            end_time     = time.perf_counter()
+            end_time = time.perf_counter()
 
-            cpu_time_end  = process.cpu_times() 
-            cpu_usage_end = process.cpu_percent(interval=None) 
+            cpu_time_end = process.cpu_times()
+            cpu_usage_end = process.cpu_percent(interval=None)
 
-            # Memory size in bytes / 1024**2 = memory size in MB 
-            memory_usage_end = process.memory_info().rss / 1024**2 
+            # Memory size in bytes / 1024**2 = memory size in MB
+            memory_usage_end = process.memory_info().rss / 1024**2
 
-            # Calculate metrics 
-            elapsed_time   = end_time - start_time
+            # Calculate metrics
+            elapsed_time = end_time - start_time
 
-            user_cpu_time = cpu_time_end.user - cpu_time_start.user 
-            system_cpu_time = cpu_time_end.system - cpu_time_start.system 
-            total_cpu_time  = user_cpu_time + system_cpu_time 
+            user_cpu_time = cpu_time_end.user - cpu_time_start.user
+            system_cpu_time = cpu_time_end.system - cpu_time_start.system
+            total_cpu_time = user_cpu_time + system_cpu_time
 
-            memory_usage_change = memory_usage_end - memory_usage_start 
+            memory_usage_change = memory_usage_end - memory_usage_start
 
-            # Log performance metrics 
-            logger.info(f"`{func.__name__}` -- Executed in: {elapsed_time:.2f}s") 
-            logger.info(f"`{func.__name__}` -- CPU User Time (Change): {user_cpu_time:.2f}s") 
-            logger.info(f"`{func.__name__}` -- CPU System Time: {system_cpu_time:.2f}s") 
-            logger.info(f"`{func.__name__}` -- CPU Total Time: {total_cpu_time:.2f}s") 
-            logger.info(f"`{func.__name__}` -- Process-Specific CPU Usage (Before): {cpu_usage_start:.2f}%") 
-            logger.info(f"`{func.__name__}` -- Process-Specific CPU Usage (After): {cpu_usage_end:.2f}%") 
-            logger.info(f"`{func.__name__}` -- Memory Usage Change: {memory_usage_change:.6f} MB") 
+            # Log performance metrics
+            logger.info(f"`{func.__name__}` -- Executed in: {elapsed_time:.2f}s")
+            logger.info(
+                f"`{func.__name__}` -- CPU User Time (Change): {user_cpu_time:.2f}s"
+            )
+            logger.info(f"`{func.__name__}` -- CPU System Time: {system_cpu_time:.2f}s")
+            logger.info(f"`{func.__name__}` -- CPU Total Time: {total_cpu_time:.2f}s")
+            logger.info(
+                f"`{func.__name__}` -- Process-Specific CPU Usage (Before): {cpu_usage_start:.2f}%"
+            )
+            logger.info(
+                f"`{func.__name__}` -- Process-Specific CPU Usage (After): {cpu_usage_end:.2f}%"
+            )
+            logger.info(
+                f"`{func.__name__}` -- Memory Usage Change: {memory_usage_change:.6f} MB"
+            )
 
             logger.info("---------------------")
-            
-            
+
             return result
 
-        return perf_wrapper  
-    
+        return perf_wrapper
 
-    @staticmethod 
-    def handle_error(error: Exception, message: str, logger: logging.Logger, level="error"):
+    @staticmethod
+    def handle_error(
+        error: Exception, message: str, logger: logging.Logger, level="error"
+    ):
         """
         Centralized method for handling and logging errors.
 
@@ -312,54 +310,86 @@ class RGBLogging:
         """
 
         if level == "error":
-
             logger.error(f"{error}: {message}", exc_info=True)
 
         elif level == "warning":
-
             logger.warning(f"{error}: {message}")
 
         elif level == "critical":
-
             logger.critical(f"{error}: {message}")
 
         else:
             logger.info(f"{error}: {message}")
 
-
-
-
-
-    @staticmethod 
-    def setup_global_exception_handler(logger):
+    @staticmethod
+    def setup_global_exception_handler(
+        logger: logging.Logger, exit_on_exception: bool = True
+    ):
         """
-        Redirect uncaught exceptions to the logger.
+        Set up a global exception handler to log uncaught exceptions using the provided logger.
+
+        This method overrides Python's default `sys.excepthook` to capture all uncaught exceptions,
+        including `KeyboardInterrupt`, and logs them to the specified logger. It ensures that
+        any unexpected runtime errors are properly logged with traceback information.
+
+        Parameters
+        ----------
+        logger : logging.Logger
+            The logger instance to use for logging uncaught exceptions.
+        exit_on_exception : bool, optional
+            If True (default), the application will terminate after logging the exception.
+            If False, the exception is logged but the application continues execution
+            (not recommended for most use cases).
+
+        Notes
+        -----
+        - `KeyboardInterrupt` is treated separately and logged as a warning.
+        - This should typically be called once at the start of the application.
+        - Exceptions handled by this function are not caught in `try`/`except` blocks;
+          only truly uncaught exceptions will trigger this handler.
+
+        Examples
+        --------
+        >>> import logging
+        >>> from rgb_logging import RGBLogging
+        >>> logger = logging.getLogger("main")
+        >>> RGBLogging.setup_global_exception_handler(logger)
+
+        Now any uncaught exception will be logged:
+
+        >>> def risky_operation():
+        ...     raise ValueError("Something went wrong")
+        ...
+        >>> risky_operation()
+        # Logs: CRITICAL - Uncaught exception occurred
         """
 
         def handle_exception(exc_type, exc_value, exc_traceback):
-
             if issubclass(exc_type, KeyboardInterrupt):
-
-                sys.__excepthook__(exc_type, exc_value, exc_traceback)
-
+                logger.warning("Execution interrupted by user (KeyboardInterrupt)")
+                if exit_on_exception:
+                    sys.exit(1)
                 return
 
             logger.critical(
-                "Uncaught exception",
+                "Uncaught exception occurred",
                 exc_info=(exc_type, exc_value, exc_traceback),
             )
 
+            if exit_on_exception:
+                sys.exit(1)
+
         sys.excepthook = handle_exception
 
-
     @staticmethod
-    def custom_warning_handler(logger, message, category, filename, lineno, file=None, line=None):
-
+    def custom_warning_handler(
+        logger, message, category, filename, lineno, file=None, line=None
+    ):
         """
         Custom handler to redirect warnings to a logger.
 
-        This method replaces the default behavior of the `warnings` module, 
-        enabling warnings to be captured and redirected to a logging system. 
+        This method replaces the default behavior of the `warnings` module,
+        enabling warnings to be captured and redirected to a logging system.
         It allows for better integration of warnings into application logs.
 
         Parameters:
@@ -396,34 +426,35 @@ class RGBLogging:
         >>> warnings.warn("This is a test warning", UserWarning)
         """
 
-        log_message = f"{category.__name__}: {message} (File: {filename}, Line: {lineno})"
+        log_message = (
+            f"{category.__name__}: {message} (File: {filename}, Line: {lineno})"
+        )
 
         logger.warning(log_message)
 
-
-    # TODO: This function should simplify the call for decorator, but is really not needed. 
-    # @staticmethod  
+    # TODO: This function should simplify the call for decorator, but is really not needed.
+    # @staticmethod
     # def rgb_decorated(func, rgb_config, decorator):
     #     """
     #     Dynamically applies a specified decorator to a given function based on configuration settings.
 
-    #     This method uses the `rgb_decorate_and_execute` decorator factory to conditionally apply the provided 
-    #     decorator to the target function. The decision to decorate is controlled by the `logpar_decorate` 
-    #     attribute of the `rgb_config` object. If `logpar_decorate` is True and a valid decorator is provided, 
+    #     This method uses the `rgb_decorate_and_execute` decorator factory to conditionally apply the provided
+    #     decorator to the target function. The decision to decorate is controlled by the `logpar_decorate`
+    #     attribute of the `rgb_config` object. If `logpar_decorate` is True and a valid decorator is provided,
     #     the function is wrapped with the specified decorator.
 
     #     Parameters:
     #     ----------
     #     func : Callable
     #         The target function to be decorated.
-    #     
+    #
     #     rgb_config : object
     #         A configuration object that must have the following attributes:
     #         - `logpar_decorate` (bool): Determines whether the function should be decorated.
     #         - `logger` (logging.Logger): A logger instance to pass to the decorator.
-    #     
+    #
     #     decorator : Callable
-    #         The decorator function to apply to `func`. This decorator must accept the target 
+    #         The decorator function to apply to `func`. This decorator must accept the target
     #         function and the logger as arguments.
 
     #     Returns:
@@ -455,5 +486,3 @@ class RGBLogging:
     #         logger=rgb_config.logger,
     #     )(func)
     #     return decorated_func
-
-
