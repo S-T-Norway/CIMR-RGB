@@ -24,31 +24,54 @@ from cimr_rgb.grid_generator import GRIDS, PROJECTIONS
 
 # ncdump does not display chunking information by default, so we adding it here as metadata
 CDL = {
+    "INTERIM_ATTRIBUTES": {
+        "cell_col": {
+            "units": "Grid y-coordinate",
+            "long_name": "Grid column index (substitute this text) for the chosen output grid",
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "0,2147483647",  # depends on the variable type
+            # "_Storage": "",
+            # "_ChunkSizes": "",
+            # "_FillValue": nc.default_fillvals['f8'],
+            "comment": "Grid col index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
+        },
+        "cell_row": {
+            "units": "Grid x-coordinate",
+            "long_name": "Grid row index (substitute this text) for the chosen output grid",
+            "grid_mapping": "crs",
+            "coverage_content_type": "Grid",
+            "valid_range": "0,2147483647",  # depends on the variable type
+            # "_Storage": "",
+            # "_ChunkSizes": "",
+            # "_FillValue": nc.default_fillvals['f8'], # Int
+            "comment": "Grid row index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
+        },
+    },
     "LOCAL_ATTRIBUTES": {
         "Measurement": {
-            # TODO: Change these number to int32 (now it is int64)
-            "cell_col": {
-                "units": "Grid y-coordinate",
-                "long_name": "Grid column index (substitute this text) for the chosen output grid",
-                "grid_mapping": "crs",
-                "coverage_content_type": "Grid",
-                "valid_range": "0,2147483647",  # depends on the variable type
-                # "_Storage": "",
-                # "_ChunkSizes": "",
-                # "_FillValue": nc.default_fillvals['f8'],
-                "comment": "Grid col index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
-            },
-            "cell_row": {
-                "units": "Grid x-coordinate",
-                "long_name": "Grid row index (substitute this text) for the chosen output grid",
-                "grid_mapping": "crs",
-                "coverage_content_type": "Grid",
-                "valid_range": "0,2147483647",  # depends on the variable type
-                # "_Storage": "",
-                # "_ChunkSizes": "",
-                # "_FillValue": nc.default_fillvals['f8'], # Int
-                "comment": "Grid row index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
-            },
+            # "cell_col": {
+            #     "units": "Grid y-coordinate",
+            #     "long_name": "Grid column index (substitute this text) for the chosen output grid",
+            #     "grid_mapping": "crs",
+            #     "coverage_content_type": "Grid",
+            #     "valid_range": "0,2147483647",  # depends on the variable type
+            #     # "_Storage": "",
+            #     # "_ChunkSizes": "",
+            #     # "_FillValue": nc.default_fillvals['f8'],
+            #     "comment": "Grid col index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
+            # },
+            # "cell_row": {
+            #     "units": "Grid x-coordinate",
+            #     "long_name": "Grid row index (substitute this text) for the chosen output grid",
+            #     "grid_mapping": "crs",
+            #     "coverage_content_type": "Grid",
+            #     "valid_range": "0,2147483647",  # depends on the variable type
+            #     # "_Storage": "",
+            #     # "_ChunkSizes": "",
+            #     # "_FillValue": nc.default_fillvals['f8'], # Int
+            #     "comment": "Grid row index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
+            # },
             "bt_h": {
                 "units": "K",
                 "long_name": "H-polarised TOA Brightness Temperatures",
@@ -1203,6 +1226,9 @@ class ProductGenerator:
         >>> generator.generate_new_product(data_dict)
         """
 
+        # print(data_dict["L"].keys())
+        # exit()
+
         # Getting filename (in simplified format)
         outfile = self.get_processor_filename_in_simplified_fmt()
         # Getting global attributes
@@ -1222,6 +1248,7 @@ class ProductGenerator:
                 top_group = dataset.createGroup(
                     f"{self.config.target_band[0]}_BAND_TARGET"
                 )
+
             # Loop through the parameters defined inside CDL and compare their
             # names to the ones provided inside pickled file. If they coincide
             # we write them into specific group (defined in CDL). In addition,
@@ -1238,15 +1265,6 @@ class ProductGenerator:
 
                 # Looping through data dictionary and retrieving its variables (per band)
                 for band_name, band_var in data_dict.items():
-                    # ----------------------
-                    # cell_row and cell_col
-                    # ----------------------
-                    # Removing/skipping cell_row and cell_col if we encounter L1R
-                    # (since it is not needed for L1R)
-                    if self.config.grid_type == "L1R" and (
-                        band_var == "cell_row" or band_var == "cell_col"
-                    ):
-                        continue
                     # ----------------------
                     # Processing Flags
                     # ----------------------
@@ -1276,7 +1294,119 @@ class ProductGenerator:
                         )
 
                     # -----------------------------------
-                    # Creating netCDF Variables
+                    # Working with cell_col and cell_row
+                    # -----------------------------------
+                    # Removing/skipping cell_row and cell_col if we encounter L1R
+                    # (since it is not needed for L1R) and adding correct values
+                    # together with placing these variables into correct place in
+                    # case of L1c
+                    if self.config.grid_type == "L1R" and (
+                        band_var == "cell_row" or band_var == "cell_col"
+                    ):
+                        continue
+                    else:
+                        if self.config.split_fore_aft:
+                            fore = [
+                                key + "_fore"
+                                for key in CDL["INTERIM_ATTRIBUTES"].keys()
+                            ]
+                            aft = [
+                                key + "_aft" for key in CDL["INTERIM_ATTRIBUTES"].keys()
+                            ]
+                            regrid_vars = fore + aft
+                        else:
+                            regrid_vars = [
+                                key for key in CDL["INTERIM_ATTRIBUTES"].keys()
+                            ]
+
+                        # Looping through data dictionary and retrieving its variables (per band)
+                        for regrid_var in regrid_vars:
+                            if regrid_var not in top_group.variables:
+                                var_shape = band_var[regrid_var].shape
+                                var_dim, chunk_size = self.determine_dimension(
+                                    band_name=band_name, var_shape=var_shape
+                                )
+
+                                print(var_dim)
+                                var_type = self.get_netcdf_dtype(
+                                    band_var[regrid_var].dtype
+                                )
+                                var_fill = nc.default_fillvals[var_type]
+
+                                self.logger.debug(
+                                    f"Creating a variable `{regrid_var}` of type `{var_type}` with the following attributes:"
+                                )
+                                self.logger.debug(
+                                    f"Group Field: {top_group}, Band Name: {band_name}, _FillValue: {var_fill}, Dimensions: {var_dim}"
+                                )
+                                # Determine the appropriate slice based on variable shape
+                                slices = tuple(slice(None) for _ in var_shape)
+
+                                # TODO: This part is intentional because chunk_size does not really work yet
+                                chunk_size = None
+
+                                if chunk_size is None:
+                                    var_data = top_group.createVariable(
+                                        varname=regrid_var,
+                                        datatype=var_type,  # "double",
+                                        dimensions=var_dim,  # ('x'),
+                                        fill_value=var_fill,  # group_vals[regrid_var]["_FillValue"]
+                                    )
+                                else:
+                                    var_data = top_group.createVariable(
+                                        varname=regrid_var,
+                                        datatype=var_type,
+                                        dimensions=var_dim,
+                                        fill_value=var_fill,
+                                        contiguous=False,
+                                        chunksizes=chunk_size,
+                                    )
+                                # Assign values to the variable
+                                var_data[slices] = band_var[regrid_var]
+
+                                # if "cell_col" in regrid_var:
+                                #     for attr_name, attr_value in CDL["INTERIM_ATTRIBUTES"]["cell_col"].items():
+                                # Loop through the dictionary and set attributes for the variable
+                                for attr_name, attr_value in CDL["INTERIM_ATTRIBUTES"][
+                                    "cell_col"
+                                    if "cell_col" in regrid_var
+                                    else "cell_row"
+                                ].items():
+                                    # Populating metadata of cell_row | cell_col variables
+                                    pattern = r"\(substitute this text\) "
+                                    if self.config.split_fore_aft:
+                                        if "_fore" in regrid_var:
+                                            substitution = "(fore scan) "
+                                        else:  # "_aft" in var_name:
+                                            substitution = "(aft scan) "
+                                    else:
+                                        substitution = ""
+
+                                    self.logger.debug(
+                                        f"Variable {regrid_var} had the following attribute value: {attr_name}={attr_value}"
+                                    )
+
+                                    if attr_name == "long_name":
+                                        attr_value = re.sub(
+                                            pattern, substitution, attr_value
+                                        )
+                                    elif attr_name == "comment":
+                                        attr_value = re.sub(
+                                            pattern, substitution, attr_value
+                                        )
+                                    # Use setncattr to assign the attribute (from the CDL dict)
+                                    var_data.setncattr(attr_name, attr_value)
+                                    # Assigning another attribute to a variable
+                                    if chunk_size is None:
+                                        var_data.setncattr("_Storage", "contiguous")
+                                    else:
+                                        var_data.setncattr("_Storage", "chunked")
+                                        var_data.setncattr(
+                                            "_ChunkSizes", f"{chunk_size}"
+                                        )
+
+                    # -----------------------------------
+                    # Creating (All Other) netCDF Variables
                     # -----------------------------------
                     for var_name, var_val in band_var.items():
                         var_shape = var_val.shape
@@ -1455,46 +1585,6 @@ class ProductGenerator:
                                         var_data.setncattr(
                                             "_ChunkSizes", f"{chunk_size}"
                                         )
-
-                            # Working with the cell_row | cell_col variables
-                            if ("cell_col" or "cell_row") in var_name:
-                                pattern = r"\(substitute this text\) "
-                                if self.config.split_fore_aft:
-                                    if "_fore" in var_name:
-                                        substitution = "(fore scan) "
-                                    else:  # "_aft" in var_name:
-                                        substitution = "(aft scan) "
-                                else:
-                                    substitution = ""
-
-                                attr_name = "long_name"
-                                attr_value = group_vals[regrid_var][attr_name]
-                                self.logger.debug(
-                                    f"Variable {var_name} had the following attribute value: {attr_name}={attr_value}"
-                                )
-                                attr_value = re.sub(pattern, substitution, attr_value)
-                                var_data.setncattr(attr_name, attr_value)
-
-                                self.logger.debug(
-                                    f"Variable {var_name} received the following attribute value: {attr_name}={attr_value}"
-                                )
-
-                                attr_name = "comment"
-                                attr_value = group_vals[regrid_var][attr_name]
-                                self.logger.debug(
-                                    f"Variable {var_name} had the following attribute value: {attr_name}={attr_value}"
-                                )
-                                print(
-                                    f"Variable {var_name} had the following attribute value: {attr_name}={attr_value}"
-                                )
-                                attr_value = re.sub(pattern, substitution, attr_value)
-                                var_data.setncattr(attr_name, attr_value)
-                                self.logger.debug(
-                                    f"Variable {var_name} received the following attribute value: {attr_name}={attr_value}"
-                                )
-                                print(
-                                    f"Variable {var_name} received the following attribute value: {attr_name}={attr_value}"
-                                )
 
     def get_netcdf_dtype(self, np_dtype: np.dtype) -> str:
         """
