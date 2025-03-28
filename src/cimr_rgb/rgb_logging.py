@@ -330,7 +330,8 @@ class RGBLogging:
 
 
 
-    def setup_global_exception_handler(self, logger):
+    @staticmethod 
+    def setup_global_exception_handler(logger):
         """
         Redirect uncaught exceptions to the logger.
         """

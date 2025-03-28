@@ -493,7 +493,8 @@ def map_compare(data1, data2):
     )
     repo_root = grasp_io.find_repo_root()
     img_path = repo_root.joinpath(
-        "output/MS3_verification_tests/T_12/T_12_difference2.png"
+        # "output/MS3_verification_tests/T_12/T_12_difference2.png"
+        "output/system/T_12/T_12_difference2.png"
     )  # ""
     plt.savefig(img_path, dpi=300)
     # plt.show()

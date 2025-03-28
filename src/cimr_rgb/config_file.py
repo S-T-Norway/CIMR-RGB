@@ -154,7 +154,7 @@ class ConfigFile:
                 "Invalid value for `decorate` encountered. \nThe `decorate` parameter can either be `True` or `False`."
             )
 
-        rgb_logging.setup_global_exception_handler(logger=self.logger)
+        RGBLogging.setup_global_exception_handler(logger=self.logger)
         # -----------
         # OutputData metadata
         self.product_version = self.validate_output_data_metadata(

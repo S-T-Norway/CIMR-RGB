@@ -102,11 +102,11 @@ def get_beamdata(
         )
         if igrid == 1:
             logger.info(
-                f"Antenna patterns are provided in the (u,v) coordinates and will be converted into (theta,phi)"
+                "Antenna patterns are provided in the (u,v) coordinates and will be converted into (theta,phi)"
             )
         else:
             raise NotImplementedError(
-                f"The module functionality is implemented only for IGRID value = 1 since CIMR patterns were provided in this format."
+                "The module functionality is implemented only for IGRID value = 1 since CIMR patterns were provided in this format."
             )
 
         # The following lines are repeated NSET of times (as per GRASP manual instructions)
@@ -191,7 +191,7 @@ def get_beamdata(
                     # It is IS in GRASP manual --- the column number of 1st datapoint
                     is_ = 1
                     # It is IN in GRASP manual --- the # of datapoints in row J (j_)
-                    in_ = nx
+                    in_ = nx - 1
                 elif klimit == 1:
                     is_ = int(line_numbers[0])
                     in_ = int(line_numbers[1])
@@ -794,11 +794,14 @@ def main():
     # Creating a logger object based on the user preference
     if use_rgb_logging and logger_config is not None:
         rgb_logging = RGBLogging(logdir=logdir, log_config=logger_config)
-        rgb_logger = rgb_logging.get_logger("rgb")
+        rgb_logger = rgb_logging.get_logger("rgb-logger")
+    else:
+        rgb_logger = logging.getLogger(__name__)
+        rgb_logger.addHandler(logging.NullHandler())
 
     # -----------------------------
 
-    rgb_logger.debug(f"Starting the script using the following libraries:")
+    rgb_logger.debug("Starting the script using the following libraries:")
     rgb_logger.debug(f"numpy      {np.__version__}")
     rgb_logger.debug(f"scipy      {sp.__version__}")
     rgb_logger.debug(f"h5py       {h5py.__version__}")
