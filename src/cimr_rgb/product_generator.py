@@ -29,25 +29,25 @@ CDL = {
             # TODO: Change these number to int32 (now it is int64)
             "cell_col": {
                 "units": "Grid y-coordinate",
-                "long_name": "Grid column index for the chosen output grid",
+                "long_name": "Grid column index (substitute this text) for the chosen output grid",
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "0,2147483647",  # depends on the variable type
                 # "_Storage": "",
                 # "_ChunkSizes": "",
                 # "_FillValue": nc.default_fillvals['f8'],
-                "comment": "Grid row index for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
+                "comment": "Grid col index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
             },
             "cell_row": {
                 "units": "Grid x-coordinate",
-                "long_name": "Grid row Index for the chosen output grid",
+                "long_name": "Grid row index (substitute this text) for the chosen output grid",
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "0,2147483647",  # depends on the variable type
                 # "_Storage": "",
                 # "_ChunkSizes": "",
                 # "_FillValue": nc.default_fillvals['f8'], # Int
-                "comment": "Grid row Index for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
+                "comment": "Grid row index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
             },
             "bt_h": {
                 "units": "K",
@@ -409,7 +409,6 @@ CDL = {
                 "comment": "A binary string of 1’s and 0’s "
                 + "providing information related to the "
                 + "processing of L1c/r data.",
-                # TODO: TBD-bit should either be 8 bit or 16 bits
             }
         },
         "Quality_information": {
@@ -440,7 +439,6 @@ CDL = {
                 + "summarises the calibration quality for each channel and scan. "
                 + "The data quality flag summarises the BT data quality for each "
                 + "channel and scan.",
-                # TODO: put 16 or remove it.
             },
             "data_quality_flag": {
                 "units": "K",
@@ -487,15 +485,6 @@ class ProductGenerator:
             self.logger = logging.getLogger(__name__)
             self.logger.addHandler(logging.NullHandler())
             self.logpar_decorate = False
-
-    # TODO: We face the following problem: the global dimensions should
-    #       coincide with local ones for the variable names. Therefore,
-    #       I need to loop through bands and determine how many dimensions
-    #       should be in there, e.g. if we have L and X bands, then we
-    #       have n_feeds_L_BAND and n_feeds_X_BANDS only, if there are
-    #       more then there will be more. Hence, I will create a separate
-    #       method to work with global metadata and a separate on to work
-    #       with local ones.
 
     # Getting netCDF dataset
     def generate_global_metadata(self, data_dict: dict) -> dict:
@@ -807,8 +796,6 @@ class ProductGenerator:
 
         return output_array
 
-    # TODO: Figure this one out properly
-    # This is for L1C only (?)
     def compute_geospatial_attributes(
         self,
         longitude,
@@ -1074,7 +1061,6 @@ class ProductGenerator:
         return glob_dims_dict
         # -----------------------------------
 
-    # TODO: There is shape mismatch, which needs to be investigated
     def populate_global_dimensions_cimr(
         self,
         glob_dims_dict,
@@ -1469,6 +1455,46 @@ class ProductGenerator:
                                         var_data.setncattr(
                                             "_ChunkSizes", f"{chunk_size}"
                                         )
+
+                            # Working with the cell_row | cell_col variables
+                            if ("cell_col" or "cell_row") in var_name:
+                                pattern = r"\(substitute this text\) "
+                                if self.config.split_fore_aft:
+                                    if "_fore" in var_name:
+                                        substitution = "(fore scan) "
+                                    else:  # "_aft" in var_name:
+                                        substitution = "(aft scan) "
+                                else:
+                                    substitution = ""
+
+                                attr_name = "long_name"
+                                attr_value = group_vals[regrid_var][attr_name]
+                                self.logger.debug(
+                                    f"Variable {var_name} had the following attribute value: {attr_name}={attr_value}"
+                                )
+                                attr_value = re.sub(pattern, substitution, attr_value)
+                                var_data.setncattr(attr_name, attr_value)
+
+                                self.logger.debug(
+                                    f"Variable {var_name} received the following attribute value: {attr_name}={attr_value}"
+                                )
+
+                                attr_name = "comment"
+                                attr_value = group_vals[regrid_var][attr_name]
+                                self.logger.debug(
+                                    f"Variable {var_name} had the following attribute value: {attr_name}={attr_value}"
+                                )
+                                print(
+                                    f"Variable {var_name} had the following attribute value: {attr_name}={attr_value}"
+                                )
+                                attr_value = re.sub(pattern, substitution, attr_value)
+                                var_data.setncattr(attr_name, attr_value)
+                                self.logger.debug(
+                                    f"Variable {var_name} received the following attribute value: {attr_name}={attr_value}"
+                                )
+                                print(
+                                    f"Variable {var_name} received the following attribute value: {attr_name}={attr_value}"
+                                )
 
     def get_netcdf_dtype(self, np_dtype: np.dtype) -> str:
         """
