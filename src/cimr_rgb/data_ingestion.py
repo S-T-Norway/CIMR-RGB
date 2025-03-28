@@ -744,6 +744,8 @@ class DataIngestion:
                         continue
                     elif "regridding_l1b_orphans" in variable:
                         continue
+                    elif "processing_flag" in variable:
+                        continue
                     else:
                         variable_key = self.config.variable_key_map[variable]
                         if variable == "acq_time_utc":
@@ -819,11 +821,14 @@ class DataIngestion:
                 num_feed_horns = self.config.num_horns[band]
                 num_scans, num_samples = variable_dict["longitude"].shape[
                     :2
-                ]  # Changed from processing scan angle because longitude will ALWAYS be there
+                ]
+
+                # Create processing_flag variable as array of zeros with same shape as longitude
+                variable_dict["processing_flag"] = zeros(
+                    variable_dict["longitude"].shape, dtype=int
+                )
 
                 # Combine Feed horns and Flatten
-
-                # variable_dict = self.combine_cimr_feeds(variable_dict, num_feed_horns)
                 timed_obj = RGBLogging.rgb_decorate_and_execute(
                     decorate=self.logpar_decorate,
                     decorator=RGBLogging.track_perf,
