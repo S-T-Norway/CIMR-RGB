@@ -405,6 +405,7 @@ class ConfigFile:
                 "acq_time_utc": "utc_time",
                 "azimuth": "earth_azimuth",
                 "oza": "OZA",
+                "processing_flag": "processing_flag",
             }
             self.aft_angle_min = 180
             self.aft_angle_max = 360
@@ -1694,139 +1695,6 @@ class ConfigFile:
 
         return num_scans, num_earth_samples
 
-    # @staticmethod
-    # def validate_variables_to_regrid(
-    #     config_object, input_data_type, variables_to_regrid
-    # ):
-    #     value = config_object.find(variables_to_regrid).text
-
-    #     if input_data_type == "SMAP":
-    #         valid_input = [
-    #             "bt_h",
-    #             "bt_v",
-    #             "bt_3",
-    #             "bt_4",
-    #             "processing_scan_angle",
-    #             "longitude",
-    #             "latitude",
-    #             "faraday_rot_angle",
-    #             "nedt_h",
-    #             "nedt_v",
-    #             "nedt_3",
-    #             "nedt_4",
-    #             "regridding_n_samples",
-    #             "regridding_l1b_orphans",
-    #             "acq_time_utc",
-    #             "azimuth",
-    #         ]
-
-    #         default_vars = [
-    #             "bt_h",
-    #             "bt_v",
-    #             "bt_3",
-    #             "bt_4",
-    #             "processing_scan_angle",
-    #             "longitude",
-    #             "latitude",
-    #             "faraday_rot_angle",
-    #             "nedt_h",
-    #             "nedt_v",
-    #             "nedt_3",
-    #             "nedt_4",
-    #             "regridding_n_samples",
-    #             "regridding_l1b_orphans",
-    #             "acq_time_utc",
-    #             "azimuth",
-    #         ]
-
-    #     elif input_data_type == "AMSR2":
-    #         valid_input = [
-    #             "bt_h",
-    #             "bt_v",
-    #             "longitude",
-    #             "latitude",
-    #             "regridding_n_samples",
-    #             "x_position",
-    #             "y_position",
-    #             "z_position",
-    #             "x_velocity",
-    #             "y_velocity",
-    #             "z_velocity",
-    #             "azimuth",
-    #             "solar_azimuth",
-    #             "acq_time_utc",
-    #         ]
-
-    #         default_vars = [
-    #             "bt_h",
-    #             "bt_v",
-    #             "longitude",
-    #             "latitude",
-    #             "regridding_n_samples",
-    #             "x_position",
-    #             "y_position",
-    #             "z_position",
-    #             "x_velocity",
-    #             "y_velocity",
-    #             "z_velocity",
-    #             "azimuth",
-    #             "solar_azimuth",
-    #             "acq_time_utc",
-    #         ]
-
-    #     elif input_data_type == "CIMR":
-    #         valid_input = [
-    #             "bt_h",
-    #             "bt_v",
-    #             "bt_3",
-    #             "bt_4",
-    #             "processing_scan_angle",
-    #             "longitude",
-    #             "latitude",
-    #             "nedt_h",
-    #             "nedt_v",
-    #             "nedt_3",
-    #             "nedt_4",
-    #             "regridding_n_samples",
-    #             "regridding_l1b_orphans",
-    #             "acq_time_utc",
-    #             "azimuth",
-    #             "oza",
-    #         ]
-
-    #         default_vars = [
-    #             "bt_h",
-    #             "bt_v",
-    #             "bt_3",
-    #             "bt_4",
-    #             "processing_scan_angle",
-    #             "longitude",
-    #             "latitude",
-    #             "nedt_h",
-    #             "nedt_v",
-    #             "nedt_3",
-    #             "nedt_4",
-    #             "regridding_n_samples",
-    #             "regridding_l1b_orphans",
-    #             "acq_time_utc",
-    #             "azimuth",
-    #             "oza",
-    #         ]
-    #     else:
-    #         raise ValueError(f"Invalid `input_data_type`: {input_data_type}")
-
-    #     if value is not None:
-    #         for variable in value.split():
-    #             if variable not in valid_input:
-    #                 raise ValueError(
-    #                     f"Invalid variable_to_regrid. Check Configuration File."
-    #                     f" Valid variables_to_regrid: {valid_input}"
-    #                 )
-    #         return value.split()
-    #     else:
-    #         # Return default variables
-    #         return default_vars
-
     @staticmethod
     def validate_variables_to_regrid(
         config_object, input_data_type, variables_to_regrid
@@ -1934,6 +1802,7 @@ class ConfigFile:
                 "acq_time_utc",
                 "azimuth",
                 "oza",
+                "processing_flag"
             ]
             default_vars = valid_input[:]
 
