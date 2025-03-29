@@ -342,14 +342,14 @@ def get_netcdf_data():
             else:
                 for bt in variables_list:
                     if "fore" in bt:
-                        cell_row = np.array(band_data["cell_row_fore"][:])
-                        cell_col = np.array(band_data["cell_col_fore"][:])
+                        cell_row = np.array(data["cell_row_fore"][:])
+                        cell_col = np.array(data["cell_col_fore"][:])
                     elif "aft" in bt:
-                        cell_row = np.array(band_data["cell_row_aft"][:])
-                        cell_col = np.array(band_data["cell_col_aft"][:])
+                        cell_row = np.array(data["cell_row_aft"][:])
+                        cell_col = np.array(data["cell_col_aft"][:])
                     else:
-                        cell_row = np.array(band_data["cell_row"][:])
-                        cell_col = np.array(band_data["cell_col"][:])
+                        cell_row = np.array(data["cell_row"][:])
+                        cell_col = np.array(data["cell_col"][:])
 
                     var = np.array(band_data[bt][:])
                     grid = np.full(
