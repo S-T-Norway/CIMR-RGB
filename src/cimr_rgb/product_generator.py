@@ -418,9 +418,12 @@ CDL = {
             },
         },
         "Processing_flags": {
-            "processing_flags": {
+            "processing_flag": {
                 "units": "N/A",
-                "long_name": "L1c processing performance related information.",
+                "long_name": "An 8-bit binary string of 1’s and 0’s indicating "
+                + "RGB processing specific flags used in the derivation of L1C/R "
+                + "data. Bit position ‘0’ corresponds to the least significant "
+                + "bit. For [fore|aft|entire] scan.",
                 "grid_mapping": "crs",
                 "coverage_content_type": "Grid",
                 "valid_range": "0, 65535",
@@ -429,9 +432,31 @@ CDL = {
                 # "_FillValue": "0",#nc.default_fillvals['f8'],
                 # "comment": "A TBD-bit binary string of 1’s and 0’s "
                 # + "indicating a variety of TBD information related to the "
-                "comment": "A binary string of 1’s and 0’s "
-                + "providing information related to the "
-                + "processing of L1c/r data.",
+                "comment": "An 8-bit binary string of 1’s and 0’s indicating "
+                + "RGB processing specific flags used in the derivation of L1C/R "
+                + "data. Bit position ‘0’ corresponds to the least significant "
+                + "bit. Bit 0: 0 = Number of neighbours available was within or "
+                + "equal to the selected max_neighbours config parameter. 1 = "
+                + "There were more neighbours available than the selected "
+                + "max_neighbours config parameter. Bit 1: 0 = All antenna "
+                + "patterns used for the target sample were resolved and projected "
+                + "to the target grid. 1 = One or more of the antenna patterns "
+                + "used for the target samples were not resolved or unable to be "
+                + "projected to the target grid. Bit 2: 0 = Iterative technique "
+                + "not used OR target relative tolerance was reached (convergence) "
+                + "in the inversion algorithm. 1 = Iterative technique used and "
+                + "target relative tolerance not met in the inversion algorithm "
+                + "(non-convergence). Bit 3: 0 = The Integration grid for the "
+                + "target cell was constructed. 1 = The integration grid for the "
+                + "target cell could not be constructed. Bit 4: 0 = 0 = Antenna "
+                + "patterns not used OR overlap between source and target patterns "
+                + "deemed sufficient to yield reliable results. 1 = Antenna "
+                + "patterns used and overlap between source and target patterns "
+                + "deemed insufficient to yield reliable results. Bit 5: 0 = This "
+                + "bit is currently not used. 1 = This bit is currently not used. "
+                + "Bit 6: 0 = This bit is currently not used. 1 = This bit is "
+                + "currently not used. Bit 7: 0 = This bit is currently not used. "
+                + "1 = This bit is currently not used.",
             }
         },
         "Quality_information": {
@@ -1297,117 +1322,6 @@ class ProductGenerator:
                     # Creating netCDF Variables
                     # -----------------------------------
                     for var_name, var_val in band_var.items():
-                        # # -----------------------------------
-                        # # Working with cell_col and cell_row
-                        # # -----------------------------------
-                        # # Removing/skipping cell_row and cell_col if we encounter L1R
-                        # # (since it is not needed for L1R) and adding correct values
-                        # # together with placing these variables into correct place in
-                        # # case of L1c
-                        # if self.config.grid_type == "L1R" and (
-                        #     "cell_row" in band_var or "cell_col" in band_var
-                        # ):
-                        #     continue
-                        # else:
-                        #     if self.config.split_fore_aft:
-                        #         fore = [
-                        #             key + "_fore"
-                        #             for key in CDL["INTERIM_ATTRIBUTES"].keys()
-                        #         ]
-                        #         aft = [
-                        #             key + "_aft" for key in CDL["INTERIM_ATTRIBUTES"].keys()
-                        #         ]
-                        #         regrid_vars = fore + aft
-                        #     else:
-                        #         regrid_vars = [
-                        #             key for key in CDL["INTERIM_ATTRIBUTES"].keys()
-                        #         ]
-
-                        #     # Looping through data dictionary and retrieving its variables (per band)
-                        #     for regrid_var in regrid_vars:
-                        #         if regrid_var not in top_group.variables:
-                        #             var_shape = band_var[regrid_var].shape
-                        #             var_dim, chunk_size = self.determine_dimension(
-                        #                 band_name=band_name, var_shape=var_shape
-                        #             )
-
-                        #             var_type = self.get_netcdf_dtype(
-                        #                 band_var[regrid_var].dtype
-                        #             )
-                        #             var_fill = nc.default_fillvals[var_type]
-
-                        #             self.logger.debug(
-                        #                 f"Creating a variable `{regrid_var}` of type `{var_type}` with the following attributes:"
-                        #             )
-                        #             self.logger.debug(
-                        #                 f"Group Field: {top_group}, Band Name: {band_name}, _FillValue: {var_fill}, Dimensions: {var_dim}"
-                        #             )
-                        #             # Determine the appropriate slice based on variable shape
-                        #             slices = tuple(slice(None) for _ in var_shape)
-
-                        #             # TODO: This part is intentional because chunk_size does not really work yet
-                        #             chunk_size = None
-
-                        #             if chunk_size is None:
-                        #                 var_data = top_group.createVariable(
-                        #                     varname=regrid_var,
-                        #                     datatype=var_type,  # "double",
-                        #                     dimensions=var_dim,  # ('x'),
-                        #                     fill_value=var_fill,  # group_vals[regrid_var]["_FillValue"]
-                        #                 )
-                        #             else:
-                        #                 var_data = top_group.createVariable(
-                        #                     varname=regrid_var,
-                        #                     datatype=var_type,
-                        #                     dimensions=var_dim,
-                        #                     fill_value=var_fill,
-                        #                     contiguous=False,
-                        #                     chunksizes=chunk_size,
-                        #                 )
-                        #             # Assign values to the variable
-                        #             var_data[slices] = band_var[regrid_var]
-
-                        #             # if "cell_col" in regrid_var:
-                        #             #     for attr_name, attr_value in CDL["INTERIM_ATTRIBUTES"]["cell_col"].items():
-                        #             # Loop through the dictionary and set attributes for the variable
-                        #             for attr_name, attr_value in CDL["INTERIM_ATTRIBUTES"][
-                        #                 "cell_col"
-                        #                 if "cell_col" in regrid_var
-                        #                 else "cell_row"
-                        #             ].items():
-                        #                 # Populating metadata of cell_row | cell_col variables
-                        #                 pattern = r"\(substitute this text\) "
-                        #                 if self.config.split_fore_aft:
-                        #                     if "_fore" in regrid_var:
-                        #                         substitution = "(fore scan) "
-                        #                     else:  # "_aft" in var_name:
-                        #                         substitution = "(aft scan) "
-                        #                 else:
-                        #                     substitution = ""
-
-                        #                 self.logger.debug(
-                        #                     f"Variable {regrid_var} had the following attribute value: {attr_name}={attr_value}"
-                        #                 )
-
-                        #                 if attr_name == "long_name":
-                        #                     attr_value = re.sub(
-                        #                         pattern, substitution, attr_value
-                        #                     )
-                        #                 elif attr_name == "comment":
-                        #                     attr_value = re.sub(
-                        #                         pattern, substitution, attr_value
-                        #                     )
-                        #                 # Use setncattr to assign the attribute (from the CDL dict)
-                        #                 var_data.setncattr(attr_name, attr_value)
-                        #                 # Assigning another attribute to a variable
-                        #                 if chunk_size is None:
-                        #                     var_data.setncattr("_Storage", "contiguous")
-                        #                 else:
-                        #                     var_data.setncattr("_Storage", "chunked")
-                        #                     var_data.setncattr(
-                        #                         "_ChunkSizes", f"{chunk_size}"
-                        #                     )
-
                         var_shape = var_val.shape
                         # -----------------------------------
                         # Getting chunk sizes
@@ -1568,6 +1482,19 @@ class ProductGenerator:
                                     attr_value = re.sub(
                                         pattern, substitution, attr_value
                                     )
+
+                                    pattern = r"\[fore\|aft\|entire\]"
+                                    if self.config.split_fore_aft:
+                                        if "_fore" in var_name:
+                                            substitution = "fore"
+                                        else:  # "_aft" in var_name:
+                                            substitution = "aft"
+                                    else:
+                                        substitution = "entire"
+                                    attr_value = re.sub(
+                                        pattern, substitution, attr_value
+                                    )
+
                                     var_data.setncattr(attr_name, attr_value)
                                 elif attr_name == "comment":
                                     pattern = r"\[L\|C\|X\|KU\|KA\]_BAND_\[fore\|aft\]"
