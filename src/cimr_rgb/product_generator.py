@@ -24,54 +24,54 @@ from cimr_rgb.grid_generator import GRIDS, PROJECTIONS
 
 # ncdump does not display chunking information by default, so we adding it here as metadata
 CDL = {
-    "INTERIM_ATTRIBUTES": {
-        "cell_col": {
-            "units": "Grid y-coordinate",
-            "long_name": "Grid column index (substitute this text) for the chosen output grid",
-            "grid_mapping": "crs",
-            "coverage_content_type": "Grid",
-            "valid_range": "0,2147483647",  # depends on the variable type
-            # "_Storage": "",
-            # "_ChunkSizes": "",
-            # "_FillValue": nc.default_fillvals['f8'],
-            "comment": "Grid col index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
-        },
-        "cell_row": {
-            "units": "Grid x-coordinate",
-            "long_name": "Grid row index (substitute this text) for the chosen output grid",
-            "grid_mapping": "crs",
-            "coverage_content_type": "Grid",
-            "valid_range": "0,2147483647",  # depends on the variable type
-            # "_Storage": "",
-            # "_ChunkSizes": "",
-            # "_FillValue": nc.default_fillvals['f8'], # Int
-            "comment": "Grid row index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
-        },
-    },
+    # "INTERIM_ATTRIBUTES": {
+    #     "cell_col": {
+    #         "units": "Grid y-coordinate",
+    #         "long_name": "Grid column index (substitute this text) for the chosen output grid",
+    #         "grid_mapping": "crs",
+    #         "coverage_content_type": "Grid",
+    #         "valid_range": "0,2147483647",  # depends on the variable type
+    #         # "_Storage": "",
+    #         # "_ChunkSizes": "",
+    #         # "_FillValue": nc.default_fillvals['f8'],
+    #         "comment": "Grid col index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
+    #     },
+    #     "cell_row": {
+    #         "units": "Grid x-coordinate",
+    #         "long_name": "Grid row index (substitute this text) for the chosen output grid",
+    #         "grid_mapping": "crs",
+    #         "coverage_content_type": "Grid",
+    #         "valid_range": "0,2147483647",  # depends on the variable type
+    #         # "_Storage": "",
+    #         # "_ChunkSizes": "",
+    #         # "_FillValue": nc.default_fillvals['f8'], # Int
+    #         "comment": "Grid row index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
+    #     },
+    # },
     "LOCAL_ATTRIBUTES": {
         "Measurement": {
-            # "cell_col": {
-            #     "units": "Grid y-coordinate",
-            #     "long_name": "Grid column index (substitute this text) for the chosen output grid",
-            #     "grid_mapping": "crs",
-            #     "coverage_content_type": "Grid",
-            #     "valid_range": "0,2147483647",  # depends on the variable type
-            #     # "_Storage": "",
-            #     # "_ChunkSizes": "",
-            #     # "_FillValue": nc.default_fillvals['f8'],
-            #     "comment": "Grid col index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
-            # },
-            # "cell_row": {
-            #     "units": "Grid x-coordinate",
-            #     "long_name": "Grid row index (substitute this text) for the chosen output grid",
-            #     "grid_mapping": "crs",
-            #     "coverage_content_type": "Grid",
-            #     "valid_range": "0,2147483647",  # depends on the variable type
-            #     # "_Storage": "",
-            #     # "_ChunkSizes": "",
-            #     # "_FillValue": nc.default_fillvals['f8'], # Int
-            #     "comment": "Grid row index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
-            # },
+            "cell_col": {
+                "units": "Grid y-coordinate",
+                "long_name": "Grid column index (substitute this text) for the chosen output grid",
+                "grid_mapping": "crs",
+                "coverage_content_type": "Grid",
+                "valid_range": "0,2147483647",  # depends on the variable type
+                # "_Storage": "",
+                # "_ChunkSizes": "",
+                # "_FillValue": nc.default_fillvals['f8'],
+                "comment": "Grid col index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
+            },
+            "cell_row": {
+                "units": "Grid x-coordinate",
+                "long_name": "Grid row index (substitute this text) for the chosen output grid",
+                "grid_mapping": "crs",
+                "coverage_content_type": "Grid",
+                "valid_range": "0,2147483647",  # depends on the variable type
+                # "_Storage": "",
+                # "_ChunkSizes": "",
+                # "_FillValue": nc.default_fillvals['f8'], # Int
+                "comment": "Grid row index (substitute this text) for the chosen output grid. This variable is used to reconstruct the chosen output grid.",
+            },
             "bt_h": {
                 "units": "K",
                 "long_name": "H-polarised TOA Brightness Temperatures",
@@ -1291,6 +1291,15 @@ class ProductGenerator:
                 # Looping through data dictionary and retrieving its variables (per band)
                 for band_name, band_var in data_dict.items():
                     # ----------------------
+                    # cell_row and cell_col
+                    # ----------------------
+                    # Removing/skipping cell_row and cell_col if we encounter L1R
+                    # (since it is not needed for L1R)
+                    if self.config.grid_type == "L1R" and (
+                        band_var == "cell_row" or band_var == "cell_col"
+                    ):
+                        continue
+                    # ----------------------
                     # Processing Flags
                     # ----------------------
                     # Processing_flags are defined as a separate field
@@ -1339,24 +1348,24 @@ class ProductGenerator:
                             fore = [key + "_fore" for key in group_vals.keys()]
                             aft = [key + "_aft" for key in group_vals.keys()]
                             #
-                            fore_col_row = [
-                                key + "_fore"
-                                for key in CDL["INTERIM_ATTRIBUTES"].keys()
-                            ]
-                            aft_col_row = [
-                                key + "_aft" for key in CDL["INTERIM_ATTRIBUTES"].keys()
-                            ]
+                            # fore_col_row = [
+                            #     key + "_fore"
+                            #     for key in CDL["INTERIM_ATTRIBUTES"].keys()
+                            # ]
+                            # aft_col_row = [
+                            #     key + "_aft" for key in CDL["INTERIM_ATTRIBUTES"].keys()
+                            # ]
                             #
-                            fore = fore + fore_col_row
-                            aft = aft + aft_col_row
+                            # fore = fore + fore_col_row
+                            # aft = aft + aft_col_row
                             regrid_vars = fore + aft
                         else:
-                            regrid_vars_col_row = [
-                                key for key in CDL["INTERIM_ATTRIBUTES"].keys()
-                            ]
+                            # regrid_vars_col_row = [
+                            #     key for key in CDL["INTERIM_ATTRIBUTES"].keys()
+                            # ]
                             regrid_vars = [
                                 key for key in group_vals.keys()
-                            ] + regrid_vars_col_row
+                            ]  # + regrid_vars_col_row
 
                         # Removing the _fore and _aft from the variable name
                         # to get the metadata from CDL (it is almost the same for
@@ -1389,19 +1398,19 @@ class ProductGenerator:
                             # -----------------------------------
                             # Working with cell_col and cell_row
                             # -----------------------------------
-                            elif "cell_row" in var_name or "cell_col" in var_name:
-                                # variable should be created only once
-                                if (
-                                    self.config.grid_type != "L1R"
-                                    and var_name not in top_group.variables
-                                ):
-                                    # modifying the band_group for cel_col and cell_row
-                                    # variables because they belong in the top group
-                                    # instead
-                                    curr_group = top_group
-                                    curr_group_vals = CDL["INTERIM_ATTRIBUTES"]
-                                else:
-                                    continue
+                            # elif "cell_row" in var_name or "cell_col" in var_name:
+                            #     # variable should be created only once
+                            #     if (
+                            #         self.config.grid_type != "L1R"
+                            #         and var_name not in top_group.variables
+                            #     ):
+                            #         # modifying the band_group for cel_col and cell_row
+                            #         # variables because they belong in the top group
+                            #         # instead
+                            #         curr_group = top_group
+                            #         curr_group_vals = CDL["INTERIM_ATTRIBUTES"]
+                            #     else:
+                            #         continue
 
                             # print(curr_group, band_var)
 
