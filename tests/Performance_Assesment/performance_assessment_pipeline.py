@@ -6,6 +6,8 @@ import pickle
 import psutil
 import gc
 import time, tracemalloc
+from scipy.spatial import cKDTree
+import netCDF4 as nc
 from numpy import full, nan, isnan, where, float16
 import numpy as np
 import csv
@@ -13,8 +15,10 @@ from tqdm import tqdm
 from cimr_rgb.config_file import ConfigFile
 from cimr_rgb.data_ingestion import DataIngestion
 from cimr_rgb.regridder import ReGridder, GRIDS
+from cimr_rgb.grid_generator import GridGenerator
 import metrics
 import cimr_grasp.grasp_io as grasp_io
+import convert_test_scenes_to_ease as ctste
 
 
 # import matplotlib
@@ -30,18 +34,34 @@ def run_RGB(config_path):
     return data_dict_out
 
 
-def open_reference_data(reference_data_id, grid_resolution, test_card_folder, band):
+def open_reference_data_ease(reference_data_id, grid_resolution, test_card_folder, band):
     reference_data_file = (f"{test_card_folder}/{reference_data_id}/"
                            f"{reference_data_id}_{grid_resolution}.npz")
     truth_data_dict = np.load(reference_data_file)
     return truth_data_dict[f'{band}_BAND']
 
 
+def open_reference_data_orig(reference_data_id, test_card_folder, band):
+    files = os.listdir(f"{test_card_folder}/{reference_data_id}")
+    files_nc = [ff for ff in files if '.nc' in ff]
+    assert len(files_nc) == 1, f"More than one files with .nc extension in directory {test_card_folder}/{reference_data_id}"
+    reference_data_file = files_nc[0]
+    #truth_data = nc.Dataset(f"{test_card_folder}/{reference_data_id}/{reference_data_file}")
+    #return truth_data[f'{band}_BAND_H'][:], truth_data["Latitude"][:], truth_data["Longitude"]
+    ref_lat, ref_lon, ref_image = ctste.get_data(f"{test_card_folder}/{reference_data_id}/{reference_data_file}", ctste.INCIDENCE_ANGLE)
+    return ref_image[f"{band}_BAND"][::-1, :], ref_lon[::-1, :], ref_lat[::-1, :]
+
+
 def RGB_dict_to_ease(data_dict, variables, grid_definition):
+
+    grid_shape = GRIDS[grid_definition]['n_rows'], GRIDS[grid_definition]['n_cols']
+    grid_proj  = grid_definition.split("_")[1][0]
+    grid_lon, grid_lat = GridGenerator(None, grid_proj, grid_definition).generate_grid_lonlat()
+
     data_dict_ease = {}
     for band in data_dict:
         data_dict_band = {}
-        grid_shape = GRIDS[grid_definition]['n_rows'], GRIDS[grid_definition]['n_cols']
+        
         grid_rows, grid_cols = data_dict[band]['cell_row'], data_dict[band]['cell_col']
 
         for variable in variables:
@@ -54,6 +74,9 @@ def RGB_dict_to_ease(data_dict, variables, grid_definition):
             data_dict_band[variable] = variable_out
 
         data_dict_ease[band] = data_dict_band
+        data_dict_ease[band]['longitude'] = grid_lon
+        data_dict_ease[band]['latitude'] = grid_lat
+
     return data_dict_ease
 
 
@@ -159,7 +182,7 @@ class TestRunner(object):
             except:
                 raise EOFError(f"Error in parsing {self.output_results_csv} Either delete it or set reset_results_data=True")
 
-    def run_tests(self, list_tests, list_metrics, list_reference_data_ids, list_input_data_paths, list_grids, reduced_grid_inds=None):
+    def run_tests(self, list_tests, list_metrics, list_reference_data_ids, list_input_data_paths, list_grids, reduced_grid_inds=None, compare_no_interp=False):
 
         """
         Function running the RGB for the test cases, computing the metrics that compare with the reference images. 
@@ -172,6 +195,8 @@ class TestRunner(object):
             list_input_data_paths (list of strings, corresponding to the paths to the L1B data)
             list_grids (list of strings defining the output grids)
             reduced_grid_inds (list of integers, defining the indexes of a subgrid of the output grid)
+            compare_no_interp (boolean, False = compare with an interpolated reference image on the same grid as the test
+                                        True  = compare the test grid and the reference image without interpolating, doing a nearest negighbor search on cells)
         
         Returns:
             nothing
@@ -251,10 +276,23 @@ class TestRunner(object):
                     # print("----------------------------------------------------")
 
                     # Convert RGB Data to an EASE grid
-                    rgb_image = RGB_dict_to_ease(rgb_dict, ['bt_h'], grid)[test.band]['bt_h']
+                    rgb_ease_dict = RGB_dict_to_ease(rgb_dict, ['bt_h'], grid)
+                    rgb_image = rgb_ease_dict[test.band]['bt_h']
 
                     # Open the reference data
-                    ref_image = open_reference_data(reference_data_id, grid, self.test_data_folder, test.band)
+                    if not compare_no_interp:
+                        ref_image = open_reference_data_ease(reference_data_id, grid, self.test_data_folder, test.band)
+                    else:
+                        ref_image, ref_lon, ref_lat = open_reference_data_orig(reference_data_id, self.test_data_folder, test.band)
+                        rgb_lon = rgb_ease_dict[test.band]['longitude']
+                        rgb_lat = rgb_ease_dict[test.band]['latitude']
+                        
+                        rgb_coords = np.column_stack((rgb_lon.ravel(), rgb_lat.ravel()))
+                        ref_coords = np.column_stack((ref_lon.ravel(), ref_lat.ravel()))
+                        rgb_tree = cKDTree(rgb_coords)
+                        #ref_tree = cKDTree(ref_coords)
+                        _, idx = rgb_tree.query(ref_coords)
+                        rgb_image = rgb_image.ravel()[idx].reshape(ref_image.shape) #upsampled rgb_image
 
                     # Add test configs and performance metrics to CSV
                     row = [test.testID, reference_data_id, test.algorithm, test.band, grid, t1-t0, peak/1024**2]
