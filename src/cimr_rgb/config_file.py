@@ -154,7 +154,7 @@ class ConfigFile:
                 "Invalid value for `decorate` encountered. \nThe `decorate` parameter can either be `True` or `False`."
             )
 
-        rgb_logging.setup_global_exception_handler(logger=self.logger)
+        RGBLogging.setup_global_exception_handler(logger=self.logger)
         # -----------
         # OutputData metadata
         self.product_version = self.validate_output_data_metadata(
@@ -979,7 +979,6 @@ class ConfigFile:
             f" {valid_input} for GridParams/grid_type data."
         )
 
-    # TODO:
     @staticmethod
     def validate_target_band(config_object, target_band, input_data_type, grid_type):
         """
@@ -1043,7 +1042,6 @@ class ConfigFile:
                 f"Invalid target band for SMAP L1C remap. Valid target band is: {valid_input}"
             )
 
-    # TODO:
     @staticmethod
     def validate_source_band(config_object, source_band, input_data_type):
         """
@@ -1802,7 +1800,7 @@ class ConfigFile:
                 "acq_time_utc",
                 "azimuth",
                 "oza",
-                "processing_flag"
+                "processing_flag",
             ]
             default_vars = valid_input[:]
 

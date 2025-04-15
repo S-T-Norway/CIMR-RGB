@@ -921,6 +921,7 @@ def test_get_scan_geometry(
                 "acq_time_utc",
                 "azimuth",
                 "oza",
+                "processing_flag",
             ],
             False,
         ),  # Default vars

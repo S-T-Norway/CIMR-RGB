@@ -686,6 +686,8 @@ def main():
 
     rgb_config = get_rgb_configuration(parser=parser)
 
+    RGBLogging.setup_global_exception_handler(logger=rgb_config.logger)
+
     # Ingest and Extract L1B Data
     timed_obj = RGBLogging.rgb_decorate_and_execute(
         decorate=rgb_config.logpar_decorate,
