@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Updated comments and removed TBDs from product_generator module
 - Fixed a bug that wasn't allowing an NEDT calculation for IDS (for split fore/aft=False)
 - Updated system tests and unit tests to reflect all changes 
+- Performance optimisations of rSIR and BG algorithms
 
 ### Removed
 - Redundant files from previous software versions
