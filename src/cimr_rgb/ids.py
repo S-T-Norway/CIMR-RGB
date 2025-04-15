@@ -120,6 +120,13 @@ class IDSInterp:
                 if variable not in self.config.variables_to_regrid:
                     # Check this
                     continue
+
+                elif 'nedt' in variable:
+                    variable_dict_out[variable] = self.get_nedt(
+                        samples_dict=samples_dict,
+                        variable=variable_dict[variable]
+                    )
+
                 else:
                     variable_dict_out[variable] = self.IDS(
                         samples_dict=samples_dict,

@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="CIMR" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="pyproj_env" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="run_grasp" project-jdk-type="Python SDK" />
 </project>
