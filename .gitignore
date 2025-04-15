@@ -158,3 +158,5 @@ cython_debug/
 # Local virtual environments
 .localenv/
 
+/tests/Performance_Assesment/plotting_scripts/
+/tests/Performance_Assesment/saved_results/
