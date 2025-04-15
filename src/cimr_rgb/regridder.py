@@ -139,50 +139,6 @@ class ReGridder:
 
         return target_grid
 
-    # def get_neighbours(
-    #     self, source_lon, source_lat, target_lon, target_lat, search_radius, neighbours
-    # ):
-    #     source_def = geometry.SwathDefinition(lons=source_lon, lats=source_lat)
-
-    #     if self.config.grid_type == "L1C":
-    #         target_def = geometry.GridDefinition(lons=target_lon, lats=target_lat)
-
-    #     elif self.config.grid_type == "L1R":
-    #         target_def = geometry.SwathDefinition(lons=target_lon, lats=target_lat)
-
-    #     # warnings.showwarning = RGBLogging.custom_warning_handler(logger = self.logger)
-
-    #     # Capturing Warnings from kde_tree_get_neighbour_info()
-    #     # (Use functools.partial to provide `logger` while deferring the other arguments)
-    #     warnings.showwarning = functools.partial(
-    #         RGBLogging.custom_warning_handler, self.logger
-    #     )
-
-    #     valid_input_index, valid_output_index, index_array, distance_array = (
-    #         kd_tree.get_neighbour_info(
-    #             source_geo_def=source_def,
-    #             target_geo_def=target_def,
-    #             neighbours=neighbours,
-    #             radius_of_influence=search_radius,
-    #         )
-    #     )
-
-    #     if distance_array.ndim == 1:
-    #         inf_mask = ~isinf(distance_array)
-    #         reduced_distance = distance_array[inf_mask]
-    #         reduced_index = index_array[inf_mask]
-    #         # Original indices is the original 1D location of the point in the EASE grid
-    #         original_indices = where(inf_mask)[0]
-
-    #     elif distance_array.ndim == 2:
-    #         inf_mask = ~all(np.isinf(distance_array), axis=1)
-    #         reduced_distance = distance_array[inf_mask]
-    #         reduced_index = index_array[inf_mask]
-    #         original_indices = where(inf_mask)[0]
-
-    #     # Remember that valid_output_index could be necessary for something in the future
-    #     return reduced_distance, reduced_index, original_indices, valid_input_index
-
     def get_neighbours(
         self,
         source_lon: np.ndarray,
