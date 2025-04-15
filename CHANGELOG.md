@@ -4,7 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2024-04-15
+
+### Added
+- Performance Assessment Testing scripts 
+- Performance Assessment Testing results 
+- CEM-PAL wrapper
+
+### Changed 
+- Changed the name of "real" to "instrument" for the instrument antenna_method configuration parameter
+- Updated comments and removed TBDs from product_generator module
+- Fixed a bug that wasn't allowing an NEDT calculation for IDS (for split fore/aft=False)
+- Updated system tests and unit tests to reflect all changes 
+
+### Removed
+- Redundant files from previous software versions
 
 ## [1.0.0rc2] - 2025-02-17
 
