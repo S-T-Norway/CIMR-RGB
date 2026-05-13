@@ -820,10 +820,13 @@ class ConfigFile:
             Validated input data path
         """
 
+        element = config_object.find(input_data_path)
+        if element is None or not (element.text or "").strip():
+            return None
+
         valid_extensions = [".h5", ".hdf5", ".nc"]
 
-        input_data_path = (config_object.find(input_data_path).text).strip()
-        input_data_path = grasp_io.resolve_config_path(path_string=input_data_path)
+        input_data_path = pb.Path(path.expandvars(path.expanduser(element.text.strip()))).resolve()
 
         if input_data_path.exists():
             if input_data_path.suffix in valid_extensions:

@@ -617,96 +617,64 @@ class DataIngestion:
 
                 return data_dict
 
-    @property
-    def read_netcdf(self):
+    def _read_netcdf_impl(self, dataset):
         """
-
-        :return:
+        Shared implementation for extracting L1B data from an open NetCDF4 Dataset.
+        Called by read_netcdf (file path) and read_netcdf_from_object (pre-opened object).
         """
-
-        from netCDF4 import Dataset
-
         data_dict = {}
         bands_to_open = set(self.config.target_band + self.config.source_band)
 
         for band in bands_to_open:
-            with Dataset(self.config.input_data_path, "r") as data:
-                # Adding this line due to the discrepancy in the naming of "KU/K" band.
-                try:
-                    band_data = data[band + "_BAND"]
-                except:
-                    if band == 'K':
-                        band_data = data['KU_BAND']
-                        
-                variable_dict = {}
+            # Adding this line due to the discrepancy in the naming of "KU/K" band.
+            try:
+                band_data = dataset[band + "_BAND"]
+            except:
+                if band == 'K':
+                    band_data = dataset['KU_BAND']
 
-                # Extract Feed offsets and u, v to add to config
-                scan_angle_feeds_offsets = array(
-                    band_data["scan_angle_feeds_offsets_relative_to_reflector"][:]
-                )
-                self.config.scan_angle_feed_offsets[band] = atleast_1d(
-                    scan_angle_feeds_offsets
-                )
-                self.config.u0[band] = atleast_1d(getattr(band_data, "uo"))
-                self.config.v0[band] = atleast_1d(getattr(band_data, "vo"))
+            variable_dict = {}
 
-                # Extract L1r output geometry
-                if self.config.grid_type == "L1R":
-                    if band in self.config.target_band:
-                        self.config.num_target_scans = len(data.dimensions["n_scans"])
-                        self.config.num_target_samples = (
-                            len(band_data.dimensions["n_samples_earth"])
-                            * self.config.num_horns[band]
-                        )
+            # Extract Feed offsets and u, v to add to config
+            scan_angle_feeds_offsets = array(
+                band_data["scan_angle_feeds_offsets_relative_to_reflector"][:]
+            )
+            self.config.scan_angle_feed_offsets[band] = atleast_1d(
+                scan_angle_feeds_offsets
+            )
+            self.config.u0[band] = atleast_1d(getattr(band_data, "uo"))
+            self.config.v0[band] = atleast_1d(getattr(band_data, "vo"))
 
-                # Extract variables (This can be tweaked to remove variables for Non-AP algorithms)
-                if self.config.grid_type == "L1R":
-                    if band in self.config.target_band:
-                        if self.config.regridding_algorithm in ["NN", "IDS", "DIB"]:
-                            variables_to_open = ["longitude", "latitude"]
-                        else:
-                            variables_to_open = [
-                                "longitude",
-                                "latitude",
-                                "processing_scan_angle",
-                                "x_position",
-                                "y_position",
-                                "z_position",
-                                "sub_satellite_lat",
-                                "sub_satellite_lon",
-                                "x_velocity",
-                                "y_velocity",
-                                "z_velocity",
-                                "attitude",
-                            ]
+            # Extract L1r output geometry
+            if self.config.grid_type == "L1R":
+                if band in self.config.target_band:
+                    self.config.num_target_scans = len(dataset.dimensions["n_scans"])
+                    self.config.num_target_samples = (
+                        len(band_data.dimensions["n_samples_earth"])
+                        * self.config.num_horns[band]
+                    )
+
+            # Extract variables (This can be tweaked to remove variables for Non-AP algorithms)
+            if self.config.grid_type == "L1R":
+                if band in self.config.target_band:
+                    if self.config.regridding_algorithm in ["NN", "IDS", "DIB"]:
+                        variables_to_open = ["longitude", "latitude"]
                     else:
-                        if self.config.regridding_algorithm in ["NN", "IDS", "DIB"]:
-                            required_variables = [
-                                "longitude",
-                                "latitude",
-                                "processing_scan_angle",
-                            ]
-                        else:
-                            required_variables = [
-                                "longitude",
-                                "latitude",
-                                "processing_scan_angle",
-                                "x_position",
-                                "y_position",
-                                "z_position",
-                                "sub_satellite_lat",
-                                "sub_satellite_lon",
-                                "x_velocity",
-                                "y_velocity",
-                                "z_velocity",
-                                "attitude",
-                            ]
-                        variables_to_open = set(
-                            required_variables + self.config.variables_to_regrid
-                        )
-
-                elif self.config.grid_type == "L1C":
-                    # We don't need alot of these variables for simple algorithms, can reduce set.
+                        variables_to_open = [
+                            "longitude",
+                            "latitude",
+                            "processing_scan_angle",
+                            "x_position",
+                            "y_position",
+                            "z_position",
+                            "sub_satellite_lat",
+                            "sub_satellite_lon",
+                            "x_velocity",
+                            "y_velocity",
+                            "z_velocity",
+                            "attitude",
+                        ]
+                else:
                     if self.config.regridding_algorithm in ["NN", "IDS", "DIB"]:
                         required_variables = [
                             "longitude",
@@ -732,162 +700,160 @@ class DataIngestion:
                         required_variables + self.config.variables_to_regrid
                     )
 
-                for variable in variables_to_open:
-                    if "nedt" in variable:
-                        # Synthetically create NEDT in the absence of L1b field and/or MACRAD LUTs
-                        shape = band_data[self.config.variable_key_map["longitude"]][
-                            :
-                        ].shape
-                        nedt = self.config.cimr_nedt[band]
-                        variable_dict[variable] = tile(nedt, shape)
-                    elif "regridding_n_samples" in variable:
-                        continue
-                    elif "regridding_l1b_orphans" in variable:
-                        continue
-                    elif "processing_flag" in variable:
-                        continue
-                    else:
-                        variable_key = self.config.variable_key_map[variable]
-                        if variable == "acq_time_utc":
-                            utc_time = band_data[variable_key]
-                            days = array(utc_time["days"][:])
-                            seconds = array(utc_time["seconds"][:])
-                            micro_seconds = array(utc_time["microseconds"][:])
-                            days_flat = days.flatten()
-                            seconds_flat = seconds.flatten()
-                            microseconds_flat = micro_seconds.flatten()
-                            base_date = datetime(2000, 1, 1, tzinfo=timezone.utc)
-
-                            timestamps = [
-                                (
-                                    base_date
-                                    + timedelta(
-                                        days=int(d),
-                                        seconds=int(s),
-                                        microseconds=int(us),
-                                    )
-                                ).timestamp()
-                                for d, s, us in zip(
-                                    days_flat, seconds_flat, microseconds_flat
-                                )
-                            ]
-
-                            variable_dict[variable] = array(timestamps).reshape(
-                                days.shape
-                            )
-
-                        else:
-                            data = band_data[variable_key][:]
-                            if variable == "x_position":
-                                variable_dict[variable] = data[:, :, 0]
-                            elif variable == "y_position":
-                                variable_dict[variable] = data[:, :, 1]
-                            elif variable == "z_position":
-                                variable_dict[variable] = data[:, :, 2]
-                            elif variable == "x_velocity":
-                                variable_dict[variable] = data[:, :, 0]
-                            elif variable == "y_velocity":
-                                variable_dict[variable] = data[:, :, 1]
-                            elif variable == "z_velocity":
-                                variable_dict[variable] = data[:, :, 2]
-                            else:
-                                variable_dict[variable] = data
-
-                # Calculate max altitude for ap_radius calculation (same for all bands)
-                if self.config.regridding_algorithm in ["BG", "RSIR", "LW", "CG"]:
-                    if (
-                        self.config.grid_type == "L1R"
-                        and band in self.config.target_band
-                    ):
-                        pass
-                    else:
-                        if not hasattr(self.config, "max_altitude"):
-                            # print(band)
-                            self.logger.info(
-                                f"`{band}` Band: Calculating max altitude for `ap_radius`"
-                            )
-
-                            altitude = (
-                                sqrt(
-                                    variable_dict["x_position"] ** 2
-                                    + variable_dict["y_position"] ** 2
-                                    + variable_dict["z_position"] ** 2
-                                )
-                                - 6371000
-                            )
-                            self.config.max_altitude = altitude.max()
-
-                # Create map between scan number and earth sample number
-                num_feed_horns = self.config.num_horns[band]
-                num_scans, num_samples = variable_dict["longitude"].shape[
-                    :2
-                ]
-
-                # Create processing_flag variable as array of zeros with same shape as longitude
-                variable_dict["processing_flag"] = zeros(
-                    variable_dict["longitude"].shape, dtype=int
+            elif self.config.grid_type == "L1C":
+                # We don't need alot of these variables for simple algorithms, can reduce set.
+                if self.config.regridding_algorithm in ["NN", "IDS", "DIB"]:
+                    required_variables = [
+                        "longitude",
+                        "latitude",
+                        "processing_scan_angle",
+                    ]
+                else:
+                    required_variables = [
+                        "longitude",
+                        "latitude",
+                        "processing_scan_angle",
+                        "x_position",
+                        "y_position",
+                        "z_position",
+                        "sub_satellite_lat",
+                        "sub_satellite_lon",
+                        "x_velocity",
+                        "y_velocity",
+                        "z_velocity",
+                        "attitude",
+                    ]
+                variables_to_open = set(
+                    required_variables + self.config.variables_to_regrid
                 )
 
-                # Combine Feed horns and Flatten
+            for variable in variables_to_open:
+                if "nedt" in variable:
+                    # Synthetically create NEDT in the absence of L1b field and/or MACRAD LUTs
+                    shape = band_data[self.config.variable_key_map["longitude"]][:].shape
+                    nedt = self.config.cimr_nedt[band]
+                    variable_dict[variable] = tile(nedt, shape)
+                elif "regridding_n_samples" in variable:
+                    continue
+                elif "regridding_l1b_orphans" in variable:
+                    continue
+                elif "processing_flag" in variable:
+                    continue
+                else:
+                    variable_key = self.config.variable_key_map[variable]
+                    if variable == "acq_time_utc":
+                        utc_time = band_data[variable_key]
+                        days = array(utc_time["days"][:])
+                        seconds = array(utc_time["seconds"][:])
+                        micro_seconds = array(utc_time["microseconds"][:])
+                        days_flat = days.flatten()
+                        seconds_flat = seconds.flatten()
+                        microseconds_flat = micro_seconds.flatten()
+                        base_date = datetime(2000, 1, 1, tzinfo=timezone.utc)
+
+                        timestamps = [
+                            (
+                                base_date
+                                + timedelta(
+                                    days=int(d),
+                                    seconds=int(s),
+                                    microseconds=int(us),
+                                )
+                            ).timestamp()
+                            for d, s, us in zip(
+                                days_flat, seconds_flat, microseconds_flat
+                            )
+                        ]
+
+                        variable_dict[variable] = array(timestamps).reshape(
+                            days.shape
+                        )
+
+                    else:
+                        raw_data = band_data[variable_key][:]
+                        if variable == "x_position":
+                            variable_dict[variable] = raw_data[:, :, 0]
+                        elif variable == "y_position":
+                            variable_dict[variable] = raw_data[:, :, 1]
+                        elif variable == "z_position":
+                            variable_dict[variable] = raw_data[:, :, 2]
+                        elif variable == "x_velocity":
+                            variable_dict[variable] = raw_data[:, :, 0]
+                        elif variable == "y_velocity":
+                            variable_dict[variable] = raw_data[:, :, 1]
+                        elif variable == "z_velocity":
+                            variable_dict[variable] = raw_data[:, :, 2]
+                        else:
+                            variable_dict[variable] = raw_data
+
+            # Calculate max altitude for ap_radius calculation (same for all bands)
+            if self.config.regridding_algorithm in ["BG", "RSIR", "LW", "CG"]:
+                if (
+                    self.config.grid_type == "L1R"
+                    and band in self.config.target_band
+                ):
+                    pass
+                else:
+                    if not hasattr(self.config, "max_altitude"):
+                        self.logger.info(
+                            f"`{band}` Band: Calculating max altitude for `ap_radius`"
+                        )
+
+                        altitude = (
+                            sqrt(
+                                variable_dict["x_position"] ** 2
+                                + variable_dict["y_position"] ** 2
+                                + variable_dict["z_position"] ** 2
+                            )
+                            - 6371000
+                        )
+                        self.config.max_altitude = altitude.max()
+
+            # Create map between scan number and earth sample number
+            num_feed_horns = self.config.num_horns[band]
+            num_scans, num_samples = variable_dict["longitude"].shape[:2]
+
+            # Create processing_flag variable as array of zeros with same shape as longitude
+            variable_dict["processing_flag"] = zeros(
+                variable_dict["longitude"].shape, dtype=int
+            )
+
+            # Combine Feed horns and Flatten
+            timed_obj = RGBLogging.rgb_decorate_and_execute(
+                decorate=self.logpar_decorate,
+                decorator=RGBLogging.track_perf,
+                logger=self.logger,
+            )(self.combine_cimr_feeds)
+            variable_dict = timed_obj(variable_dict, num_feed_horns)
+
+            variable_dict["scan_number"] = float32(
+                repeat(
+                    arange(num_scans)[:, newaxis],
+                    num_samples * num_feed_horns,
+                    axis=1,
+                ).flatten("C")
+            )
+
+            single_row = tile(arange(num_samples), num_feed_horns)
+
+            variable_dict["sample_number"] = float32(
+                tile(single_row, (num_scans, 1)).flatten("C")
+            )
+
+            # Remove out of bounds here
+            if self.config.grid_type != "L1R":
                 timed_obj = RGBLogging.rgb_decorate_and_execute(
                     decorate=self.logpar_decorate,
                     decorator=RGBLogging.track_perf,
                     logger=self.logger,
-                )(self.combine_cimr_feeds)
-                variable_dict = timed_obj(variable_dict, num_feed_horns)
+                )(self.remove_out_of_bounds)
+                variable_dict = timed_obj(variable_dict)
 
-                variable_dict["scan_number"] = float32(
-                    repeat(
-                        arange(num_scans)[:, newaxis],
-                        num_samples * num_feed_horns,
-                        axis=1,
-                    ).flatten("C")
-                )
-
-                single_row = tile(arange(num_samples), num_feed_horns)
-
-                variable_dict["sample_number"] = float32(
-                    tile(single_row, (num_scans, 1)).flatten("C")
-                )
-
-                # Remove out of bounds here
-                if self.config.grid_type != "L1R":
-                    # variable_dict = self.remove_out_of_bounds(variable_dict)
-                    timed_obj = RGBLogging.rgb_decorate_and_execute(
-                        decorate=self.logpar_decorate,
-                        decorator=RGBLogging.track_perf,
-                        logger=self.logger,
-                    )(self.remove_out_of_bounds)
-                    variable_dict = timed_obj(variable_dict)
-
-                # Split Fore/Aft
-                if self.config.grid_type == "L1R":
-                    if band in self.config.target_band:
-                        pass
-                    else:
-                        if self.config.split_fore_aft:
-                            mask_dict = {
-                                "aft": (
-                                    variable_dict["processing_scan_angle"]
-                                    >= self.config.aft_angle_min
-                                )
-                                & (
-                                    variable_dict["processing_scan_angle"]
-                                    <= self.config.aft_angle_max
-                                )
-                            }
-                            mask_dict["fore"] = ~mask_dict["aft"]
-                            variable_dict_out = {}
-                            for variable in variable_dict:
-                                for scan_direction in ["fore", "aft"]:
-                                    mask = mask_dict[scan_direction].flatten("C")
-                                    variable_dict_out[
-                                        f"{variable}_{scan_direction}"
-                                    ] = variable_dict[variable][mask]
-
-                            variable_dict = variable_dict_out
-                            del variable_dict_out
-                elif self.config.grid_type == "L1C":
+            # Split Fore/Aft
+            if self.config.grid_type == "L1R":
+                if band in self.config.target_band:
+                    pass
+                else:
                     if self.config.split_fore_aft:
                         mask_dict = {
                             "aft": (
@@ -904,16 +870,63 @@ class DataIngestion:
                         for variable in variable_dict:
                             for scan_direction in ["fore", "aft"]:
                                 mask = mask_dict[scan_direction].flatten("C")
-                                variable_dict_out[f"{variable}_{scan_direction}"] = (
-                                    variable_dict[variable][mask]
-                                )
+                                variable_dict_out[
+                                    f"{variable}_{scan_direction}"
+                                ] = variable_dict[variable][mask]
 
                         variable_dict = variable_dict_out
                         del variable_dict_out
+            elif self.config.grid_type == "L1C":
+                if self.config.split_fore_aft:
+                    mask_dict = {
+                        "aft": (
+                            variable_dict["processing_scan_angle"]
+                            >= self.config.aft_angle_min
+                        )
+                        & (
+                            variable_dict["processing_scan_angle"]
+                            <= self.config.aft_angle_max
+                        )
+                    }
+                    mask_dict["fore"] = ~mask_dict["aft"]
+                    variable_dict_out = {}
+                    for variable in variable_dict:
+                        for scan_direction in ["fore", "aft"]:
+                            mask = mask_dict[scan_direction].flatten("C")
+                            variable_dict_out[f"{variable}_{scan_direction}"] = (
+                                variable_dict[variable][mask]
+                            )
 
-                data_dict[band] = variable_dict
+                    variable_dict = variable_dict_out
+                    del variable_dict_out
+
+            data_dict[band] = variable_dict
 
         return data_dict
+
+    @property
+    def read_netcdf(self):
+        """
+        Extracts relevant data from the CIMR L1B NetCDF file on disk.
+        The L1B file should be in the CIMR L1B V1 format.
+
+        :return:
+        A data dictionary containing all required L1B data for a particular regridding configuration.
+        """
+        from netCDF4 import Dataset
+
+        with Dataset(self.config.input_data_path, "r") as dataset:
+            return self._read_netcdf_impl(dataset)
+
+    def read_netcdf_from_object(self, data):
+        """
+        Extracts relevant data from a pre-opened CIMR L1B NetCDF4 Dataset object.
+
+        :param data: An already-opened NetCDF4 Dataset object.
+        :return:
+        A data dictionary containing all required L1B data for a particular regridding configuration.
+        """
+        return self._read_netcdf_impl(data)
 
     def apply_smap_qc(self, variable_dict):
         """
@@ -1488,32 +1501,47 @@ class DataIngestion:
 
         return data_dict
 
-    def ingest_cimr(self):
+    def ingest_cimr(self, data=None):
         """
+        Ingests CIMR L1B data.
 
-        :return:
+        :param data: Optional pre-opened NetCDF4 Dataset object. When None, reads from
+                     self.config.input_data_path.
+        :return: Cleaned data dictionary.
         """
-        # Open netcdf file
-        #
-        # [Note]: This method is defined as @property so
-        #         it cannot be tracked easily using track_perf method
-        data_dict = self.read_netcdf
+        if data is not None:
+            if self.config.input_data_path is not None:
+                self.logger.warning(
+                    "A Dataset object was passed to ingest_cimr but input_data_path is also "
+                    "set in the configuration. The file path will be ignored."
+                )
+            data_dict = self.read_netcdf_from_object(data)
+        else:
+            if self.config.input_data_path is None:
+                raise ValueError(
+                    "No input data source available: ingest_cimr requires either a "
+                    "pre-opened Dataset object or a valid input_data_path in the configuration."
+                )
+            data_dict = self.read_netcdf
 
-        # data_dict = self.clean_data(data_dict)
         tracked_func = RGBLogging.rgb_decorate_and_execute(
             decorate=self.logpar_decorate,
             decorator=RGBLogging.track_perf,
             logger=self.logger,
         )(self.clean_data)
         data_dict = tracked_func(data_dict)
-        # data_dict = self.clean_data(data_dict)
 
-        # Apply QC as and when
         return data_dict
 
-    def ingest_data(self):
+    def ingest_data(self, data=None):
         """
         Initiates ingestion of user specified data type.
+
+        Parameters
+        ----------
+        data : netCDF4.Dataset, optional
+            Pre-opened Dataset object. Only used for CIMR input. When None, reads from
+            self.config.input_data_path.
 
         Returns
         -------
@@ -1528,4 +1556,4 @@ class DataIngestion:
             return self.ingest_smap()
 
         if self.config.input_data_type == "CIMR":
-            return self.ingest_cimr()
+            return self.ingest_cimr(data=data)
