@@ -767,65 +767,148 @@ def test_validate_search_radius(
         assert result == expected
 
 
+
 @pytest.mark.parametrize(
-    "input_data_type_value, band_to_remap, expected, expect_exception",
+    "input_data_type, variables_to_regrid_value, expected, expect_exception",
     [
-        # Valid Cases
-        ("SMAP", None, (779, 241), False),
-        ("CIMR", "L", (74, 691), False),
-        ("CIMR", "C", (74, 2747 * 4), False),
-        ("CIMR", "X", (74, 2807 * 4), False),
-        ("CIMR", "KA", (74, 10395 * 8), False),
-        ("CIMR", "K", (74, 7692 * 8), False),
-        # Invalid Cases
-        ("UNKNOWN", None, None, True),  # Invalid input_data_type
+        # Valid Cases for SMAP
+        (
+            "SMAP",
+            "bt_h bt_v longitude latitude",
+            ["bt_h", "bt_v", "longitude", "latitude"],
+            False,
+        ),
+        (
+            "SMAP",
+            None,
+            [
+                "bt_h",
+                "bt_v",
+                "bt_3",
+                "bt_4",
+                "processing_scan_angle",
+                "longitude",
+                "latitude",
+                "faraday_rot_angle",
+                "nedt_h",
+                "nedt_v",
+                "nedt_3",
+                "nedt_4",
+                "regridding_n_samples",
+                "regridding_l1b_orphans",
+                "acq_time_utc",
+                "azimuth",
+            ],
+            False,
+        ),  # Default vars
+        ("SMAP", "bt_h bt_v invalid_var", None, True),  # Invalid variable in SMAP
+        # Valid Cases for AMSR2
+        (
+            "AMSR2",
+            "bt_h bt_v longitude latitude",
+            ["bt_h", "bt_v", "longitude", "latitude"],
+            False,
+        ),
+        (
+            "AMSR2",
+            None,
+            [
+                "bt_h",
+                "bt_v",
+                "longitude",
+                "latitude",
+                "regridding_n_samples",
+                "x_position",
+                "y_position",
+                "z_position",
+                "x_velocity",
+                "y_velocity",
+                "z_velocity",
+                "azimuth",
+                "solar_azimuth",
+                "acq_time_utc",
+            ],
+            False,
+        ),
+        ("AMSR2", "invalid_var", None, True),  # Invalid variable in AMSR2
+        # Valid Cases for CIMR
+        (
+            "CIMR",
+            "bt_h bt_v longitude latitude oza",
+            ["bt_h", "bt_v", "longitude", "latitude", "oza"],
+            False,
+        ),
+        (
+            "CIMR",
+            None,
+            [
+                "bt_h",
+                "bt_v",
+                "bt_3",
+                "bt_4",
+                "processing_scan_angle",
+                "longitude",
+                "latitude",
+                "nedt_h",
+                "nedt_v",
+                "nedt_3",
+                "nedt_4",
+                "regridding_n_samples",
+                "regridding_l1b_orphans",
+                "acq_time_utc",
+                "azimuth",
+                "oza",
+                "processing_flag",
+            ],
+            False,
+        ),  # Default vars
+        ("CIMR", "invalid_var", None, True),  # Invalid variable in CIMR
+        # Invalid input_data_type
+        ("INVALID_TYPE", None, None, True),  # Unsupported input_data_type
     ],
 )
-def test_get_scan_geometry(
-    input_data_type_value, band_to_remap, expected, expect_exception
+def test_validate_variables_to_regrid(
+    input_data_type, variables_to_regrid_value, expected, expect_exception
 ):
-    """
-    Pytest unit test for the `get_scan_geometry` method.
+    r"""
+    Pytest unit test for the `validate_variables_to_regrid` method.
 
-    This test verifies the correct retrieval of scan geometry for different
-    sensor types and frequency bands. It checks both valid and invalid cases.
+    This test function validates the behavior of `validate_variables_to_regrid`, ensuring
+    that valid variables are correctly parsed, and invalid values raise appropriate exceptions.
 
     Parameters
     ----------
-    input_data_type_value : str
-        The input data type being tested (e.g., `SMAP`, `CIMR`).
-    band_to_remap : str or None
-        The frequency band for `CIMR` input data types.
-    expected : tuple or None
-        The expected result (num_scans, num_earth_samples) if valid, otherwise None.
+    input_data_type : str
+        The input data type being tested.
+    variables_to_regrid_value : str or None
+        The value assigned to the `variables_to_regrid` XML tag.
+    expected : list of str or None
+        The expected validated output list of variables if valid, otherwise None.
     expect_exception : bool
-        Whether a `ValueError` exception is expected.
-
-    Raises
-    ------
-    ValueError
-        If `input_data_type` is invalid.
-
-    Notes
-    -----
-    - Uses `pytest.raises` to verify exceptions.
-    - Mocks the config object using `MagicMock`.
+        Indicates whether an exception is expected.
     """
 
-    # Mock the config object
-    config_mock = MagicMock()
-    config_mock.input_data_type = input_data_type_value
+    # Arrange
+    config_object = ET.Element("config")
+    regridder_params = ET.SubElement(config_object, "ReGridderParams")
+    variables_to_regrid = ET.SubElement(regridder_params, "variables_to_regrid")
+    if variables_to_regrid_value is not None:
+        variables_to_regrid.text = variables_to_regrid_value
 
     if expect_exception:
         # Act & Assert: Expect an exception
         with pytest.raises(ValueError):
-            ConfigFile.get_scan_geometry(
-                config=config_mock, band_to_remap=band_to_remap
+            ConfigFile.validate_variables_to_regrid(
+                config_object=config_object,
+                input_data_type=input_data_type,
+                variables_to_regrid="ReGridderParams/variables_to_regrid",
             )
     else:
         # Act: No exception expected
-        result = ConfigFile.get_scan_geometry(
-            config=config_mock, band_to_remap=band_to_remap
+        result = ConfigFile.validate_variables_to_regrid(
+            config_object=config_object,
+            input_data_type=input_data_type,
+            variables_to_regrid="ReGridderParams/variables_to_regrid",
         )
         # Assert: Compare result to expected value
         assert result == expected

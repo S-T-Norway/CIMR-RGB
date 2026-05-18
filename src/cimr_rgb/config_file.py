@@ -419,14 +419,7 @@ class ConfigFile:
             self.scan_angle_feed_offsets = {}
             self.u0 = {}
             self.v0 = {}
-            # Scan Geometry Hard Coding for now
-            self.scan_geometry = {
-                "L": (74, 691),
-                "C": (74, 2747 * 4),
-                "X": (74, 2807 * 4),
-                "KA": (74, 10395 * 8),
-                "K": (74, 7692 * 8),
-            }
+            self.scan_geometry = {}
             self.cimr_nedt = self.validate_cimr_nedt(config_object=config_object)
 
         self.variables_to_regrid = self.validate_variables_to_regrid(
@@ -1622,79 +1615,6 @@ class ConfigFile:
                 raise ValueError(f"Invalid `grid_type`: {grid_type}")
 
         return value
-
-    @staticmethod
-    def get_scan_geometry(config, band_to_remap=None):
-        r"""
-        Retrieve the scan geometry based on the input data type and band to remap.
-
-        This function determines the number of scans and earth samples per scan
-        based on the sensor type and frequency band.
-
-        Parameters
-        ----------
-        config : object
-            A configuration object that must have an `input_data_type` attribute.
-        band_to_remap : str, optional
-            The frequency band to remap (applicable only for `CIMR` data).
-
-        Returns
-        -------
-        tuple
-            A tuple containing:
-            - num_scans (int): Number of scans per swath.
-            - num_earth_samples (int): Number of earth samples per scan.
-
-        Raises
-        ------
-        ValueError
-            If an invalid `input_data_type` is provided.
-
-        Notes
-        -----
-        - For `SMAP`, the scan geometry is fixed at (779, 241).
-        - For `CIMR`, the scan geometry depends on the selected frequency band.
-
-        Examples
-        --------
-        >>> class Config:
-        ...     input_data_type = "SMAP"
-        >>> config = Config()
-        >>> get_scan_geometry(config)
-        (779, 241)
-
-        >>> class Config:
-        ...     input_data_type = "CIMR"
-        >>> config = Config()
-        >>> get_scan_geometry(config, band_to_remap="L")
-        (74, 691)
-        """
-
-        if config.input_data_type == "SMAP":
-            num_scans = 779
-            num_earth_samples = 241
-        elif config.input_data_type == "CIMR":
-            if band_to_remap == "L":
-                num_scans = 74
-                num_earth_samples = 691
-            elif band_to_remap == "C":
-                num_scans = 74
-                num_earth_samples = 2747 * 4
-            elif band_to_remap == "X":
-                num_scans = 74
-                num_earth_samples = 2807 * 4
-            elif band_to_remap == "KA":
-                num_scans = 74
-                num_earth_samples = 10395 * 8
-            elif band_to_remap == "K":
-                num_scans = 74
-                num_earth_samples = 7692 * 8
-            else:
-                raise ValueError(f"Invalid band_to_remap: {band_to_remap}")
-        else:
-            raise ValueError(f"Invalid `input_data_type`: {config.input_data_type}")
-
-        return num_scans, num_earth_samples
 
     @staticmethod
     def validate_variables_to_regrid(

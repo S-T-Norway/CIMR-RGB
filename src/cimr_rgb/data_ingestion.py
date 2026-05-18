@@ -633,6 +633,12 @@ class DataIngestion:
                 if band == 'K':
                     band_data = dataset['KU_BAND']
 
+            # Extracting the per band scan geometry
+            n_scans = len(dataset.dimensions['n_scans'])
+            n_samples_earth = len(band_data.dimensions["n_samples_earth"])
+            num_horns = len(band_data.dimensions["n_horns"])
+            self.config.scan_geometry[band] = (n_scans, n_samples_earth * num_horns)
+
             variable_dict = {}
 
             # Extract Feed offsets and u, v to add to config
