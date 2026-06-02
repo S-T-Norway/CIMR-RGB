@@ -1,82 +1,211 @@
 {
-  description = "Flake to reproduce CIMR RGB development environment"; 
+  description = "CIMR RGB Python package and development environment";
 
   inputs = {
-    # Defining which version of nixpkgs to follow 
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05"; 
-    #nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable"; 
-    # Set of utils allowing to target different systems 
-    flake-utils.url = "github:numtide/flake-utils"; 
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
 
-    # To use pyproject.nix (we are not using as of now) 
-    pyproject-nix.url = "github:nix-community/pyproject.nix";
-    pyproject-nix.inputs.nixpkgs.follows = "nixpkgs";
+    flake-utils.url = "github:numtide/flake-utils";
+
+    pyproject-nix = {
+      url = "github:pyproject-nix/pyproject.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    uv2nix = {
+      url = "github:pyproject-nix/uv2nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.pyproject-nix.follows = "pyproject-nix";
+    };
+
+    pyproject-build-systems = {
+      url = "github:pyproject-nix/build-system-pkgs";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.pyproject-nix.follows = "pyproject-nix";
+      inputs.uv2nix.follows = "uv2nix";
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils, pyproject-nix, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let 
-      
-        # inherit (nixpkgs) lib; 
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+      pyproject-nix,
+      uv2nix,
+      pyproject-build-systems,
+      ...
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+        lib = pkgs.lib;
 
-        # # Pyproject.nix organisation 
-        # project = pyproject-nix.lib.project.loadPyprojectDynamic {
+        # Pin Python explicitly so uv.lock and Nix agree more reliably.
+        python = pkgs.python312;
 
-        #   inherit pyver; 
+        pyproject = builtins.fromTOML (builtins.readFile ./pyproject.toml);
+        projectName = pyproject.project.name;
 
-        #   projectRoot = ./.; 
-
-        # };
-
-        project = pyproject-nix.lib.project.loadPyproject {
-          # Read & unmarshal pyproject.toml relative to this project root.
-          # projectRoot is also used to set `src` for renderers such as buildPythonPackage.
-          projectRoot = ./.;
+        # Load pyproject.toml + uv.lock.
+        workspace = uv2nix.lib.workspace.loadWorkspace {
+          workspaceRoot = ./.;
         };
 
-        pkgs = nixpkgs.legacyPackages.${system}; 
-        python = pkgs.python3; 
-      in 
+        # Prefer wheels first. If a wheel is unavailable or incompatible,
+        # uv2nix may fall back to building from source depending on the lock
+        # data and package.
+        uvLockedOverlay = workspace.mkPyprojectOverlay {
+          sourcePreference = "wheel";
+        };
+
+        pyprojectOverrides =
+          final: prev:
+          {
+            # Package-specific fixes go here. To be kept empty unless there is
+            # a build error. 
+          };
+
+        # Base Python package set from pyproject.nix, extended with:
+        # 1. common Python build backends,
+        # 2. packages resolved from uv.lock,
+        # 3. the local fixups.
+        pythonSet =
+          (pkgs.callPackage pyproject-nix.build.packages {
+            inherit python;
+          }).overrideScope
+            (
+              lib.composeManyExtensions [
+                pyproject-build-systems.overlays.default
+                uvLockedOverlay
+                pyprojectOverrides
+              ]
+            );
+
+        # The actual Nix package for the Python project.
+        package = pythonSet.${projectName};
+
+        # A normal, non-editable virtual environment containing all packages
+        # and their runtime dependencies.
+        runtimeEnv = pythonSet.mkVirtualEnv "${projectName}-env" workspace.deps.default;
+
+        editableOverlay = workspace.mkEditablePyprojectOverlay {
+          root = "$REPO_ROOT";
+          members = [ projectName ];
+        };
+
+        editablePythonSet =
+          pythonSet.overrideScope
+            (
+              lib.composeManyExtensions [
+                editableOverlay
+
+                # Needed for editable installs of local workspace packages.
+                (
+                  final: prev:
+                  {
+                    ${projectName} = prev.${projectName}.overrideAttrs (old: {
+                      nativeBuildInputs =
+                        (old.nativeBuildInputs or [ ])
+                        ++ final.resolveBuildSystem {
+                          editables = [ ];
+                        };
+                    });
+                  }
+                )
+              ]
+            );
+
+        devEnv =
+          editablePythonSet.mkVirtualEnv "${projectName}-dev-env" workspace.deps.all;
+
+        inherit (pkgs.callPackages pyproject-nix.build.util { }) mkApplication;
+
+        app =
+          mkApplication {
+            venv = runtimeEnv;
+            package = pythonSet.${projectName};
+          };
+      in
       {
-        # Creates dev env, but not installs package 
-        # [Note]: Add file to git for this approach to work as expected 
-        devShells.default = import ./nix/shell.nix { inherit pkgs; }; 
+        packages = {
+          default = app;
+          ${projectName} = app;
+          python-env = runtimeEnv;
+        };
 
-        # Creat:ng a shell with cartopy compiled from source (the package is broken)
-        # devShells.default = with pkgs; mkShell {
-        #   buildInputs = pypkgs ++ otherpkgs; 
-        # }; 
+        apps = {
+          default = {
+            type = "app";
+            program = "${app}/bin/cimr-rgb";
+          };
 
-        # devShells.default = with pkgs; 
-        #   let
-        #     # Returns a function that can be passed to `python.withPackages`
-        #     arg = project.renderers.withPackages { inherit pyver; };
+          cimr-rgb = {
+            type = "app";
+            program = "${app}/bin/cimr-rgb";
+          };
 
-        #     # Returns a wrapped environment (virtualenv like) with all our packages
-        #     pythonEnv = pyver.withPackages arg;
-        #   in
-        #   # Create a devShell like normal.
-        #   pkgs.mkShell { packages = [ pythonEnv ]; };
+          cimr-grasp = {
+            type = "app";
+            program = "${app}/bin/cimr-grasp";
+          };
+        };
 
-        # TODO; This doesn' work because of Pyresample (not in nixpkgs) and
-        # also does not provide any executable whatsoever 
-        # 
-        # Create a development shell containing dependencies from `pyproject.toml`
-        #devShells.default =
-        #  let
-        #    # Returns a function that can be passed to `python.withPackages`
-        #    arg = project.renderers.withPackages { inherit python; };
+        checks = {
+          default = app;
+        };
 
-        #    # Returns a wrapped environment (virtualenv like) with all our packages
-        #    pythonEnv = python.withPackages arg;
-        #    # Adding custom pyresample 
-        #    pyresampleDeps = import ./nix/pyresample.nix { inherit pkgs; }; 
-        #  in
-        #  # Create a devShell like normal.
-        #  pkgs.mkShell { packages = [ pythonEnv ]; }; 
+        devShells = {
+          default = with pkgs; mkShell {
+            packages = [
+              devEnv
+              uv
+              hdf5
+              netcdf
+              proj
+              geos
+            ];
 
-        # defaultPackage = import ./default.nix; 
+            env = {
+              UV_NO_SYNC = "1";
+              UV_PYTHON = "${devEnv}/bin/python";
+              UV_PYTHON_DOWNLOADS = "never";
+            };
 
+            shellHook = ''
+              unset PYTHONPATH
+
+              export REPO_ROOT="$(
+                git rev-parse --show-toplevel 2>/dev/null || pwd
+              )"
+
+              echo "CIMR RGB uv2nix dev shell"
+              echo "Python: $(${devEnv}/bin/python --version)"
+              echo "Repo root: $REPO_ROOT"
+            '';
+          };
+
+          impure = pkgs.mkShell {
+            packages = [
+              python
+              pkgs.uv
+
+              pkgs.hdf5
+              pkgs.netcdf
+              pkgs.proj
+              pkgs.geos
+            ];
+
+            env = {
+              UV_PYTHON_DOWNLOADS = "never";
+            };
+
+            shellHook = ''
+              unset PYTHONPATH
+              echo "Impure uv shell. Use: uv sync"
+            '';
+          };
+        };
       }
-    ); 
+    );
 }

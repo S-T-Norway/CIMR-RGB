@@ -1,4 +1,3 @@
-# Python STD imports
 import sys
 import os
 import re
@@ -24,257 +23,276 @@ from cimr_rgb.rgb_logging import RGBLogging
 
 def get_beamdata(
     beamfile: pb.Path | str,
+    pol: str,
     half_space: str,
     file_version: float,
     cimr: dict,
     logger: logging.Logger,
-) -> dict():
+) -> dict:
     """
-    Parses GRASP `grd` file and returns data as dictionary object.
+    Parses one GRASP `grd` file and adds its polarization component
+    to the CIMR dictionary.
 
-    Parameters:
-    -----------
-    beamfile: str or Path
-        The path to the beamfile to work at.
+    Parameters
+    ----------
+    beamfile : str or Path
+        Path to the GRASP beam file.
 
-    half_space: str
-        The current antenna pattern's half space to work with.
+    pol : str
+        Polarization of the current file. Expected values: "H" or "V".
 
-    cimr: dict
-        Beam object to be returned.
+    half_space : str
+        Current antenna pattern half-space, e.g. "FR" or "BK".
 
-    file_version: float
-        Version of a current file iteration.
+    file_version : float or str
+        Version of the current file iteration.
 
-    logger: logging.Logger
-        Logger object to properly parse information.
+    cimr : dict
+        CIMR dictionary to be updated.
 
-    Returns:
-    --------
-    cimr: dict
-        Returns an object that contains parsed beam data (amplitude components
-        and the grids those are defined on).
+    logger : logging.Logger
+        Logger object.
 
-    Raises:
+    Returns
     -------
-    NotImplementedError
-        If IGRID value is different than one.
+    cimr : dict
+        Updated CIMR dictionary containing the parsed polarization component.
     """
 
-    # This part is to be inline with Joe's data format. But we are using it
-    # onlyt for tqdm output in the teminal since BHS is more intuitive than BK
+    pol = pol.upper()
+
+    if pol not in {"H", "V"}:
+        raise ValueError(
+            f"Unsupported polarization '{pol}' for file {beamfile}. "
+            "Expected 'H' or 'V'."
+        )
+
+    # This part is inline with Joe's data format.
+    # We use FHS/BHS only for tqdm/log output.
     if half_space == "FR":
         bn = "FHS"
     elif half_space == "BK":
         bn = "BHS"
+    else:
+        bn = half_space
 
-    # Precompile regex pattern to find numbers in each consecutive line
     reline_pattern = re.compile(r"-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?")
 
     with open(beamfile, mode="r", encoding="UTF-8") as bfile:
         header = io.get_header(bfile)
 
         # Retrieving data after ++++
-
-        # First 3 lines after ++++
         info = [line.strip("\n") for i, line in enumerate(bfile)]
-        line_shift = 3
 
-        for i in range(0, line_shift):
-            line_numbers = reline_pattern.findall(info[i])
+    # First 3 lines after ++++
+    line_shift = 3
 
-            if i == 0:
-                ktype = int(line_numbers[0])
-            elif i == 1:
-                nset = int(line_numbers[0])
-                icomp = int(line_numbers[1])
-                ncomp = int(line_numbers[2])
-                igrid = int(line_numbers[3])
-            elif i == 2:
-                ix = int(line_numbers[0])
-                iy = int(line_numbers[1])
+    for i in range(0, line_shift):
+        line_numbers = reline_pattern.findall(info[i])
 
-        # Raising an error if igrid is not = 1 (see GRASP TICRA manual for the
-        # info abut all other values it can have)
-        logger.info(f"KTYPE = {ktype}")
+        if i == 0:
+            ktype = int(line_numbers[0])
+
+        elif i == 1:
+            nset = int(line_numbers[0])
+            icomp = int(line_numbers[1])
+            ncomp = int(line_numbers[2])
+            igrid = int(line_numbers[3])
+
+        elif i == 2:
+            ix = int(line_numbers[0])
+            iy = int(line_numbers[1])
+
+    logger.info(f"KTYPE = {ktype}")
+    logger.info(
+        f"NSET = {nset}, ICOMP = {icomp}, NCOMP = {ncomp}, IGRID = {igrid}"
+    )
+
+    if igrid == 1:
         logger.info(
-            f"NSET  = {nset}, ICOMP = {icomp}, NCOMP = {ncomp}, IGRID = {igrid}"
+            "Antenna patterns are provided in the (u,v) coordinates "
+            "and will be converted into (theta,phi)"
         )
-        if igrid == 1:
-            logger.info(
-                "Antenna patterns are provided in the (u,v) coordinates and will be converted into (theta,phi)"
-            )
+    else:
+        raise NotImplementedError(
+            "The module functionality is implemented only for IGRID value = 1 "
+            "since CIMR patterns were provided in this format."
+        )
+
+    # The following lines are repeated NSET times.
+    # In the current CIMR files we expect NSET = 1.
+    if nset != 1:
+        raise NotImplementedError(
+            f"Only NSET=1 is currently supported. Found NSET={nset} in {beamfile}."
+        )
+
+    for i_set in range(nset):
+        for k in range(line_shift, line_shift + 2):
+            line_numbers = reline_pattern.findall(info[k])
+
+            if k == 3:
+                xs = float(line_numbers[0])
+                ys = float(line_numbers[1])
+                xe = float(line_numbers[2])
+                ye = float(line_numbers[3])
+
+            elif k == 4:
+                nx = int(line_numbers[0])
+                ny = int(line_numbers[1])
+                klimit = int(line_numbers[2])
+
+        line_shift = line_shift + 2
+
+    logger.info(f"IX = {ix}, IY = {iy}")
+    logger.info(f"XS = {xs}, YS = {ys}, XE = {xe}, YE = {ye}")
+    logger.info(f"NX = {nx}, NY = {ny}")
+
+    # Grid spacing
+    dx = (xe - xs) / (nx - 1)
+    dy = (ye - ys) / (ny - 1)
+
+    xcen = dx * ix
+    ycen = dy * iy
+
+    logger.info(f"DX = {dx}, DY = {dy}")
+    logger.info(f"XCEN = {xcen}, YCEN = {ycen}")
+
+    # Temporary arrays for the current polarization only.
+    #
+    # GRASP file convention used by the existing code:
+    #   line_numbers[2], line_numbers[3] -> co-pol real/imag
+    #   line_numbers[0], line_numbers[1] -> cross-pol real/imag
+    Gco_real = np.full((ny, nx), 0.0, dtype=float)
+    Gco_imag = np.full((ny, nx), 0.0, dtype=float)
+    Gcx_real = np.full((ny, nx), 0.0, dtype=float)
+    Gcx_imag = np.full((ny, nx), 0.0, dtype=float)
+
+    for j_ in tqdm.tqdm(
+        range(0, ny),
+        desc=f"| {bn}-{pol}: Working on chunks (1 chunk = IS rows in a file)",
+        unit=" chunk",
+    ):
+        line_numbers = reline_pattern.findall(info[j_ + line_shift])
+
+        if klimit == 0:
+            # Full row. No row limit given.
+            is_ = 1
+            in_ = nx
+
+        elif klimit == 1:
+            # IS and IN are provided at the start of each row.
+            is_ = int(line_numbers[0])
+            in_ = int(line_numbers[1])
+
         else:
             raise NotImplementedError(
-                "The module functionality is implemented only for IGRID value = 1 since CIMR patterns were provided in this format."
+                f"Unsupported KLIMIT={klimit} in file {beamfile}."
             )
 
-        # The following lines are repeated NSET of times (as per GRASP manual instructions)
-        for i_set in range(nset):
-            for k in range(line_shift, line_shift + 2):
-                line_numbers = reline_pattern.findall(info[k])
+        for ict in range(in_):
+            line_numbers = reline_pattern.findall(
+                info[j_ + line_shift + (ict + 1)]
+            )
 
-                if k == 3:
-                    xs = float(line_numbers[0])
-                    ys = float(line_numbers[1])
-                    xe = float(line_numbers[2])
-                    ye = float(line_numbers[3])
-                elif k == 4:
-                    nx = int(line_numbers[0])
-                    ny = int(line_numbers[1])
-                    klimit = int(line_numbers[2])
+            # MATLAB/GRASP starts at 1, Python starts at 0.
+            ic = is_ + ict - 1
 
-            line_shift = line_shift + 2
+            Gco_real[ic, j_] = float(line_numbers[2])
+            Gco_imag[ic, j_] = float(line_numbers[3])
+            Gcx_real[ic, j_] = float(line_numbers[0])
+            Gcx_imag[ic, j_] = float(line_numbers[1])
 
-            logger.info(f"IX = {ix}, IY = {iy}")
-            logger.info(f"XS = {xs}, YS = {ys}, XE = {xe}, YE = {ye}")
-            logger.info(f"NX = {nx}, NY = {ny}")
+        # Move to the next block of points.
+        line_shift = line_shift + in_
 
-            # Grid spacing
-            dx = (xe - xs) / (nx - 1)
-            dy = (ye - ys) / (ny - 1)
-            xcen = dx * ix
-            ycen = dy * iy
+    u_grid, v_grid = utils.generate_uv_grid(
+        xcen,
+        ycen,
+        xs,
+        ys,
+        nx,
+        ny,
+        dx,
+        dy,
+    )
 
-            logger.info(f"DX   = {dx},   DY = {dy}")
-            logger.info(f"XCEN = {xcen}, YCEN = {ycen}")
-
-            # The output components
-            """
-            From SMAP file, page 6, at the bottom of the page: 
-            https://nsidc.org/sites/default/files/smap_anc_l1l3l4.pdf    
-            
-            G1v: V-pol, Co-pol component, real part
-            G2v: V-pol, Co-pol component, imagine part
-            G3v: V-pol, Cross-pol component, real part
-            G4v: V-pol, Cross-pol component, magine part
-            
-            G1h: H-pol, Co-pol component, real part
-            G2h: H-pol, Co-pol component, imagine part
-            G3h: H-pol, Cross-pol component, real part
-            G4h: H-pol, Cross-pol component, imagine part 
-            """
-            # From Numpy docs:
-            # https://numpy.org/doc/stable/user/basics.types.html
-            # """
-            # Note that, above, we could have used the Python float object as a
-            # dtype instead of numpy.float64. NumPy knows that int refers to
-            # numpy.int_, bool means numpy.bool, that float is numpy.float64
-            # and complex is numpy.complex128. The other data-types do not have
-            # Python equivalents.
-            # """
-            G1h = np.full((ny, nx), 0.0, dtype=float)
-            G2h = np.full((ny, nx), 0.0, dtype=float)
-            G3h = np.full((ny, nx), 0.0, dtype=float)
-            G4h = np.full((ny, nx), 0.0, dtype=float)
-
-            G1v = np.full((ny, nx), 0.0, dtype=float)
-            G2v = np.full((ny, nx), 0.0, dtype=float)
-            G3v = np.full((ny, nx), 0.0, dtype=float)
-            G4v = np.full((ny, nx), 0.0, dtype=float)
-
-            # j_ is J in GRASP manual
-            #
-            # Here j_ is the row number after (nx, ny, klimit) row in a
-            # file. So, to get the current row in a grd file, we need to add
-            # j_ and line_shift
-
-            for j_ in tqdm.tqdm(
-                range(0, ny),
-                desc=f"| {bn}: Working on chunks (1 chunk = IS rows in a file)",
-                unit=" chunk",
-            ):
-                line_numbers = reline_pattern.findall(info[j_ + line_shift])
-
-                # Get the number of columns to read
-                if klimit == 0:
-                    # It is IS in GRASP manual --- the column number of 1st datapoint
-                    is_ = 1
-                    # It is IN in GRASP manual --- the # of datapoints in row J (j_)
-                    in_ = nx - 1
-                elif klimit == 1:
-                    is_ = int(line_numbers[0])
-                    in_ = int(line_numbers[1])
-
-                """
-                In GRASP manual it is written that this line should be looped
-                as: 
-                
-                F1(I), F2(I), I = IS, IE 
-
-                where IS is is_ in our case and IE = IS + IN - 1.  
-
-                If we now subtract (IE - IS) to start the array from index 0
-                instead of IS, then we get IN - 1. Python subtracts one by
-                default, so we loop to in_ which is IN in our case. 
-                """
-
-                for ict in range(in_):
-                    # for ict in tqdm.tqdm(range(nxr), desc="NX", leave=False, unit=" col"):
-
-                    line_numbers = reline_pattern.findall(
-                        info[j_ + line_shift + (ict + 1)]
-                    )
-
-                    # If is_ = 1, then ic and ict are exactly the same it seems
-                    # the matlab version starts with index 1, but python starts with 0
-                    ic = is_ + ict - 1
-
-                    # We were given only horizontal component files, so we copy
-                    # those values into vertical as well
-                    G1h[ic, j_] = float(line_numbers[2])
-                    G2h[ic, j_] = float(line_numbers[3])
-                    G3h[ic, j_] = float(line_numbers[0])
-                    G4h[ic, j_] = float(line_numbers[1])
-
-                    G1v[ic, j_] = float(line_numbers[2])
-                    G2v[ic, j_] = float(line_numbers[3])
-                    G3v[ic, j_] = float(line_numbers[0])
-                    G4v[ic, j_] = float(line_numbers[1])
-
-                # To go to the next block of points within the file we need to
-                # increase the line counter
-                line_shift = line_shift + in_
-
-    u_grid, v_grid = utils.generate_uv_grid(xcen, ycen, xs, ys, nx, ny, dx, dy)
-
-    # Getting Vectors Back
-    #
-    # See the note in the generate grid as to why we do it this way
+    # Getting vectors back.
     u = np.unique(u_grid[0, :])
     v = np.unique(v_grid[:, 0])
 
-    # Mandatory Parameters
-    cimr["Grid"]["u"] = u
-    cimr["Grid"]["v"] = v
+    # Store/check grid.
+    # The first polarization creates the grid.
+    # The second polarization must be on the same grid.
+    if "u" in cimr["Grid"]:
+        if not np.allclose(cimr["Grid"]["u"], u):
+            raise ValueError(
+                f"u-grid mismatch while reading {beamfile}. "
+                "H and V files must be defined on the same grid."
+            )
 
-    cimr["Gain"]["G1h"] = G1h
-    cimr["Gain"]["G2h"] = G2h
-    cimr["Gain"]["G3h"] = G3h
-    cimr["Gain"]["G4h"] = G4h
+        if not np.allclose(cimr["Grid"]["v"], v):
+            raise ValueError(
+                f"v-grid mismatch while reading {beamfile}. "
+                "H and V files must be defined on the same grid."
+            )
 
-    cimr["Gain"]["G1v"] = G1v
-    cimr["Gain"]["G2v"] = G2v
-    cimr["Gain"]["G3v"] = G3v
-    cimr["Gain"]["G4v"] = G4v
+        grid_checks = {
+            "xcen": xcen,
+            "ycen": ycen,
+            "xs": xs,
+            "ys": ys,
+            "nx": nx,
+            "ny": ny,
+            "dx": dx,
+            "dy": dy,
+        }
+
+        for key, value in grid_checks.items():
+            old_value = cimr["Grid"][key]
+
+            if isinstance(value, float):
+                if not np.isclose(old_value, value):
+                    raise ValueError(
+                        f"Grid mismatch for '{key}' while reading {beamfile}: "
+                        f"{old_value} != {value}"
+                    )
+            else:
+                if old_value != value:
+                    raise ValueError(
+                        f"Grid mismatch for '{key}' while reading {beamfile}: "
+                        f"{old_value} != {value}"
+                    )
+
+    else:
+        cimr["Grid"]["u"] = u
+        cimr["Grid"]["v"] = v
+
+        # Optional parameters, mainly to restore the grid if needed.
+        cimr["Grid"]["xcen"] = xcen
+        cimr["Grid"]["ycen"] = ycen
+        cimr["Grid"]["xs"] = xs
+        cimr["Grid"]["ys"] = ys
+        cimr["Grid"]["nx"] = nx
+        cimr["Grid"]["ny"] = ny
+        cimr["Grid"]["dx"] = dx
+        cimr["Grid"]["dy"] = dy
+
+    # Add only the current polarization component.
+    if pol == "H":
+        cimr["Gain"]["G1h"] = Gco_real
+        cimr["Gain"]["G2h"] = Gco_imag
+        cimr["Gain"]["G3h"] = Gcx_real
+        cimr["Gain"]["G4h"] = Gcx_imag
+
+    elif pol == "V":
+        cimr["Gain"]["G1v"] = Gco_real
+        cimr["Gain"]["G2v"] = Gco_imag
+        cimr["Gain"]["G3v"] = Gcx_real
+        cimr["Gain"]["G4v"] = Gcx_imag
 
     cimr["Version"] = file_version
 
-    # Optional Parameters (mainly to restore the grid if needed)
-    cimr["Grid"]["xcen"] = xcen
-    cimr["Grid"]["ycen"] = ycen
-
-    cimr["Grid"]["xs"] = xs
-    cimr["Grid"]["ys"] = ys
-
-    cimr["Grid"]["nx"] = nx
-    cimr["Grid"]["ny"] = ny
-
-    cimr["Grid"]["dx"] = dx
-    cimr["Grid"]["dy"] = dy
-
     return cimr
-
 
 def recenter_beamdata(cimr: dict, logger: logging.Logger) -> dict:
     """
@@ -353,6 +371,76 @@ def recenter_beamdata(cimr: dict, logger: logging.Logger) -> dict:
         cimr["Grid"]["v_grid"] = cimr["Grid"]["v_grid"] - v_shift
 
     return cimr
+
+def build_apat_name_info(
+    beamfiles_paths: list[pb.Path],
+    logger: logging.Logger = None,
+) -> dict:
+    """
+    Deconstruct GRASP beam filenames and build a lookup dictionary that keeps
+    the H and V polarization files separate.
+
+    Output structure
+    ----------------
+    apat_name_info[band][horn][half_space][pol] = {
+        "path": beamfile,
+        "freq": freq,
+    }
+
+    Example
+    -------
+    apat_name_info["C"]["1"]["FR"]["H"]["path"] -> C1-6810-H-FR.grd
+    apat_name_info["C"]["1"]["FR"]["V"]["path"] -> C1-6810-V-FR.grd
+    """
+
+    apat_name_info = {}
+
+    for beamfile in beamfiles_paths:
+        beamfile = pb.Path(beamfile)
+
+        band, horn, freq, pol, half_space = io.parse_file_name(str(beamfile.stem))
+
+        pol = pol.upper()
+        half_space = half_space.upper()
+
+        if pol not in {"H", "V"}:
+            raise ValueError(
+                f"Unsupported polarization '{pol}' in file {beamfile.name}. "
+                "Expected 'H' or 'V'."
+            )
+
+        if band not in apat_name_info:
+            apat_name_info[band] = {}
+
+        if horn not in apat_name_info[band]:
+            apat_name_info[band][horn] = {}
+
+        if half_space not in apat_name_info[band][horn]:
+            apat_name_info[band][horn][half_space] = {}
+
+        if pol in apat_name_info[band][horn][half_space]:
+            existing_file = apat_name_info[band][horn][half_space][pol]["path"]
+
+            raise ValueError(
+                f"Duplicate {pol}-polarization file found for "
+                f"band={band}, horn={horn}, half_space={half_space}.\n"
+                f"Existing file: {existing_file}\n"
+                f"New file: {beamfile}"
+            )
+
+        apat_name_info[band][horn][half_space][pol] = {
+            "path": beamfile,
+            "freq": freq,
+        }
+
+        if logger is not None:
+            logger.debug(
+                f"Registered beam file: band={band}, horn={horn}, "
+                f"freq={freq}, pol={pol}, half_space={half_space}, "
+                f"path={beamfile}"
+            )
+
+    return apat_name_info
 
 
 def run_cimr_grasp(
@@ -445,17 +533,22 @@ def run_cimr_grasp(
     # Reconstructing the file names to operate on necessary parts later on
     apat_name_info = {}
 
-    for beamfile in beamfiles_paths:
-        tobesplit = str(beamfile.stem)
-        band, horn, freq, pol, half_space = io.parse_file_name(tobesplit)
+    # for beamfile in beamfiles_paths:
+    #     tobesplit = str(beamfile.stem)
+    #     band, horn, freq, pol, half_space = io.parse_file_name(tobesplit)
+    #
+    #     if band not in apat_name_info:
+    #         apat_name_info[band] = [freq, pol, {}]
+    #
+    #     if horn not in apat_name_info[band][2]:
+    #         apat_name_info[band][2][horn] = []
+    #
+    #     apat_name_info[band][2][horn].append(half_space)
 
-        if band not in apat_name_info:
-            apat_name_info[band] = [freq, pol, {}]
-
-        if horn not in apat_name_info[band][2]:
-            apat_name_info[band][2][horn] = []
-
-        apat_name_info[band][2][horn].append(half_space)
+    apat_name_info = build_apat_name_info(
+        beamfiles_paths=beamfiles_paths,
+        logger=logger,
+    )
 
     logger.info("==============================")
     logger.info("Parsing the Antenna Patterns")
@@ -478,51 +571,57 @@ def run_cimr_grasp(
         f"{Fore.GREEN}Preprocessed Directory:{Fore.RESET}\n| {Fore.BLUE}{preprocessed_dir}{Style.RESET_ALL}"
     )
 
-    # Main parsing loop
-    for band in apat_name_info.keys():
-        for horn, half_spaces in apat_name_info[band][2].items():
-            freq = apat_name_info[band][0]
-            pol = apat_name_info[band][1]
+    # Main parsing + preprocessing loop
+    required_pols = {"H", "V"}
 
-            for half_space in half_spaces:
-                # Since we do not require BHS, we skip the relevant part of the
-                # loop
+    required_gain_keys = {
+        "G1h", "G2h", "G3h", "G4h",
+        "G1v", "G2v", "G3v", "G4v",
+    }
+
+    for band in apat_name_info.keys():
+        for horn, half_spaces_dict in apat_name_info[band].items():
+            for half_space, pol_files in half_spaces_dict.items():
+
+                # Skip BHS/BK unless explicitly requested.
                 if not use_bhs and half_space == "BK":
                     logger.info(f"| use_bhs = {use_bhs}; skipping {half_space}.")
                     continue
 
-                cimr = {"Gain": {}, "Grid": {}}
-                cimr_is_empty = False
+                missing_pols = required_pols - set(pol_files.keys())
 
-                # Reconstructing the full path to the file
-                if band == "L":
-                    infile = band + "-" + freq + "-" + pol + "-" + half_space + ".grd"
-                else:
-                    infile = (
-                        band
-                        + str(horn)
-                        + "-"
-                        + freq
-                        + "-"
-                        + pol
-                        + "-"
-                        + half_space
-                        + ".grd"
+                if missing_pols:
+                    raise FileNotFoundError(
+                        f"Missing polarization files for "
+                        f"band={band}, horn={horn}, half_space={half_space}. "
+                        f"Missing: {sorted(missing_pols)}. "
+                        f"Available: {sorted(pol_files.keys())}"
                     )
 
-                infile = pb.Path(str(datadir) + "/" + band + "/" + infile)
+                infile_h = pol_files["H"]["path"]
+                infile_v = pol_files["V"]["path"]
+
                 logger.info(
                     f"{Fore.YELLOW}------------------------------{Style.RESET_ALL}"
                 )
                 logger.info(
-                    f"{Fore.GREEN}Working with Input File: {infile.name}{Style.RESET_ALL}"
+                    f"{Fore.GREEN}Working with H Input File: "
+                    f"{infile_h.name}{Style.RESET_ALL}"
+                )
+                logger.info(
+                    f"{Fore.GREEN}Working with V Input File: "
+                    f"{infile_v.name}{Style.RESET_ALL}"
                 )
 
-                # Parsing Original GRASP Beam Files
-                # Output filename
+                # ------------------------------------------------------------
+                # Output filenames
+                # ------------------------------------------------------------
+
                 horn_output = str(int(horn) - 1)
+
                 parsedfile_prefix = f"CIMR-OAP-{half_space}"
                 parsedfile_suffix = "UV"
+
                 outfile_oap = pb.Path(
                     str(parsed_dir)
                     + f"/{parsedfile_prefix}-"
@@ -531,29 +630,9 @@ def run_cimr_grasp(
                     + f"-{parsedfile_suffix}v{file_version}.h5"
                 )
 
-                if io.check_outfile_existance(outfile_oap):
-                    cimr_is_empty = io.is_nested_dict_empty(cimr)
-                else:
-                    logger.info("------------------------------")
-                    logger.info("Parsing")
-                    logger.info("------------------------------")
-
-                    start_time_pars = time.perf_counter()
-
-                    cimr = get_beamdata(infile, half_space, file_version, cimr, logger)
-                    end_time_pars = time.perf_counter() - start_time_pars
-                    logger.info(f"Finished Parsing in: {end_time_pars:.2f}s")
-
-                    logger.info(
-                        f"{Fore.BLUE}Saving Output File: {outfile_oap.name}{Style.RESET_ALL}"
-                    )
-
-                    with h5py.File(outfile_oap, "w") as hdf5_file:
-                        io.save_dict_to_hdf5(hdf5_file, cimr)
-
-                # Performing Beam Recentering and Interpolation on rectilinear grid
                 preprocfile_prefix = f"CIMR-PAP-{half_space}"
                 preprocfile_suffix = "TP"
+
                 outfile_pap = pb.Path(
                     str(preprocessed_dir)
                     + f"/{preprocfile_prefix}-"
@@ -562,83 +641,162 @@ def run_cimr_grasp(
                     + f"-{preprocfile_suffix}v{file_version}.h5"
                 )
 
-                if io.check_outfile_existance(outfile_pap):
-                    continue
+                # ------------------------------------------------------------
+                # Step 1: parse original GRASP files into OAP/UV HDF5
+                # ------------------------------------------------------------
+
+                if io.check_outfile_existance(outfile_oap):
+                    logger.info(
+                        f"{Fore.BLUE}Parsed file already exists: "
+                        f"{outfile_oap.name}{Style.RESET_ALL}"
+                    )
+
+                    logger.info("Loading existing parsed object...")
+
+                    start_time_load = time.perf_counter()
+
+                    with h5py.File(outfile_oap, "r") as hdf5_file:
+                        cimr = io.load_hdf5_to_dict(hdf5_file)
+
+                    end_time_load = time.perf_counter() - start_time_load
+                    logger.info(f"Finished loading parsed object in: {end_time_load:.2f}s")
+
                 else:
-                    if cimr_is_empty:
-                        logger.info("Loading data object...")
-                        start_time_pars = time.time()
+                    cimr = {"Gain": {}, "Grid": {}}
 
-                        with h5py.File(outfile_oap, "r") as hdf5_file:
-                            cimr = io.load_hdf5_to_dict(hdf5_file)
+                    logger.info("------------------------------")
+                    logger.info("Parsing H and V polarizations")
+                    logger.info("------------------------------")
 
-                        end_time_pars = time.time() - start_time_pars
-                        logger.info(f"Finished Loading in: {end_time_pars:.2f}s")
+                    start_time_pars = time.perf_counter()
 
-                    # Creating a set of temporary values to be removed from memory
-                    cimr["temp"] = {}
+                    cimr = get_beamdata(
+                        infile_h,
+                        "H",
+                        half_space,
+                        file_version,
+                        cimr,
+                        logger,
+                    )
 
-                    cimr = utils.construct_complete_gains(cimr)
+                    cimr = get_beamdata(
+                        infile_v,
+                        "V",
+                        half_space,
+                        file_version,
+                        cimr,
+                        logger,
+                    )
 
-                    cimr["Grid"]["u_grid"], cimr["Grid"]["v_grid"] = (
-                        utils.generate_uv_grid(
-                            xcen=cimr["Grid"]["xcen"],
-                            ycen=cimr["Grid"]["ycen"],
-                            xs=cimr["Grid"]["xs"],
-                            ys=cimr["Grid"]["ys"],
-                            nx=cimr["Grid"]["nx"],
-                            ny=cimr["Grid"]["ny"],
-                            dx=cimr["Grid"]["dx"],
-                            dy=cimr["Grid"]["dy"],
+                    missing_gain_keys = required_gain_keys - set(cimr["Gain"].keys())
+
+                    if missing_gain_keys:
+                        raise ValueError(
+                            f"Incomplete cimr['Gain'] for "
+                            f"band={band}, horn={horn}, half_space={half_space}. "
+                            f"Missing keys: {sorted(missing_gain_keys)}"
                         )
-                    )
 
-                    # If no recentering, then just create a temporary grid to
-                    # pass those values further and then delete them once we
-                    # are done
-                    if recenter_beam:
-                        logger.info("------------------------------")
-                        logger.info("ReCentering")
-                        logger.info("------------------------------")
-
-                        start_time_recen = time.perf_counter()
-
-                        cimr = recenter_beamdata(cimr, logger)
-
-                        end_time_recen = time.perf_counter() - start_time_recen
-                        logger.info(f"Finished Recentering in: {end_time_recen:.2f}s")
-
-                    logger.info("------------------------------")
-                    logger.info("Interpolating")
-                    logger.info("------------------------------")
-
-                    start_time_interpn = time.perf_counter()
-
-                    cimr = utils.interp_beamdata_into_uv(
-                        cimr=cimr,
-                        logger=logger,
-                        grid_max_theta=grid_max_theta,
-                        grid_res_phi=grid_res_phi,
-                        grid_res_theta=grid_res_theta,
-                        chunk_data=chunk_data,
-                        num_chunks=num_chunks,
-                        overlap_margin=overlap_margin,
-                        interp_method=interp_method,
-                    )
-
-                    end_time_interpn = time.perf_counter() - start_time_interpn
-                    logger.info(f"Finished Interpolation in: {end_time_interpn:.2f}s")
+                    end_time_pars = time.perf_counter() - start_time_pars
+                    logger.info(f"Finished Parsing in: {end_time_pars:.2f}s")
 
                     logger.info(
-                        f"{Fore.BLUE}Saving Output File: {outfile_pap.name}{Style.RESET_ALL}"
+                        f"{Fore.BLUE}Saving Output File: "
+                        f"{outfile_oap.name}{Style.RESET_ALL}"
                     )
-                    with h5py.File(outfile_pap, "w") as hdf5_file:
+
+                    with h5py.File(outfile_oap, "w") as hdf5_file:
                         io.save_dict_to_hdf5(hdf5_file, cimr)
 
-            logger.info(
-                f"| {Fore.YELLOW}------------------------------{Style.RESET_ALL}"
-            )
+                # ------------------------------------------------------------
+                # Step 2: preprocess OAP/UV into PAP/TP
+                # ------------------------------------------------------------
 
+                if io.check_outfile_existance(outfile_pap):
+                    logger.info(
+                        f"{Fore.BLUE}Preprocessed file already exists: "
+                        f"{outfile_pap.name}{Style.RESET_ALL}"
+                    )
+                    continue
+
+                logger.info("------------------------------")
+                logger.info("Preparing complex gains")
+                logger.info("------------------------------")
+
+                # Validate again before interpolation.
+                missing_gain_keys = required_gain_keys - set(cimr["Gain"].keys())
+
+                if missing_gain_keys:
+                    raise ValueError(
+                        f"Cannot preprocess incomplete cimr['Gain'] for "
+                        f"band={band}, horn={horn}, half_space={half_space}. "
+                        f"Missing keys: {sorted(missing_gain_keys)}"
+                    )
+
+                # Creating temporary complex gains:
+                #   Ghh, Ghv, Gvv, Gvh
+                cimr["temp"] = {}
+                cimr = utils.construct_complete_gains(cimr)
+
+                # Reconstruct full u/v grids from parsed metadata.
+                cimr["Grid"]["u_grid"], cimr["Grid"]["v_grid"] = (
+                    utils.generate_uv_grid(
+                        xcen=cimr["Grid"]["xcen"],
+                        ycen=cimr["Grid"]["ycen"],
+                        xs=cimr["Grid"]["xs"],
+                        ys=cimr["Grid"]["ys"],
+                        nx=cimr["Grid"]["nx"],
+                        ny=cimr["Grid"]["ny"],
+                        dx=cimr["Grid"]["dx"],
+                        dy=cimr["Grid"]["dy"],
+                    )
+                )
+
+                # Optional recentering.
+                if recenter_beam:
+                    logger.info("------------------------------")
+                    logger.info("ReCentering")
+                    logger.info("------------------------------")
+
+                    start_time_recen = time.perf_counter()
+
+                    cimr = recenter_beamdata(cimr, logger)
+
+                    end_time_recen = time.perf_counter() - start_time_recen
+                    logger.info(f"Finished Recentering in: {end_time_recen:.2f}s")
+
+                logger.info("------------------------------")
+                logger.info("Interpolating")
+                logger.info("------------------------------")
+
+                start_time_interpn = time.perf_counter()
+
+                cimr = utils.interp_beamdata_into_uv(
+                    cimr=cimr,
+                    logger=logger,
+                    grid_max_theta=grid_max_theta,
+                    grid_res_phi=grid_res_phi,
+                    grid_res_theta=grid_res_theta,
+                    chunk_data=chunk_data,
+                    num_chunks=num_chunks,
+                    overlap_margin=overlap_margin,
+                    interp_method=interp_method,
+                )
+
+                end_time_interpn = time.perf_counter() - start_time_interpn
+                logger.info(f"Finished Interpolation in: {end_time_interpn:.2f}s")
+
+                logger.info(
+                    f"{Fore.BLUE}Saving Output File: "
+                    f"{outfile_pap.name}{Style.RESET_ALL}"
+                )
+
+                with h5py.File(outfile_pap, "w") as hdf5_file:
+                    io.save_dict_to_hdf5(hdf5_file, cimr)
+
+                logger.info(
+                    f"| {Fore.YELLOW}------------------------------{Style.RESET_ALL}"
+                )
 
 def load_grasp_config(config_file: str = "grasp_config.xml") -> dict:
     """
@@ -862,3 +1020,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
