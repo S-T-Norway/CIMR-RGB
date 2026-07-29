@@ -56,6 +56,54 @@ TAI_UTC_OFFSET = 37
 TAI_EPOCH = datetime(1993, 1, 1, 0, 0)
 
 
+class _XarrayBandGroupAdapter:
+    """Wraps one band's pre-opened xarray Dataset to look like a netCDF4 group."""
+
+    def __init__(self, xarray_data, group_name):
+        self._xarray_data = xarray_data
+        self._ds = xarray_data[group_name]
+        self._group_name = group_name
+
+    def __getitem__(self, variable_key):
+        if variable_key == "utc_time":
+            # netCDF4 nests this as a sub-group; the caller pre-opens it as its
+            # own xr.Dataset under "{group_name}/utc_time" (see
+            # read_xarray_from_object) since xarray doesn't expose sub-groups
+            # on a Dataset opened for a single group.
+            return self._xarray_data[f"{self._group_name}/utc_time"]
+        # Materialize eagerly so downstream numpy-only ops (e.g. flatten("F"),
+        # fancy-index assignment in remove_out_of_bounds) see plain ndarrays
+        # rather than lazy DataArrays.
+        return self._ds[variable_key].values
+
+    @property
+    def dimensions(self):
+        return dict(self._ds.sizes)
+
+    @property
+    def attrs(self):
+        return self._ds.attrs
+
+
+class _XarrayL1BAdapter:
+    """Wraps a dict of pre-opened per-band xarray Datasets to look like a netCDF4 Dataset."""
+
+    def __init__(self, xarray_data):
+        self._xarray_data = xarray_data
+
+    def __getitem__(self, group_name):
+        # Raises KeyError for a missing group, same as netCDF4.Dataset, so the
+        # K -> KU_BAND fallback in _read_l1b_impl works unchanged.
+        return _XarrayBandGroupAdapter(self._xarray_data, group_name)
+
+    @property
+    def dimensions(self):
+        # There is no single parent object to ask (each band was opened as its
+        # own Dataset), so read n_scans off whichever band group is present.
+        any_band = next(k for k in self._xarray_data if k.endswith("_BAND"))
+        return {"n_scans": self._xarray_data[any_band].sizes["n_scans"]}
+
+
 class DataIngestion:
     """
     This class is responsible for ingesting the data from the user specified path
@@ -617,10 +665,29 @@ class DataIngestion:
 
                 return data_dict
 
-    def _read_netcdf_impl(self, dataset):
+    @staticmethod
+    def _dim_len(obj, dim_name):
+        """Dimension length for a netCDF4 Dimension (needs len()) or an xarray adapter (already an int)."""
+        dim = obj.dimensions[dim_name]
+        return dim if isinstance(dim, int) else len(dim)
+
+    @staticmethod
+    def _band_attr(band_data, name):
+        """Group-level scalar attribute (uo/vo): a real attribute on netCDF4 groups, `.attrs` on xarray."""
+        if hasattr(band_data, "attrs"):
+            return band_data.attrs[name]
+        return getattr(band_data, name)
+
+    def _read_l1b_impl(self, dataset):
         """
-        Shared implementation for extracting L1B data from an open NetCDF4 Dataset.
-        Called by read_netcdf (file path) and read_netcdf_from_object (pre-opened object).
+        Shared implementation for extracting L1B data from an open L1B dataset object.
+
+        `dataset` may be a netCDF4.Dataset, or a _XarrayL1BAdapter wrapping a dict
+        of pre-opened xarray Datasets (one per band group) - both expose group
+        lookup via `dataset[band + "_BAND"]`, dimensions, and group attributes.
+
+        Called by read_netcdf (file path), read_netcdf_from_object (pre-opened
+        netCDF4.Dataset), and read_xarray_from_object (pre-opened xarray Datasets).
         """
         data_dict = {}
         bands_to_open = set(self.config.target_band + self.config.source_band)
@@ -634,9 +701,9 @@ class DataIngestion:
                     band_data = dataset['KU_BAND']
 
             # Extracting the per band scan geometry
-            n_scans = len(dataset.dimensions['n_scans'])
-            n_samples_earth = len(band_data.dimensions["n_samples_earth"])
-            num_horns = len(band_data.dimensions["n_horns"])
+            n_scans = self._dim_len(dataset, 'n_scans')
+            n_samples_earth = self._dim_len(band_data, "n_samples_earth")
+            num_horns = self._dim_len(band_data, "n_horns")
             self.config.scan_geometry[band] = (n_scans, n_samples_earth * num_horns)
 
             variable_dict = {}
@@ -648,15 +715,15 @@ class DataIngestion:
             self.config.scan_angle_feed_offsets[band] = atleast_1d(
                 scan_angle_feeds_offsets
             )
-            self.config.u0[band] = atleast_1d(getattr(band_data, "uo"))
-            self.config.v0[band] = atleast_1d(getattr(band_data, "vo"))
+            self.config.u0[band] = atleast_1d(self._band_attr(band_data, "uo"))
+            self.config.v0[band] = atleast_1d(self._band_attr(band_data, "vo"))
 
             # Extract L1r output geometry
             if self.config.grid_type == "L1R":
                 if band in self.config.target_band:
-                    self.config.num_target_scans = len(dataset.dimensions["n_scans"])
+                    self.config.num_target_scans = self._dim_len(dataset, "n_scans")
                     self.config.num_target_samples = (
-                        len(band_data.dimensions["n_samples_earth"])
+                        self._dim_len(band_data, "n_samples_earth")
                         * self.config.num_horns[band]
                     )
 
@@ -748,6 +815,9 @@ class DataIngestion:
                 else:
                     variable_key = self.config.variable_key_map[variable]
                     if variable == "acq_time_utc":
+                        # For xarray input, band_data is a _XarrayBandGroupAdapter
+                        # whose __getitem__ redirects "utc_time" to the pre-opened
+                        # "{band}_BAND/utc_time" Dataset - see that class above.
                         utc_time = band_data[variable_key]
                         days = array(utc_time["days"][:])
                         seconds = array(utc_time["seconds"][:])
@@ -845,7 +915,6 @@ class DataIngestion:
             variable_dict["sample_number"] = float32(
                 tile(single_row, (num_scans, 1)).flatten("C")
             )
-
             # Remove out of bounds here
             if self.config.grid_type != "L1R":
                 timed_obj = RGBLogging.rgb_decorate_and_execute(
@@ -922,7 +991,7 @@ class DataIngestion:
         from netCDF4 import Dataset
 
         with Dataset(self.config.input_data_path, "r") as dataset:
-            return self._read_netcdf_impl(dataset)
+            return self._read_l1b_impl(dataset)
 
     def read_netcdf_from_object(self, data):
         """
@@ -932,7 +1001,32 @@ class DataIngestion:
         :return:
         A data dictionary containing all required L1B data for a particular regridding configuration.
         """
-        return self._read_netcdf_impl(data)
+        return self._read_l1b_impl(data)
+
+    def read_xarray_from_object(self, xarray_data):
+        """
+        Extracts relevant data from a dict of pre-opened xarray Datasets, one per
+        CIMR L1B band group.
+
+        :param xarray_data: dict mapping "{BAND}_BAND" and "{BAND}_BAND/utc_time"
+            keys to xr.Dataset objects, e.g.:
+
+                xarray_data = {}
+                for band in ("L", "C", "X", "K", "KA"):
+                    bandn = band + "_BAND"
+                    xarray_data[bandn] = xr.open_dataset(path, group=bandn, decode_times=False)
+                    xarray_data[bandn + "/utc_time"] = xr.open_dataset(
+                        path, group=f"{bandn}/utc_time", decode_times=False
+                    )
+
+            decode_times=False is required: the days/seconds/microseconds
+            variables have plain (non-CF-epoch) units, and xarray's default
+            time decoding otherwise turns them into timedelta64 values that
+            overflow the int(d) conversion below.
+        :return:
+        A data dictionary containing all required L1B data for a particular regridding configuration.
+        """
+        return self._read_l1b_impl(_XarrayL1BAdapter(xarray_data))
 
     def apply_smap_qc(self, variable_dict):
         """
@@ -1511,8 +1605,9 @@ class DataIngestion:
         """
         Ingests CIMR L1B data.
 
-        :param data: Optional pre-opened NetCDF4 Dataset object. When None, reads from
-                     self.config.input_data_path.
+        :param data: Optional pre-opened NetCDF4 Dataset object, or a dict of
+                     pre-opened xarray Datasets (see read_xarray_from_object).
+                     When None, reads from self.config.input_data_path.
         :return: Cleaned data dictionary.
         """
         if data is not None:
@@ -1521,7 +1616,10 @@ class DataIngestion:
                     "A Dataset object was passed to ingest_cimr but input_data_path is also "
                     "set in the configuration. The file path will be ignored."
                 )
-            data_dict = self.read_netcdf_from_object(data)
+            if isinstance(data, dict):
+                data_dict = self.read_xarray_from_object(data)
+            else:
+                data_dict = self.read_netcdf_from_object(data)
         else:
             if self.config.input_data_path is None:
                 raise ValueError(
@@ -1545,9 +1643,10 @@ class DataIngestion:
 
         Parameters
         ----------
-        data : netCDF4.Dataset, optional
-            Pre-opened Dataset object. Only used for CIMR input. When None, reads from
-            self.config.input_data_path.
+        data : netCDF4.Dataset or dict, optional
+            Pre-opened Dataset object, or a dict of pre-opened xarray Datasets
+            (see read_xarray_from_object). Only used for CIMR input. When None,
+            reads from self.config.input_data_path.
 
         Returns
         -------
