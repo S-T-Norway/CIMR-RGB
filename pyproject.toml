@@ -20,7 +20,7 @@ dependencies = [
   # Add any dependencies here if necessary
   "netCDF4 >= 1.7.2", 
   "colorama >= 0.4.6", 
-  "numpy >= 1.24.6", 
+  "numpy >= 2.0.0",
   "pyresample >= 1.28.2",
   "scipy >= 1.13.0", 
   "h5py >= 3.11.0", 
