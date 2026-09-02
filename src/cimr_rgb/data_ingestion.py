@@ -55,6 +55,15 @@ MV = -9999.0
 TAI_UTC_OFFSET = 37
 TAI_EPOCH = datetime(1993, 1, 1, 0, 0)
 
+# CIMR Constants
+# CIMR SCEPS scene versions disagree on which frame the following rotation matrix is expressed in.
+# The older scenes express the attitude as named in the ECI frame, whereas the newer versions
+# name it as ECEF frame. Both versions of the variable perform the same job, but a distinction needs
+# to be made depending on what is available.
+ATTITUDE_VARIABLE_CANDIDATES = [
+    "SatelliteBody2EarthCenteredInertialFrame",
+    "SatelliteBody2EarthCenteredEarthFixedFrame",
+]
 
 class _XarrayBandGroupAdapter:
     """Wraps one band's pre-opened xarray Dataset to look like a netCDF4 group."""
@@ -83,6 +92,9 @@ class _XarrayBandGroupAdapter:
     @property
     def attrs(self):
         return self._ds.attrs
+
+    def __contains__(self, variable_key):
+        return variable_key in self._ds
 
 
 class _XarrayL1BAdapter:
@@ -678,6 +690,22 @@ class DataIngestion:
             return band_data.attrs[name]
         return getattr(band_data, name)
 
+    @staticmethod
+    def _resolve_attitude_variable(band_data, band):
+        """Which of the known attitude-matrix variable names this file actually has."""
+        has_var = (
+            (lambda name: name in band_data.variables)
+            if hasattr(band_data, "variables")
+            else (lambda name: name in band_data)
+        )
+        for candidate in ATTITUDE_VARIABLE_CANDIDATES:
+            if has_var(candidate):
+                return candidate
+        raise KeyError(
+            f"`{band}` Band: none of the known attitude-matrix variable names "
+            f"{ATTITUDE_VARIABLE_CANDIDATES} were found in the input file."
+        )
+
     def _read_l1b_impl(self, dataset):
         """
         Shared implementation for extracting L1B data from an open L1B dataset object.
@@ -813,7 +841,10 @@ class DataIngestion:
                 elif "processing_flag" in variable:
                     continue
                 else:
-                    variable_key = self.config.variable_key_map[variable]
+                    if variable == "attitude":
+                        variable_key = self._resolve_attitude_variable(band_data, band)
+                    else:
+                        variable_key = self.config.variable_key_map[variable]
                     if variable == "acq_time_utc":
                         # For xarray input, band_data is a _XarrayBandGroupAdapter
                         # whose __getitem__ redirects "utc_time" to the pre-opened

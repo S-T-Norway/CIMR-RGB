@@ -395,7 +395,6 @@ class ConfigFile:
                 "z_velocity": "satellite_velocity",
                 "sub_satellite_lon": "sub_satellite_lon",
                 "sub_satellite_lat": "sub_satellite_lat",
-                "attitude": "SatelliteBody2EarthCenteredInertialFrame",
                 "nedt_h": "nedt_h",
                 "nedt_v": "nedt_v",
                 "nedt_3": "nedt_3",
