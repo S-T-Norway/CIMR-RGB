@@ -64,6 +64,29 @@ GRIDS = {'EASE2_G1km': {'epsg': 6933, 'x_min': -17367530.44, 'y_max': 7314540.83
                        'res': 12500, 'n_cols': 3207, 'n_rows':3189 , 'lat_min': -85, 'lat_max': 85},
          'MERC_G6.25km': {'epsg': 3395, 'x_min':-20037508.342789244, 'y_max': 19929239.11337915,
                           'res': 6250, 'n_cols': 6413, 'n_rows': 6378, 'lat_min': -85, 'lat_max': 85},
+         'EASE2_NP3km': {'epsg':6931 , 'x_min':-5400000.0, 'y_max':5400000.0,
+                          'res':3000 , 'n_cols':3600, 'n_rows':3600 , 'lat_min':0},
+
+         'EASE2_NP9km': {'epsg':6931 , 'x_min':-5400000.0, 'y_max':5400000.0,
+                          'res':9000 , 'n_cols':1200, 'n_rows':1200 , 'lat_min':0},
+
+         'EASE2_NP18km': {'epsg':6931 , 'x_min':-5400000.0, 'y_max':5400000.0,
+                          'res':18000 , 'n_cols':600, 'n_rows':600 , 'lat_min':0},
+
+         'EASE2_NP36km': {'epsg':6931 , 'x_min':-5400000.0, 'y_max':5400000.0,
+                          'res':36000 , 'n_cols':300, 'n_rows':300 , 'lat_min':0},
+
+         'EASE2_SP3km': {'epsg': 6932, 'x_min': -4428000.0, 'y_max': 4428000.0,
+                        'res': 3000, 'n_cols': 2952, 'n_rows': 2952, 'lat_min': 0},
+
+         'EASE2_SP9km': {'epsg': 6932, 'x_min': -4428000.0, 'y_max': 4428000.0,
+                        'res': 9000, 'n_cols': 984, 'n_rows': 984, 'lat_min': 0},
+
+         'EASE2_SP18km': {'epsg': 6932, 'x_min': -4428000.0, 'y_max': 4428000.0,
+                        'res': 18000, 'n_cols': 492, 'n_rows': 492, 'lat_min': 0},
+
+         'EASE2_SP36km': {'epsg': 6932, 'x_min': -4428000.0, 'y_max': 4428000.0,
+                        'res': 36000, 'n_cols': 246, 'n_rows': 246, 'lat_min': 0},
          }
 
 
