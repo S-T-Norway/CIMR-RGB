@@ -405,6 +405,8 @@ class ConfigFile:
                 "azimuth": "earth_azimuth",
                 "oza": "OZA",
                 "processing_flag": "processing_flag",
+                "satellite_ground_velocity_northward": "satellite_ground_velocity_northward",
+                "satellite_ground_velocity_eastward": "satellite_ground_velocity_eastward"
             }
             self.aft_angle_min = 180
             self.aft_angle_max = 360
@@ -1731,6 +1733,14 @@ class ConfigFile:
                 "azimuth",
                 "oza",
                 "processing_flag",
+                "x_velocity",
+                "y_velocity",
+                "z_velocity",
+                "x_position",
+                "y_position",
+                "z_position",
+                "satellite_ground_velocity_northward",
+                "satellite_ground_velocity_eastward"
             ]
             default_vars = valid_input[:]
 
