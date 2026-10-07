@@ -1986,7 +1986,7 @@ class ConfigFile:
         -------
         float
             The validated `target_antenna_threshold` value as a float.
-            Returns `9.0` if the value is missing or empty.
+            Returns `0.001` if the value is missing or empty.
 
         Raises
         ------
@@ -1995,7 +1995,7 @@ class ConfigFile:
 
         Notes
         -----
-        - If `target_antenna_threshold` is missing or empty, it defaults to `9.0`.
+        - If `target_antenna_threshold` is missing or empty, it defaults to `0.001`.
         - If provided, the value must be convertible to a float.
 
         Examples
@@ -2010,9 +2010,8 @@ class ConfigFile:
         value = config_object.find(target_antenna_threshold).text
 
         if value is None or value.strip() == "":
-            # We should have a default set of values for each Antenna Pattern
-            # For now, I will just choose 9dB
-            return 9.0
+            # -30dB default value
+            return 0.001
 
         try:
             return float(value)

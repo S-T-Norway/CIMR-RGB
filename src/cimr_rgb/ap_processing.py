@@ -116,8 +116,9 @@ class AntennaPattern:
         ap_dict['Gvco'] = gain_dict['G1v'] + 1j * gain_dict['G2v']
         ap_dict['Gvcx'] = gain_dict['G3v'] + 1j * gain_dict['G4v']
 
-        ap_dict['Gnorm'] = 0.5* (sqrt(abs(ap_dict['Ghco'])**2+abs(ap_dict['Ghcx'])**2)
-                                 + sqrt(abs(ap_dict['Gvco'])**2+abs(ap_dict['Gvcx'])**2))
+        # Scalar power pattern: mean of H- and V-port power, P = |E_co|^2 + |E_cx|^2
+        ap_dict['Gnorm'] = 0.5 * (abs(ap_dict['Ghco']) ** 2 + abs(ap_dict['Ghcx']) ** 2
+            + abs(ap_dict['Gvco']) ** 2 + abs(ap_dict['Gvcx']) ** 2)
 
         ap_dict['Gnorm'] /= np.sum( ap_dict['Gnorm'])
 
@@ -245,14 +246,9 @@ class AntennaPattern:
             f_gain_vcx = RegularGridInterpolator((phi, theta), ap_dict[horn]['Gvcx'], bounds_error=False, fill_value=0.)
             
             def f_scalar_gain(phi, theta):
-                Ghco_norm = abs(f_gain_hco((phi, theta)))
-                Ghcx_norm = abs(f_gain_hcx((phi, theta)))
-                Gvco_norm = abs(f_gain_vco((phi, theta)))
-                Gvcx_norm = abs(f_gain_vcx((phi, theta)))
-                Gv = sqrt(Gvco_norm**2 + Gvcx_norm**2)
-                Gh = sqrt(Ghco_norm**2 + Ghcx_norm**2)
-                Gscalar = 0.5*(Gv + Gh)
-                return Gscalar
+                Ph = abs(f_gain_hco((phi, theta))) ** 2 + abs(f_gain_hcx((phi, theta))) ** 2
+                Pv = abs(f_gain_vco((phi, theta))) ** 2 + abs(f_gain_vcx((phi, theta))) ** 2
+                return 0.5 * (Ph + Pv) # Gscalar
 
             scalar_pattern[horn] = f_scalar_gain
 
@@ -621,7 +617,7 @@ class GaussianAntennaPattern:
     def __init__(self, config, antenna_threshold):
 
         self.config = config
-        self.antenna_threshold = antenna_threshold #dB
+        self.antenna_threshold = antenna_threshold
         self.fraction_below_threshold = 1.
 
         return

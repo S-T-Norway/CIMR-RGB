@@ -23,8 +23,8 @@
     <source_antenna_method>gaussian</source_antenna_method>
     <target_antenna_method>instrument</target_antenna_method>
     <polarisation_method>scalar</polarisation_method>
-    <source_antenna_threshold>0.5</source_antenna_threshold>
-    <target_antenna_threshold>0.5</target_antenna_threshold>
+    <source_antenna_threshold>0.001</source_antenna_threshold>
+    <target_antenna_threshold>0.001</target_antenna_threshold>
     <max_theta_antenna_patterns>40.</max_theta_antenna_patterns>
     <MRF_grid_definition>EASE2_G3km</MRF_grid_definition>
     <MRF_projection_definition>G</MRF_projection_definition>
