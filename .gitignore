@@ -93,9 +93,10 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
+# Sphinx / Jupyter Book documentation
 docs/_build/
 docs/_autosummary/
+docs/*/_build/
 
 # Jupyter Notebook
 .ipynb_checkpoints
