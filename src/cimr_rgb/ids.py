@@ -1,4 +1,4 @@
-from numpy import take, where, nan, nansum
+from numpy import take, where, nan, nansum, errstate
 
 class IDSInterp:
     def __init__(self, config):
@@ -8,8 +8,12 @@ class IDSInterp:
 
     @staticmethod
     def get_weights(distances):
-        dist_sq = distances ** 2
-        weights = 1 / dist_sq
+        with errstate(divide='ignore'):
+            weights=1/distances ** 2
+        # Exact co-location: give the coincident sample(s) all the weight
+        exact = distances == 0
+        has_exact = exact.any(axis=-1)
+        weights[has_exact] = exact[has_exact].astype(weights.dtype)
         return weights
 
     def IDS(self, samples_dict, variable):
