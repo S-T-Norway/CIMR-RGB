@@ -1,0 +1,573 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Acronyms and definitions &#8212; CIMR RGB Algorithms Theoretical Baseline Document</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/styles.css?v=df429b37" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '01_acronyms';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="1. Introduction" href="02_introduction.html" />
+    <link rel="prev" title="Changelog" href="00_changelog.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="_static/searchtools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script src="searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="intro.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">CIMR RGB Algorithms Theoretical Baseline Document</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="intro.html">
+                    ATBD - Algorithms Theoretical Baseline
+                </a>
+            </li>
+        </ul>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="00_changelog.html">Changelog</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Acronyms and definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="02_introduction.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="03_references.html">2. References</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="04_output_grids_and_map_projections.html">3. Output Grids and Map Projections</a></li>
+<li class="toctree-l1"><a class="reference internal" href="05_regridding_algorithms.html">4. Regridding Algorithms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="06_implementation.html">5. Implementation</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/S-T-Norway/CIMR-RGB" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/01_acronyms.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Acronyms and definitions</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="acronyms-and-definitions">
+<h1>Acronyms and definitions<a class="headerlink" href="#acronyms-and-definitions" title="Link to this heading">#</a></h1>
+<p>Here follows a formatted list of acronyms.</p>
+<dl class="simple glossary">
+<dt id="term-ATBD">ATBD<a class="headerlink" href="#term-ATBD" title="Link to this term">#</a></dt><dd><p>Algorithm Theoretical Basis Document</p>
+</dd>
+<dt id="term-AP">AP <a class="headerlink" href="#term-AP" title="Link to this term">#</a></dt><dd><p>Antenna Pattern</p>
+</dd>
+<dt id="term-BG">BG<a class="headerlink" href="#term-BG" title="Link to this term">#</a></dt><dd><p>Backus-Gilbert</p>
+</dd>
+<dt id="term-CETB">CETB<a class="headerlink" href="#term-CETB" title="Link to this term">#</a></dt><dd><p>Calibrated Enhanced-Resolution Passive Microwave Daily EASE-Grid 2.0 Brightness Temperature (CETB) product</p>
+</dd>
+<dt id="term-CIMR">CIMR<a class="headerlink" href="#term-CIMR" title="Link to this term">#</a></dt><dd><p><a class="reference internal" href="#term-Copernicus-Imaging-Microwave-Radiometer"><span class="xref std std-term">Copernicus Imaging Microwave Radiometer</span></a></p>
+</dd>
+<dt id="term-DIB">DIB <a class="headerlink" href="#term-DIB" title="Link to this term">#</a></dt><dd><p>Drop-in-the-Bucket</p>
+</dd>
+<dt id="term-EASE2">EASE2<a class="headerlink" href="#term-EASE2" title="Link to this term">#</a></dt><dd><p>Equal Area Scaled Earth</p>
+</dd>
+<dt id="term-EPSG">EPSG <a class="headerlink" href="#term-EPSG" title="Link to this term">#</a></dt><dd><p>European Petroleum Survey Group</p>
+</dd>
+<dt id="term-FoV">FoV<a class="headerlink" href="#term-FoV" title="Link to this term">#</a></dt><dd><p>Field of View</p>
+</dd>
+<dt id="term-IDS">IDS<a class="headerlink" href="#term-IDS" title="Link to this term">#</a></dt><dd><p>Inverse Distance Squared</p>
+</dd>
+<dt id="term-GPP">GPP<a class="headerlink" href="#term-GPP" title="Link to this term">#</a></dt><dd><p>Ground Processor Prototype</p>
+</dd>
+<dt id="term-L1B">L1B<a class="headerlink" href="#term-L1B" title="Link to this term">#</a></dt><dd><p>Level-1B</p>
+</dd>
+<dt id="term-L2">L2<a class="headerlink" href="#term-L2" title="Link to this term">#</a></dt><dd><p>Level-2</p>
+</dd>
+<dt id="term-L2PAD">L2PAD<a class="headerlink" href="#term-L2PAD" title="Link to this term">#</a></dt><dd><p>Level-2 Product Algorithm Development</p>
+</dd>
+<dt id="term-LUT">LUT<a class="headerlink" href="#term-LUT" title="Link to this term">#</a></dt><dd><p>Look-Up Table</p>
+</dd>
+<dt id="term-MRF">MRF<a class="headerlink" href="#term-MRF" title="Link to this term">#</a></dt><dd><p>Measurment Response Function</p>
+</dd>
+<dt id="term-NEDT">NEDT<a class="headerlink" href="#term-NEDT" title="Link to this term">#</a></dt><dd><p>Noise Equivalent Delta Temperature</p>
+</dd>
+<dt id="term-NN">NN<a class="headerlink" href="#term-NN" title="Link to this term">#</a></dt><dd><p>Nearest-Neighbour</p>
+</dd>
+<dt id="term-NRT1H">NRT1H<a class="headerlink" href="#term-NRT1H" title="Link to this term">#</a></dt><dd><p><a class="reference internal" href="#term-Near-Real-Time-1-Hour"><span class="xref std std-term">Near-Real-Time-1-Hour</span></a></p>
+</dd>
+<dt id="term-NRT3H">NRT3H<a class="headerlink" href="#term-NRT3H" title="Link to this term">#</a></dt><dd><p><a class="reference internal" href="#term-Near-Real-Time-3-Hour"><span class="xref std std-term">Near-Real-Time-3-Hour</span></a></p>
+</dd>
+<dt id="term-NTC">NTC<a class="headerlink" href="#term-NTC" title="Link to this term">#</a></dt><dd><p><a class="reference internal" href="#term-Non-Time-Critical"><span class="xref std std-term">Non-Time-Critical</span></a></p>
+</dd>
+<dt id="term-NSIDC">NSIDC<a class="headerlink" href="#term-NSIDC" title="Link to this term">#</a></dt><dd><p>National Snow and Ice Data Center</p>
+</dd>
+<dt id="term-OZA">OZA<a class="headerlink" href="#term-OZA" title="Link to this term">#</a></dt><dd><p><a class="reference internal" href="#term-Observation-Zenith-Angle"><span class="xref std std-term">Observation Zenith Angle</span></a></p>
+</dd>
+<dt id="term-RGB">RGB<a class="headerlink" href="#term-RGB" title="Link to this term">#</a></dt><dd><p>Re-Gridding tool Box</p>
+</dd>
+<dt id="term-rSIR">rSIR    <a class="headerlink" href="#term-rSIR" title="Link to this term">#</a></dt><dd><p>Radiometer Scatterometer Image Reconstruction</p>
+</dd>
+<dt id="term-SMAP">SMAP<a class="headerlink" href="#term-SMAP" title="Link to this term">#</a></dt><dd><p>Soil Moisture Active Passie Satellite</p>
+</dd>
+<dt id="term-TB">TB<a class="headerlink" href="#term-TB" title="Link to this term">#</a></dt><dd><p>Brightness Temperature</p>
+</dd>
+<dt id="term-TOA">TOA<a class="headerlink" href="#term-TOA" title="Link to this term">#</a></dt><dd><p>Top Of Atmosphere</p>
+</dd>
+</dl>
+<hr class="docutils" />
+<p>Here follows a glossary, or list of definitions</p>
+<dl class="simple glossary">
+<dt id="term-annotated">annotated<a class="headerlink" href="#term-annotated" title="Link to this term">#</a></dt><dd><p>An annotated correction is computed but not applied. It is stored in a product file (e.g. as a delta) so that subsequent processing steps can apply the correction.</p>
+</dd>
+<dt id="term-Consolidated-Ice">Consolidated Ice<a class="headerlink" href="#term-Consolidated-Ice" title="Link to this term">#</a></dt><dd><p>In this context, ice with 100% concentration irrespective of its type.</p>
+</dd>
+<dt id="term-Copernicus-Imaging-Microwave-Radiometer">Copernicus Imaging Microwave Radiometer<a class="headerlink" href="#term-Copernicus-Imaging-Microwave-Radiometer" title="Link to this term">#</a></dt><dd><p>The Copernicus Imaging Microwave Radiometer is a Microwave Radiometer which launch is planned by ESA in 2029.</p>
+</dd>
+<dt id="term-Level-2-Pre-Processed">Level-2 Pre-Processed<a class="headerlink" href="#term-Level-2-Pre-Processed" title="Link to this term">#</a></dt><dd><p>Fields (in particular TBs) prepared in the <em>L2 pre-processing</em> sub-system. Output of the L1B/L2 Bridge processor.</p>
+</dd>
+<dt id="term-Near-Real-Time-1-Hour">Near-Real-Time-1-Hour<a class="headerlink" href="#term-Near-Real-Time-1-Hour" title="Link to this term">#</a></dt><dd><p>Product delivered in &lt;1 hour to the point of user pickup after data acquisition by the satellite. NRT1H products are used for nowcasting
+operational applications (e.g., navigation bulletins in the Arctic) from sea ice services, operational oceanography and meteorology.</p>
+</dd>
+<dt id="term-Near-Real-Time-3-Hour">Near-Real-Time-3-Hour<a class="headerlink" href="#term-Near-Real-Time-3-Hour" title="Link to this term">#</a></dt><dd><p>Product delivered in &lt;3 hour to the point of user pickup after data acquisition by the satellite. NRT3H products are used for operational
+applications such as sea ice services, operational oceanography, and meteorology.</p>
+</dd>
+<dt id="term-Non-Time-Critical">Non-Time-Critical<a class="headerlink" href="#term-Non-Time-Critical" title="Link to this term">#</a></dt><dd><p>Product delivered in less than 30 days to the point of user pickup after data acquisition by the satellite. NTC target climate users, and rely
+on the availability of auxiliary of the highest quality. NTC products are consolidated products as they are generated using the most
+precise auxiliary information, orbit knowledge, uncertainty estimates, quality control and other parameter available.</p>
+</dd>
+<dt id="term-Observation-Zenith-Angle">Observation Zenith Angle<a class="headerlink" href="#term-Observation-Zenith-Angle" title="Link to this term">#</a></dt><dd><p>Angle between the satellite viewing direction and the local zenith defined in the surface target reference frame (i.e., zenith – target – satellite)</p>
+</dd>
+<dt id="term-Radiative-Transfer-for-TOVS">Radiative Transfer for TOVS<a class="headerlink" href="#term-Radiative-Transfer-for-TOVS" title="Link to this term">#</a></dt><dd><p>RTTOV (Radiative Transfer for TOVS) is a very fast radiative transfer model for passive visible, infrared and
+microwave downward-viewing satellite radiometers, spectrometers and interferometers .</p>
+</dd>
+<dt id="term-Sea-Ice-Concentration">Sea Ice Concentration<a class="headerlink" href="#term-Sea-Ice-Concentration" title="Link to this term">#</a></dt><dd><p>The Sea Ice Concentration is the fraction of the sea surface covered by sea ice. It is a measure of the amount of sea ice in a given area. It is usually expressed as a percentage.</p>
+</dd>
+</dl>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./."
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="00_changelog.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Changelog</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="02_introduction.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">1. Introduction</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Joseph Heywood, Maksym Brilenkov and Davide Decataldo
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

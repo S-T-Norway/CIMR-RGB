@@ -1,0 +1,721 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>5. Implementation &#8212; CIMR RGB Algorithms Theoretical Baseline Document</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/styles.css?v=df429b37" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '06_implementation';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="4. Regridding Algorithms" href="05_regridding_algorithms.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="_static/searchtools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script src="searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="intro.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">CIMR RGB Algorithms Theoretical Baseline Document</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="intro.html">
+                    ATBD - Algorithms Theoretical Baseline
+                </a>
+            </li>
+        </ul>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="00_changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="01_acronyms.html">Acronyms and definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="02_introduction.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="03_references.html">2. References</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="04_output_grids_and_map_projections.html">3. Output Grids and Map Projections</a></li>
+<li class="toctree-l1"><a class="reference internal" href="05_regridding_algorithms.html">4. Regridding Algorithms</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">5. Implementation</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/S-T-Norway/CIMR-RGB" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/06_implementation.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>5. Implementation</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#algorithm-flow">5.1. Algorithm Flow</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#points-selection">5.2. Points Selection</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#initializing-antenna-patterns">5.3. Initializing Antenna Patterns</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#image-domain-integration-grid">5.4. Image Domain/Integration Grid</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#antenna-pattern-projection-and-measurement-response-function">5.5. Antenna Pattern Projection and Measurement Response Function</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gaussian">5.5.1. Gaussian</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gaussian-projected-and-instrument-cimr">5.5.2. Gaussian_projected and Instrument (CIMR)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gaussian-projected-and-instrument-smap">5.5.3. Gaussian_projected and Instrument (SMAP)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-antenna-pattern-for-l1r-and-l1c-regridding">5.6. Target Antenna Pattern for L1r and L1c Regridding</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="implementation">
+<h1>5. Implementation<a class="headerlink" href="#implementation" title="Link to this heading">#</a></h1>
+<section id="algorithm-flow">
+<h2>5.1. Algorithm Flow<a class="headerlink" href="#algorithm-flow" title="Link to this heading">#</a></h2>
+<p>The toolbox is governed and initiated by use of a configuration file, which provides users with a
+variety of options. <a class="reference internal" href="#fig-rgb-dataflow"><span class="std std-numref">Fig. 1</span></a> depicts the flow of data through the toolbox. The white boxes indicate
+functions that sit within the coloured processing modules. The toolbox has been designed such that
+input data types, ingestion functionality, regridding algorithms, and modular functionality, in general,
+can be added relatively easily. It is also intended that the modules can be used independently or
+outside of the main pipeline.</p>
+<figure class="align-default" id="fig-rgb-dataflow">
+<a class="reference internal image-reference" href="_images/RGB_algorithm_flow_V2.drawio.png"><img alt="_images/RGB_algorithm_flow_V2.drawio.png" src="_images/RGB_algorithm_flow_V2.drawio.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 1 </span><span class="caption-text">CIMR RGB Data Flow</span><a class="headerlink" href="#fig-rgb-dataflow" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<p>As can be seen from <a class="reference internal" href="#fig-rgb-dataflow"><span class="std std-numref">Fig. 1</span></a>, there are no corrections implemented on the data, such as land/water
+contamination, atmospheric, faraday rotation etc.</p>
+</section>
+<section id="points-selection">
+<h2>5.2. Points Selection<a class="headerlink" href="#points-selection" title="Link to this heading">#</a></h2>
+<p>The points selection algorithm lies within the <a class="reference external" href="https://github.com/S-T-Norway/CIMR-RGB/blob/main/src/cimr_rgb/regridder.py">ReGridder</a> module and utilises the pyresample
+python library. The search radius and the number of neighbours desired are user-configurable.
+pyresample calculates orthodromic distances of the Earth’s surface based on spherical geometry. At
+the time of writing, the points selected for use in the regridding algorithm are based solely on the
+proximity to the target location, as opposed to considering scan numbers or feed horn numbers
+when selecting points.</p>
+</section>
+<section id="initializing-antenna-patterns">
+<h2>5.3. Initializing Antenna Patterns<a class="headerlink" href="#initializing-antenna-patterns" title="Link to this heading">#</a></h2>
+<p>Antenna patterns need to be initialised before being projected to the Earth’s surface.</p>
+<ol class="arabic simple">
+<li><p>The functional shape of the antenna pattern in spherical coordinates is decided based on the chosen projection method (See Section XXX)</p></li>
+<li><p>All values for the gain $<span class="math notranslate nohighlight">\(\theta\)</span><span class="math notranslate nohighlight">\( &gt; \)</span><span class="math notranslate nohighlight">\(\theta_{max}\)</span><span class="math notranslate nohighlight">\( are set to zero (where the parameter \)</span><span class="math notranslate nohighlight">\(\theta_{max}\)</span><span class="math notranslate nohighlight">\( is configurable by the user,
+and a value of 40\)</span><span class="math notranslate nohighlight">\(\deg\)</span>$ is recommended (and applied as default), as usually, no feedhorn has a significant
+value of gain at such an angle).</p></li>
+<li><p>All values of gain smaller than a user-defined threshold are set to zero.</p></li>
+<li><p>The remaining gains are passed through the RGB software for projection to the Earth, normalisation occurs after projection.</p></li>
+<li><p>An antenna pattern radius (used to size the integration domain) is defined by estimating the largest radius on Earth where the
+gain is non-zero (i.e. above the threshold), as shown in Figure</p></li>
+</ol>
+<figure class="align-default" id="fig-rgb-ap-description">
+<a class="reference internal image-reference" href="static_imgs/AP_radius_description.png"><img alt="static_imgs/AP_radius_description.png" src="static_imgs/AP_radius_description.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 2 </span><span class="caption-text">Sketch of the procedure to estimate the maximum AP radius. This provides an upper limit to the
+size of the integration domain. First, the boresight of the antenna feedhorn is intersected with the
+Earth’s surface. The distance on Earth between the boresight location and furthest point with above-threshold
+projected gain is then measured. The Earth is assumed to be a sphere in this calculation.</span><a class="headerlink" href="#fig-rgb-ap-description" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<p>Antenna patterns are fully characterised by four values of the gain|: H-pol cross-pol, H-pol co-pol
+, V-pol cross-pol, V-pol co-pol. These four values allow the definition of a 4x4 Mueller matrix, which
+is required to compute the full response of the optical system to the incoming polarised radiation.
+Due to the additional computational cost of projecting the full Mueller matrix to Earth, a scalar
+value of the gain is derived by averaging the cross and co-polarisation terms. The full Mueller matrix is expressed as:</p>
+<div class="math notranslate nohighlight" id="equation-eq-implementation-1">
+<span class="eqno">(32)<a class="headerlink" href="#equation-eq-implementation-1" title="Link to this equation">#</a></span>\[\begin{split}
+\mathbf{G} =
+\begin{bmatrix}
+|G_{vv}|^2 &amp; |G_{vh}|^2 &amp; \text{Re}(G_{vv}G_{vh}^*) &amp; \text{Im}(G_{vh}G_{vv}^*) \\
+|G_{vh}|^2 &amp; |G_{hh}|^2 &amp; \text{Re}(G_{hh}G_{vh}^*) &amp; \text{Im}(G_{hh}G_{vh}^*) \\
+2\text{Re}(G_{vv}G_{vh}^*) &amp; 2\text{Re}(G_{vh}G_{hh}^*) &amp; \text{Re}(G_{vv}G_{hh}^* + G_{vh}G_{vh}^*) &amp; -\text{Im}(G_{vv}G_{hh}^* - G_{vh}G_{vh}^*) \\
+2\text{Im}(G_{vv}G_{vh}^*) &amp; 2\text{Im}(G_{vh}G_{hh}^*) &amp; \text{Im}(G_{vv}G_{hh}^* + G_{vh}G_{vh}^*) &amp; \text{Re}(G_{vv}G_{hh}^* - G_{vh}G_{vh}^*)
+\end{bmatrix}
+\end{split}\]</div>
+<p>where <span class="math notranslate nohighlight">\(Re\)</span> and <span class="math notranslate nohighlight">\(Im\)</span> represent the real and imaginary components respectively. The total scalar gain
+measured for incoming H-polarized radiation is <span class="math notranslate nohighlight">\(G_H = \sqrt{G_{hh} + G_{hv}}\)</span> and similarly for the gain
+measured for incoming V-polarized radiation <span class="math notranslate nohighlight">\(G_V = \sqrt{G_{vv} + G_{vh}}\)</span>. Thus, the scalar gain can be
+estimated as an average of H and V modes:</p>
+<div class="math notranslate nohighlight" id="equation-eq-implementation-2">
+<span class="eqno">(33)<a class="headerlink" href="#equation-eq-implementation-2" title="Link to this equation">#</a></span>\[
+G_{scalar} = \frac{1}{2} \left( \sqrt{G_{hh} + G_{hv}} + \sqrt{G_{vh} + G_{vv}} \right)
+\]</div>
+</section>
+<section id="image-domain-integration-grid">
+<h2>5.4. Image Domain/Integration Grid<a class="headerlink" href="#image-domain-integration-grid" title="Link to this heading">#</a></h2>
+<p>A temporary integration grid is used for calculations involving projected antenna patterns. This is required by the following algorithms:</p>
+<ul class="simple">
+<li><p>BG/rSIR: for each output grid cell (L1C) or output antenna pattern (L1R), the neighbouring antenna patterns are projected to the integration
+grid such that the integrals in Section XXX can be computed; the size of the integration grid is such that all projected patterns fit in the grid, taking into
+account their radius (estimated as explained in Section XXX, point 5).</p></li>
+</ul>
+<p>Since the integration grid is needed only for the purpose of performing intermediate calculations, it is not required to be of the same type as the user-selected
+output grid. For this reason, we chose an EASE2 grid for this purpose, which as a mathematically simple definition and is convenient for computing integrals being
+an equal-area projection.</p>
+<p>The resolution of the integration grid can be configured by the user. The appropriate choice of integration grid resolution depends on the source band to be regridded
+(as well as the target band for L1B–&gt;L1R) since it should be high enough to resolve the projection of the antenna patterns to Earth (Ka-band data will require a resolution
+of 1km at most, while L-band data can be regridded with 3km). <a class="reference internal" href="#tbl-integration-grid"><span class="std std-numref">Table 1</span></a> provides the recommended resolutions for each band and allow the resolution of the antenna pattern
+main lobe with at least 30 pixels.</p>
+<div class="pst-scrollable-table-container"><table class="table" id="tbl-integration-grid">
+<caption><span class="caption-number">Table 1 </span><span class="caption-text">Integration Grid Recommended parameters</span><a class="headerlink" href="#tbl-integration-grid" title="Link to this table">#</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Instrument/Band</p></th>
+<th class="head"><p>Integration Grid Resolution</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>SMAP L</p></td>
+<td><p>3 km</p></td>
+</tr>
+<tr class="row-odd"><td><p>CIMR L</p></td>
+<td><p>3 km</p></td>
+</tr>
+<tr class="row-even"><td><p>CIMR C</p></td>
+<td><p>1.5 km</p></td>
+</tr>
+<tr class="row-odd"><td><p>CIMR X</p></td>
+<td><p>1 km</p></td>
+</tr>
+<tr class="row-even"><td><p>CIMR K</p></td>
+<td><p>0.5 km</p></td>
+</tr>
+<tr class="row-odd"><td><p>CIMR Ka</p></td>
+<td><p>0.25 km</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="antenna-pattern-projection-and-measurement-response-function">
+<h2>5.5. Antenna Pattern Projection and Measurement Response Function<a class="headerlink" href="#antenna-pattern-projection-and-measurement-response-function" title="Link to this heading">#</a></h2>
+<p>The projection of antenna patterns to Earth, the result of which is referred to as the Measurement Response Function (MRF), can be achieved with three different (user configurable) techniques:</p>
+<ul class="simple">
+<li><p>Gaussian</p></li>
+<li><p>Gaussian_projected</p></li>
+<li><p>Instrument</p></li>
+</ul>
+<section id="gaussian">
+<h3>5.5.1. Gaussian<a class="headerlink" href="#gaussian" title="Link to this heading">#</a></h3>
+<p>The “gaussian” projection technique is a simplified version of the antenna pattern projection,
+intended for situations in which a shorter computational time is desired, as well as allowing
+developers/users to remove performance sensitivities to antenna patterns and their projections
+when comparing regridding algorithms or for those users without access to the instrument antenna patterns.
+Projection from the antenna to Earth is not performed, and
+the MRF is built directly on the Earth’s surface. The antenna pattern for a measurement at location
+<span class="math notranslate nohighlight">\((x_0, y_0)\)</span> is assumed to be a 2D gaussian on the integration grid, defined by the equations:</p>
+<div class="math notranslate nohighlight" id="equation-eq-implementation-3">
+<span class="eqno">(34)<a class="headerlink" href="#equation-eq-implementation-3" title="Link to this equation">#</a></span>\[
+G = \exp\left[-(x_1^2/2\sigma_x^2 + y_1^2/2\sigma_y^2)\right]
+\]</div>
+<div class="math notranslate nohighlight" id="equation-eq-implementation-4">
+<span class="eqno">(35)<a class="headerlink" href="#equation-eq-implementation-4" title="Link to this equation">#</a></span>\[
+x_1 = (x - x_0)\cos\alpha + (y - y_0)\sin\alpha
+\]</div>
+<div class="math notranslate nohighlight" id="equation-eq-implementation-5">
+<span class="eqno">(36)<a class="headerlink" href="#equation-eq-implementation-5" title="Link to this equation">#</a></span>\[
+y_1 = -(x - x_0)\sin\alpha + (y - y_0)\cos\alpha
+\]</div>
+<p>with the following parameters:</p>
+<ul class="simple">
+<li><p>The standard deviation of the two perpendicular directions (<span class="math notranslate nohighlight">\(\sigma_x\)</span> and <span class="math notranslate nohighlight">\(\sigma_y\)</span>) are defined by the
+user and should be chosen based on the instrument and band under consideration.</p></li>
+<li><p>The rotation angle <span class="math notranslate nohighlight">\(\alpha\)</span> with respect to the latitude line passing through <span class="math notranslate nohighlight">\((x_0, y_0)\)</span> is computed
+to take into account the satellite position and the boresight corresponding to the selected
+feedhorn.</p></li>
+</ul>
+<figure class="align-default" id="fig-rgb-gaussian-ap">
+<a class="reference internal image-reference" href="_images/gaussian_ap.png"><img alt="_images/gaussian_ap.png" src="_images/gaussian_ap.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 3 </span><span class="caption-text">Sketch showing how the rotation angle, <span class="math notranslate nohighlight">\(\alpha\)</span>, of the 2D gaussian is cmputed when using the “gaussian” projection method
+for antenna patterns.</span><a class="headerlink" href="#fig-rgb-gaussian-ap" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="gaussian-projected-and-instrument-cimr">
+<h3>5.5.2. Gaussian_projected and Instrument (CIMR)<a class="headerlink" href="#gaussian-projected-and-instrument-cimr" title="Link to this heading">#</a></h3>
+<p>These two methods employ the same technique for the projection of the antenna pattern. The difference is in the assumed functional shape of the antenna
+pattern in the antenna reference fram. For “gaussian_projected”, the antenna pattern is a gaussian in the (<span class="math notranslate nohighlight">\(\theta\)</span>, <span class="math notranslate nohighlight">\(\phi\)</span>) spherical coordinate system, with
+user-defined variance (<span class="math notranslate nohighlight">\(\sigma_{\theta}\)</span>, <span class="math notranslate nohighlight">\(\sigma_{\phi}\)</span>). For “instrument”, the antenna pattern is loaded from the actual beam files of
+the radiometers (SMAP, CIMR).</p>
+<p>Subsequent to either loading the beam file of the creation of a Gaussian in its place, the patterns are projected to the Earth’s surface. The
+projection algorithm requires the following values, all obtained from the input L1B data:</p>
+<ul class="simple">
+<li><p>The position (<span class="math notranslate nohighlight">\(x_{0}\)</span>, <span class="math notranslate nohighlight">\(y_{0}\)</span>, <span class="math notranslate nohighlight">\(z_{0}\)</span>) of the satellite at the moment of the measurement (in an ECEF coordinate system)</p></li>
+<li><p>The attitude matrix <span class="math notranslate nohighlight">\(A\)</span> of the satellite in an ECEF coordinate system (CIMR, not available for SMAP)</p></li>
+<li><p>The scan angle, <span class="math notranslate nohighlight">\(\theta_{scan}\)</span></p></li>
+</ul>
+<p>and the following specifications of the radiometer:</p>
+<ul class="simple">
+<li><p>The tilt angle, <span class="math notranslate nohighlight">\(\theta_{tilt}\)</span></p></li>
+<li><p>The feedhorn offsets (<span class="math notranslate nohighlight">\(\theta_{off}\)</span>, <span class="math notranslate nohighlight">\(\phi_{off}\)</span>)</p></li>
+</ul>
+</section>
+<section id="gaussian-projected-and-instrument-smap">
+<h3>5.5.3. Gaussian_projected and Instrument (SMAP)<a class="headerlink" href="#gaussian-projected-and-instrument-smap" title="Link to this heading">#</a></h3>
+<!-- TODO -->
+</section>
+</section>
+<section id="target-antenna-pattern-for-l1r-and-l1c-regridding">
+<h2>5.6. Target Antenna Pattern for L1r and L1c Regridding<a class="headerlink" href="#target-antenna-pattern-for-l1r-and-l1c-regridding" title="Link to this heading">#</a></h2>
+<!-- TODO -->
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./."
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="05_regridding_algorithms.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">4. Regridding Algorithms</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#algorithm-flow">5.1. Algorithm Flow</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#points-selection">5.2. Points Selection</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#initializing-antenna-patterns">5.3. Initializing Antenna Patterns</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#image-domain-integration-grid">5.4. Image Domain/Integration Grid</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#antenna-pattern-projection-and-measurement-response-function">5.5. Antenna Pattern Projection and Measurement Response Function</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gaussian">5.5.1. Gaussian</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gaussian-projected-and-instrument-cimr">5.5.2. Gaussian_projected and Instrument (CIMR)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gaussian-projected-and-instrument-smap">5.5.3. Gaussian_projected and Instrument (SMAP)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target-antenna-pattern-for-l1r-and-l1c-regridding">5.6. Target Antenna Pattern for L1r and L1c Regridding</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Joseph Heywood, Maksym Brilenkov and Davide Decataldo
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

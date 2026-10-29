@@ -1,0 +1,1113 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>4. Regridding Algorithms &#8212; CIMR RGB Algorithms Theoretical Baseline Document</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/styles.css?v=df429b37" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '05_regridding_algorithms';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="5. Implementation" href="06_implementation.html" />
+    <link rel="prev" title="3. Output Grids and Map Projections" href="04_output_grids_and_map_projections.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="_static/searchtools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script src="searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="intro.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">CIMR RGB Algorithms Theoretical Baseline Document</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="intro.html">
+                    ATBD - Algorithms Theoretical Baseline
+                </a>
+            </li>
+        </ul>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="00_changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="01_acronyms.html">Acronyms and definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="02_introduction.html">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="03_references.html">2. References</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="04_output_grids_and_map_projections.html">3. Output Grids and Map Projections</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">4. Regridding Algorithms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="06_implementation.html">5. Implementation</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/S-T-Norway/CIMR-RGB" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/05_regridding_algorithms.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>4. Regridding Algorithms</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#nearest-neighbour">4.1. Nearest Neighbour</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#statement-of-function">4.1.1. Statement of Function</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#heritage">4.1.2. Heritage</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#limitations-and-assumptions">4.1.3. Limitations and Assumptions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#approximations">4.1.4. Approximations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#algorithm-definition">4.1.5. Algorithm Definition</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#references">4.1.6. References</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#drop-in-the-bucket">4.2. Drop-in-the-Bucket</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">4.2.1. Statement of Function</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">4.2.2. Heritage</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">4.2.3. Limitations and Assumptions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">4.2.4. Approximations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">4.2.5. Algorithm Definition</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">4.2.6. References</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#inverse-distance-squared">4.3. Inverse Distance Squared</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">4.3.1. Statement of Function</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">4.3.2. Heritage</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">4.3.3. Limitations and Assumptions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">4.3.4. Approximations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">4.3.5. Algorithm Definition</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id12">4.3.6. References</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#backus-gilbert">4.4. Backus Gilbert</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id13">4.4.1. Statement of Function</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id14">4.4.2. Heritage</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id15">4.4.3. Limitations and Assumptions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id16">4.4.4. Approximations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id17">4.4.5. Algorithm Definition</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id18">4.4.6. References</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#radiometer-scatterometer-image-reconstruction">4.5. Radiometer Scatterometer Image Reconstruction</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id19">4.5.1. Statement of Function</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id20">4.5.2. Heritage</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id21">4.5.3. Limitations and Assumptions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id22">4.5.4. Approximations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id23">4.5.5. Algorithm Definition</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id24">4.5.6. References</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#nedt-and-uncertainty-propagation">4.7. NEDT and Uncertainty Propagation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id25">4.7.1. Nearest Neighbour</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id26">4.7.2. Drop-in-the-Bucket</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id27">4.7.3. Inverse Distance Squared</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id28">4.7.4. Backus Gilbert</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id29">4.7.5. Radiometer Scatterometer Image Reconstruction</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="regridding-algorithms">
+<h1>4. Regridding Algorithms<a class="headerlink" href="#regridding-algorithms" title="Link to this heading">#</a></h1>
+<p>The RGB provides functionality for a variety of regridding/ interpolation methods, whose theoretical basis are described in this Section.</p>
+<p>All algorithms, except for NN, rely on multiple input samples to perform interpolation. The selection of these input samples
+is determined by two configuration parameters: <code class="docutils literal notranslate"><span class="pre">search_radius</span></code> and <code class="docutils literal notranslate"><span class="pre">max_neighbours</span></code>.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">search_radius</span></code> specifies the radius from the target location within which the algorithm searches for neighboring samples.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_neighbours</span></code> defines the maximum number of neighbours that shall be used for the interpolation.</p></li>
+</ul>
+<p>If the number of neighbours found within a specified <code class="docutils literal notranslate"><span class="pre">search_radius</span></code> exceeds the value of <code class="docutils literal notranslate"><span class="pre">max_neighbors</span></code>, the algorithm will select
+only the closest <code class="docutils literal notranslate"><span class="pre">N</span> <span class="pre">=</span> <span class="pre">max_neighbors</span></code> samples for interpolation.</p>
+<section id="nearest-neighbour">
+<h2>4.1. Nearest Neighbour<a class="headerlink" href="#nearest-neighbour" title="Link to this heading">#</a></h2>
+<section id="statement-of-function">
+<h3>4.1.1. Statement of Function<a class="headerlink" href="#statement-of-function" title="Link to this heading">#</a></h3>
+<p>The Nearest Neighbour (NN) regridding algorithm assigns each point in the target grid the value of the closest point in
+the source grid. This method is especially useful when precise, discrete values need to be preserved, as it does not involve
+interpolation or averaging.</p>
+</section>
+<section id="heritage">
+<h3>4.1.2. Heritage<a class="headerlink" href="#heritage" title="Link to this heading">#</a></h3>
+<p>NN doesn’t traditionally have a heritage in formal satellite products due to it’s simplicity and non-smoothing characteristics.
+It is, however, the fastest algorithm and is useful for sanity checks in the development of more complext algorithms, or when
+using new data.</p>
+</section>
+<section id="limitations-and-assumptions">
+<h3>4.1.3. Limitations and Assumptions<a class="headerlink" href="#limitations-and-assumptions" title="Link to this heading">#</a></h3>
+<p>This approach is fast and simple but will likely introduce abrupt changes and artefacts in the output data due to the lack
+of smoothing. Moreover, there will be no reduction in noise by averaging. It also throws away the vast majority of available input
+data, leading to potentially inaccurate output results. However, the effective antenna pattern is only broadened to the size of
+the output grid cell, as opposed to other methods whose effective antenna pattern is largely widened by considering points
+far away from the target location.</p>
+</section>
+<section id="approximations">
+<h3>4.1.4. Approximations<a class="headerlink" href="#approximations" title="Link to this heading">#</a></h3>
+<p>No approximations are made for this algorithm.</p>
+</section>
+<section id="algorithm-definition">
+<h3>4.1.5. Algorithm Definition<a class="headerlink" href="#algorithm-definition" title="Link to this heading">#</a></h3>
+<p>The NN algorithm assigns each point in the target grid the value of the closest point in the source grid. If there are <span class="math notranslate nohighlight">\(N\)</span> source samples <span class="math notranslate nohighlight">\(\{T_{B1}, \ldots, T_{BN}\}\)</span> that fall within a search radius of a
+given cell, the corresponding gridded <span class="math notranslate nohighlight">\(T_B\)</span> is expressed as</p>
+<div class="math notranslate nohighlight" id="equation-eq-nn">
+<span class="eqno">(4)<a class="headerlink" href="#equation-eq-nn" title="Link to this equation">#</a></span>\[
+T_{Bg} = T_{Bj}
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(T_{Bj}\)</span> represents the single sample that is radially closest to the grid cell centre.</p>
+</section>
+<section id="references">
+<h3>4.1.6. References<a class="headerlink" href="#references" title="Link to this heading">#</a></h3>
+<p>This Section is intentionally left blank.</p>
+</section>
+</section>
+<section id="drop-in-the-bucket">
+<h2>4.2. Drop-in-the-Bucket<a class="headerlink" href="#drop-in-the-bucket" title="Link to this heading">#</a></h2>
+<section id="id1">
+<h3>4.2.1. Statement of Function<a class="headerlink" href="#id1" title="Link to this heading">#</a></h3>
+<p>The Drop-in-the-Bucket (DIB) algorithm aggregates data from the source grid into the cells of the target grid, effectively
+“dropping” data points into the nearest target cell without weighting (i.e all have equal weights).</p>
+</section>
+<section id="id2">
+<h3>4.2.2. Heritage<a class="headerlink" href="#id2" title="Link to this heading">#</a></h3>
+<p>The algorithm doesn’t have significant heritage in comparable products but is frequently used in literature to compare more complext algorithms.</p>
+</section>
+<section id="id3">
+<h3>4.2.3. Limitations and Assumptions<a class="headerlink" href="#id3" title="Link to this heading">#</a></h3>
+<p>While the effective noise fluctuations in the source measurements are reduced in the averaging
+process, the effective antenna pattern can be significantly broadened due to equal weights given to
+source samples that may lie near the cell boundaries, resulting in the gridded result containing
+radiance from outside the target cell/ search area.</p>
+</section>
+<section id="id4">
+<h3>4.2.4. Approximations<a class="headerlink" href="#id4" title="Link to this heading">#</a></h3>
+<p>No approximations were made.</p>
+</section>
+<section id="id5">
+<h3>4.2.5. Algorithm Definition<a class="headerlink" href="#id5" title="Link to this heading">#</a></h3>
+<p>If there are <span class="math notranslate nohighlight">\(N\)</span> source samples <span class="math notranslate nohighlight">\(\{T_{B1}, \ldots, T_{BN}\}\)</span> that fall within a target cell/search radius, the
+corresponding gridded <span class="math notranslate nohighlight">\(T_B\)</span> is expressed as</p>
+<div class="math notranslate nohighlight" id="equation-eq-average">
+<span class="eqno">(5)<a class="headerlink" href="#equation-eq-average" title="Link to this equation">#</a></span>\[
+T_{Bg} = \frac{1}{N}\sum_{i=1}^{N} \alpha_i T_{Bi}
+\]</div>
+<p>where all <span class="math notranslate nohighlight">\(\alpha_i\)</span> are equal to 1.</p>
+<p>The RGB offers the DIB algorithm to be applied within a chosen search radius or directly within the cells (squared) themselves.
+Suppose there are more neighbours in the search radius than the specified <span class="math notranslate nohighlight">\(N\)</span> = <code class="docutils literal notranslate"><span class="pre">max_neighbours</span></code>.
+Then, the algorithm will consider the closest <span class="math notranslate nohighlight">\(N\)</span> neighbours.</p>
+</section>
+<section id="id6">
+<h3>4.2.6. References<a class="headerlink" href="#id6" title="Link to this heading">#</a></h3>
+<p>This Section is intentionally left blank.</p>
+</section>
+</section>
+<section id="inverse-distance-squared">
+<h2>4.3. Inverse Distance Squared<a class="headerlink" href="#inverse-distance-squared" title="Link to this heading">#</a></h2>
+<section id="id7">
+<h3>4.3.1. Statement of Function<a class="headerlink" href="#id7" title="Link to this heading">#</a></h3>
+<p>The Inverse Distance Squared (IDS) regridding algorithm interpolates values from the source grid to
+the target grid by weighting each source point’s influence on the target cell inversely to the square of
+the distance. Closer points have a much stronger influence than those far away, resulting in smooth
+gradients across the grid.</p>
+</section>
+<section id="id8">
+<h3>4.3.2. Heritage<a class="headerlink" href="#id8" title="Link to this heading">#</a></h3>
+<p>This algorithm is often used in microwave radiometry applications, most notably in the SMAP L1C
+Radiometer Half-Orbit 36 km EASE-Grid Brightness Temperatures (BTs) <a class="reference internal" href="03_references.html"><span class="doc">[RD-4]</span></a>, <a class="reference internal" href="03_references.html"><span class="doc">[RD-5]</span></a> product.</p>
+</section>
+<section id="id9">
+<h3>4.3.3. Limitations and Assumptions<a class="headerlink" href="#id9" title="Link to this heading">#</a></h3>
+<p>IDS can introduce smoothing that can mask finer details in the data, especially in the case where
+source data is unevenly distributed, as is of course the case for conically scanning radiometers. This
+algorithm is limited in cases where finer resolution detail is required and/or when an appropriate
+number of neighbouring samples are not within an appropriate proximity to the target cell. This is
+due to the fact that the sample temperatures are treated as discrete temperatures at that location,
+as opposed to methods utilising antenna patterns, which allow the distribution of temperatures over
+larger regions.</p>
+</section>
+<section id="id10">
+<h3>4.3.4. Approximations<a class="headerlink" href="#id10" title="Link to this heading">#</a></h3>
+<p>No approximations were made.</p>
+</section>
+<section id="id11">
+<h3>4.3.5. Algorithm Definition<a class="headerlink" href="#id11" title="Link to this heading">#</a></h3>
+<p>The Inverse Distance Squared method assigns weights to each measurement identified in the points
+selection depending on its vicinity to the centre of the target output cell.</p>
+<div class="math notranslate nohighlight" id="equation-eq-idw-a">
+<span class="eqno">(6)<a class="headerlink" href="#equation-eq-idw-a" title="Link to this equation">#</a></span>\[
+T_{B_{target}} = \frac{1}{A}\sum_{i=1}^{N} \alpha_i T_{B_{i_{source}}}
+\]</div>
+<div class="math notranslate nohighlight" id="equation-eq-idw-b">
+<span class="eqno">(7)<a class="headerlink" href="#equation-eq-idw-b" title="Link to this equation">#</a></span>\[
+A = \sum_{i=1}^{N} \alpha_i
+\]</div>
+<div class="math notranslate nohighlight" id="equation-eq-idw-c">
+<span class="eqno">(8)<a class="headerlink" href="#equation-eq-idw-c" title="Link to this equation">#</a></span>\[
+\alpha_i = \frac{1}{d_i^2}
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(d\)</span> is the orthodromic distance based on the Earth’s sphere.</p>
+</section>
+<section id="id12">
+<h3>4.3.6. References<a class="headerlink" href="#id12" title="Link to this heading">#</a></h3>
+<p>The reader is referred to <a class="reference internal" href="03_references.html"><span class="doc">[RD-4]</span></a> and <a class="reference internal" href="03_references.html"><span class="doc">[RD-5]</span></a> for more information.</p>
+</section>
+</section>
+<section id="backus-gilbert">
+<h2>4.4. Backus Gilbert<a class="headerlink" href="#backus-gilbert" title="Link to this heading">#</a></h2>
+<section id="id13">
+<h3>4.4.1. Statement of Function<a class="headerlink" href="#id13" title="Link to this heading">#</a></h3>
+<p>The Backus-Gilbert (BG) regridding algorithm interpolates values from the source grid to the target
+grid using a weighted average of the source points. The weights are chosen to minimise the fit
+error, accounting for the projection of the source and target antenna gain patterns onto the Earth’s
+surface. The goal is to reproduce, as closely as possible, what the radiometer would have measured
+had it been pointed directly at the interpolation point. The algorithm takes advantage of the
+non-uniform spatial sampling characteristic of conical microwave radiometer measurements, which
+oversample in certain regions.</p>
+</section>
+<section id="id14">
+<h3>4.4.2. Heritage<a class="headerlink" href="#id14" title="Link to this heading">#</a></h3>
+<p>The Backus-Gilbert interpolation algorithm was first developed in the 1960’s in order to better
+understand the internal structure of the Earth. Since its first development, the BG method has been
+widely used in a variety of scientific fields, mostly in geophysics and, more recently, in the field of
+spatial data interpolation and resolution enhancement. The algorithm was selected for
+implementation in the RGB as a result of a literature review of state-of-the-art algorithms, detailed in
+the Comparative Performance Assessment Plan <a class="reference internal" href="03_references.html"><span class="doc">[AD-2]</span></a>.</p>
+<p>In the last 15 years or so, BG has been extensively researched in the application of microwave
+radiometry and applied as the chosen interpolation method for a variety of satellite data products.
+Most notably, the BG algorithm was used in the creation of the “GCOM-W1 AMSR2 Level 1R
+Product” <a class="reference internal" href="03_references.html"><span class="doc">[RD-6]</span></a> and the “SMAP Enhanced L1C Radiometer Half-Orbit 9 km EASE-Grid Brightness
+Temperatures” <a class="reference internal" href="03_references.html"><span class="doc">[RD-7]</span></a> and has also been applied to the Microwave Imager (MWI) and Ice Cloud Imager (ICI)
+L2 products <a class="reference internal" href="03_references.html"><span class="doc">[RD-8]</span></a>.</p>
+</section>
+<section id="id15">
+<h3>4.4.3. Limitations and Assumptions<a class="headerlink" href="#id15" title="Link to this heading">#</a></h3>
+<p>Despite its powerful capabilities, the Backus-Gilbert method has faced challenges in widespread
+adoption, primarily due to its computational cost and complexity in implementation, especially for
+large-scale problems.</p>
+<p>Implementations of the Backus-Gilbert method in satellite data processing have had to address
+issues such as artefact production due to poor condition numbers in matrix inversions. This is
+especially true when the number of neighbours taken into account for the interpolation is large,
+making the matrix inversion more computationally intensive and affected by uncertainties.</p>
+<p>As multiple input source samples are used for the interpolation, the temperatures are averaged
+temporally over these source samples. It is, therefore, assumed that the surface characteristics
+remain constant over this period. This assumption is, of course, more applicable in the case where
+adjacent samples from the same scan are considered. However, there could be significantly more
+time in-between two samples in which one was taken from a forward-looking part of one scan and
+the backward-looking part of another. The user should consider this in their choice of configuration
+parameters.</p>
+</section>
+<section id="id16">
+<h3>4.4.4. Approximations<a class="headerlink" href="#id16" title="Link to this heading">#</a></h3>
+<p>Several approximations are required in order to implement the BG algorithm for the interpolation of
+radiometric data, in particular when there is a large number of high-resolution measurements,
+entailing a higher computational load.</p>
+<p>Antenna patterns for CIMR are provided with high resolution (&lt; 0.01 deg for K and Ka bands) through
+the full forward hemisphere. Projecting all the gain values on Earth’s surface for each source pattern
+is not feasible, and the following strategies are adopted to decrease the computational load:</p>
+<ul class="simple">
+<li><p>Antenna patterns are sub-sampled to lower resolution</p></li>
+<li><p>Gain values smaller than a threshold values are set to zero</p></li>
+<li><p>Antenna patterns are projected to an integration grid on the Earth’s surface (with resolution being a user-defined parameter), which could downgrade further the antenna pattern
+resolution</p></li>
+</ul>
+<p>Antenna temperature measurements, described by 4 Stokes parameters, are, in principle, obtained
+via a radiative transfer calculation, which can be described with a Mueller Matrix. The full Mueller
+matrix for the SMAP and CIMR instrument is provided and can be included in the BG algorithm when
+interpolating the 4 Stokes parameters. However, this significantly increases the amount of operations
+in the projection step since all 16 values of the Mueller matrix need to be projected to Earth and
+recomputed in a Ludwig-3 polarisation basis relative to the Earth’s surface. Therefore, an
+approximation is performed that derives a scalar value from the Mueller matrix to characterise the
+antenna gain, as described in Section XXX. This considerably speeds up the calculation, with the
+drawback that all 4 Stokes parameters will be interpolated with the same scalar value of the gain,
+neglecting the different response of the feedhorn to different polarisation components.</p>
+</section>
+<section id="id17">
+<h3>4.4.5. Algorithm Definition<a class="headerlink" href="#id17" title="Link to this heading">#</a></h3>
+<p>The <span class="math notranslate nohighlight">\(T_B\)</span> measured by a receiving antenna is expressed as</p>
+<div class="math notranslate nohighlight" id="equation-eq-bg-1">
+<span class="eqno">(9)<a class="headerlink" href="#equation-eq-bg-1" title="Link to this equation">#</a></span>\[
+T_B = \iint G(x,y) T_B(x,y)\, dx\, dy = \int G(\rho) T_B(\rho)\, ds
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(G(x,y) = G(\rho)\)</span> is the projected antenna pattern on Earth, i.e., the gain of the antenna at
+position <span class="math notranslate nohighlight">\((x,y) = \rho\)</span> on the Earth’s Surface, and <span class="math notranslate nohighlight">\(T_B(x,y) = T_B(\rho)\)</span> is the microwave energy emitted
+from the point <span class="math notranslate nohighlight">\(\rho\)</span>. <span class="math notranslate nohighlight">\(G(\rho)\)</span> is the normalised gain value of the antenna, where <span class="math notranslate nohighlight">\(\int G(\rho)\, dS = 1\)</span>.</p>
+<p>For the interpolation of an output grid cell, multiple source samples and their respective antenna
+patterns are considered, each with varying positions and rotations on the 2D surface. The set of
+source patterns considered is expressed as:</p>
+<div class="math notranslate nohighlight" id="equation-eq-bg-2">
+<span class="eqno">(10)<a class="headerlink" href="#equation-eq-bg-2" title="Link to this equation">#</a></span>\[
+T_{B_{source,i}} = \int G_{source,i}(\rho) T_{B_{source,i}}(\rho)\, dS
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(G_i\)</span> <span class="math notranslate nohighlight">\((i = 1, \ldots, N)\)</span>.</p>
+<p>The target measurement, <span class="math notranslate nohighlight">\(T_{B_{target}}\)</span>, is measured by another receiving antenna pattern. Depending on
+the desired output grid type, this could be the real or simulated antenna pattern of the target band
+in the case of an L1R remap or a gaussian fit to the size of the output cell in the case of an L1C
+remap. The target measurement is expressed as</p>
+<div class="math notranslate nohighlight" id="equation-eq-bg-3">
+<span class="eqno">(11)<a class="headerlink" href="#equation-eq-bg-3" title="Link to this equation">#</a></span>\[
+T_{B_{target}} = \int F_{target}(\rho) T_{B_{target}}(\rho)\, dS
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(F(\rho)\)</span> is the target antenna pattern and <span class="math notranslate nohighlight">\(\int F(\rho)\, dS = 1\)</span>.</p>
+<p><span class="math notranslate nohighlight">\(T_{B_{target}}\)</span> is a weighted combination of the source samples expressed as</p>
+<div class="math notranslate nohighlight" id="equation-eq-bg-4">
+<span class="eqno">(12)<a class="headerlink" href="#equation-eq-bg-4" title="Link to this equation">#</a></span>\[
+T_{B_{target}} = \sum_{i=1}^{N} a_i T_{B_{source,i}} = \sum_{i=1}^{N} a_i \left( \int_S G_i(\rho) T_{B_{source,i}}(\rho)\, dS \right)
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(a_i\)</span> are weighting factors of the source samples, that can be computed to minimise the fit error.</p>
+<p>The ideal <span class="math notranslate nohighlight">\(a_i\)</span> should satisfy a fit error of zero,</p>
+<div class="math notranslate nohighlight" id="equation-eq-bg-5">
+<span class="eqno">(13)<a class="headerlink" href="#equation-eq-bg-5" title="Link to this equation">#</a></span>\[
+F(\rho) - \sum_{i=1}^{N} a_i G_i(\rho) = 0
+\]</div>
+<p>The resulting equation for the weighting factors (written in matrix form) is</p>
+<div class="math notranslate nohighlight" id="equation-eq-bg-6">
+<span class="eqno">(14)<a class="headerlink" href="#equation-eq-bg-6" title="Link to this equation">#</a></span>\[
+\mathbf{a} = \mathbf{V}^{-1} \left[ \mathbf{v} + \left( \frac{1 - \mathbf{u}^T \mathbf{V}^{-1} \mathbf{v}}{\mathbf{u}^T \mathbf{V}^{-1} \mathbf{u}} \right) \mathbf{u} \right]
+\]</div>
+<p>where</p>
+<div class="math notranslate nohighlight" id="equation-eq-bg-7">
+<span class="eqno">(15)<a class="headerlink" href="#equation-eq-bg-7" title="Link to this equation">#</a></span>\[
+\mathbf{V} = \mathbf{G} + k\mathbf{I}
+\]</div>
+<div class="math notranslate nohighlight" id="equation-eq-bg-8">
+<span class="eqno">(16)<a class="headerlink" href="#equation-eq-bg-8" title="Link to this equation">#</a></span>\[
+u_i = \int G_i(\rho)\, dS
+\]</div>
+<div class="math notranslate nohighlight" id="equation-eq-bg-9">
+<span class="eqno">(17)<a class="headerlink" href="#equation-eq-bg-9" title="Link to this equation">#</a></span>\[
+v_i = \int G_i(\rho) F(\rho)\, dS
+\]</div>
+<div class="math notranslate nohighlight" id="equation-eq-bg-10">
+<span class="eqno">(18)<a class="headerlink" href="#equation-eq-bg-10" title="Link to this equation">#</a></span>\[
+G_{ij} = \int G_i(\rho) G_j(\rho)\, dS
+\]</div>
+<p><span class="math notranslate nohighlight">\(k\)</span> is a factor multiplied by the identity matrix <span class="math notranslate nohighlight">\(I\)</span>, which varies from 0 to infinity and smooths the
+variation of the coefficient <span class="math notranslate nohighlight">\(a_i\)</span>.</p>
+</section>
+<section id="id18">
+<h3>4.4.6. References<a class="headerlink" href="#id18" title="Link to this heading">#</a></h3>
+<p>For further reading on the BG algorithm, we refer the reader to <a class="reference internal" href="03_references.html"><span class="doc">[RD-9]</span></a>, <a class="reference internal" href="03_references.html"><span class="doc">[RD-10]</span></a> , <a class="reference internal" href="03_references.html"><span class="doc">[RD-8]</span></a>,
+<a class="reference internal" href="03_references.html"><span class="doc">[RD-11]</span></a>, <a class="reference internal" href="03_references.html"><span class="doc">[RD-12]</span></a>, <a class="reference internal" href="03_references.html"><span class="doc">[RD-6]</span></a>, <a class="reference internal" href="03_references.html"><span class="doc">[RD-12]</span></a>, <a class="reference internal" href="03_references.html"><span class="doc">[RD-7]</span></a> and  <a class="reference internal" href="03_references.html"><span class="doc">[RD-13]</span></a>.</p>
+</section>
+</section>
+<section id="radiometer-scatterometer-image-reconstruction">
+<h2>4.5. Radiometer Scatterometer Image Reconstruction<a class="headerlink" href="#radiometer-scatterometer-image-reconstruction" title="Link to this heading">#</a></h2>
+<section id="id19">
+<h3>4.5.1. Statement of Function<a class="headerlink" href="#id19" title="Link to this heading">#</a></h3>
+<p>The Radiometer Scatterometer Image Reconstruction (rSIR) method is an iterative image reconstruction technique.
+rSIR makes use of a surface temperature distribution defined by the instruments antenna patterns. The algorithm uses
+regularisation in order to trade-off between noise amplification and spatial resolution. It achieves this by selecting
+an appropriate number of iterations, which consequently produces only a partial reconstruction of the image.</p>
+<p>The aim is to estimate the surface brightness temperature based on the noise source measurements. The algorithm makes
+use of the instruments (or simulated) antenna patterns, which translate to the Measurement Response Function (MRF) on the Earth’s surface and is therefore highly sensitive to
+processing decisions pertaining to this. The MRF is calculated using the satellite position, antenna
+scan angle, and the antenna gain pattern. The processing of antenna patterns and their associated
+MRF’s is discussed in Section XXX.</p>
+</section>
+<section id="id20">
+<h3>4.5.2. Heritage<a class="headerlink" href="#id20" title="Link to this heading">#</a></h3>
+<p>rSIR was selected as an outcome of a literature study on state-of-the-art regridding algorithms
+outlined in the Comparative Performance Assessment Plan <a class="reference internal" href="03_references.html"><span class="doc">[AD-02]</span></a>. The studies by Long et al.
+<a class="reference internal" href="03_references.html"><span class="doc">[RD-14]</span></a>, <a class="reference internal" href="03_references.html"><span class="doc">[RD-15]</span></a> applied to SMAP data demonstrate that in comparison
+with other image production methods, rSIR produces images with finer resolution and lower Root Mean Square Errors
+(RMSEs). rSIR, in particular, exhibits slightly lower noise in simulations and finer resolution by certain metrics. The
+studies conclude that due to its lower computational requirements and superior performance, rSIR is
+preferred for generating enhanced-resolution images for Calibrated Passive Microwave Daily
+Equal-Area Scalable Earth Grid 2.0 (EASE2) Brightness Temperature (CETB) products, specifically for
+SMAP applications.
+rSIR has been applied to SMAP data in a stand-alone NSIDC product, “SMAP Radiometer Twice-Daily
+rSIR-Enhanced EASE-Grid 2.0 Brightness Temperatures” <a class="reference internal" href="03_references.html"><span class="doc">[RD-16]</span></a>. This product (and its associated
+documentation) was one of the main sources of reference in the implementation of this algorithm.</p>
+</section>
+<section id="id21">
+<h3>4.5.3. Limitations and Assumptions<a class="headerlink" href="#id21" title="Link to this heading">#</a></h3>
+<p>As the rSIR algorithm is an iterative update of temperature distribution over a larger area
+surrounding the target location, it is only appropriate to apply it to the brightness temperatures
+(<code class="docutils literal notranslate"><span class="pre">bt_h</span></code>, <code class="docutils literal notranslate"><span class="pre">bt_v</span></code>, <code class="docutils literal notranslate"><span class="pre">bt_3</span></code>, <code class="docutils literal notranslate"><span class="pre">bt_4</span></code>). Therefore, all other variables apart from these use IDS for their regrid
+when this algorithm is selected.
+As multiple input source samples are used to reconstruct the image, the reconstructed image is
+averaged temporally over these source samples. It is, therefore, assumed that the surface
+characteristics remain constant over this period. This assumption is, of course, more applicable in the
+case where adjacent samples from the same scan are considered. However, there could be
+significantly more time in-between two samples in which one was taken from a forward-looking part
+of one scan and the backward-looking part of another. The user should consider this in their choice
+of configuration parameters.</p>
+</section>
+<section id="id22">
+<h3>4.5.4. Approximations<a class="headerlink" href="#id22" title="Link to this heading">#</a></h3>
+<p>If a full reconstruction were employed, noise in the source samples could be excessively amplified.
+The algorithm is therefore regularised through the iteration number, which effectively imposes a
+smoothing constraint on the image.</p>
+<p>The antenna pattern processing and, consequently, the MRF, contains a degree of approximation
+regardless of the method used to generate it (users can employ instrument antenna patterns or
+simulate a Gaussian; see the Software Installation and User Manual <a class="reference internal" href="03_references.html"><span class="doc">[AD-01]</span></a> for more details). In all
+cases, users must choose a gain threshold, below which the antenna pattern is ignored and not
+considered part of the “footprint.” This threshold is generally taken in the field to be 3 dB (half
+power). Moreover, when “instrument” antenna patterns are used, some interpolation is applied to
+the patterns before ingestion into the RGB, when “gaussian” or “gaussian_projected” patterns are
+selected, the antenna pattern itself is naturally approximated by a Gaussian function (see Sections
+XXX to XXX for details on this function). The MRF is further approximated in its superposition onto
+the image domain/integration grid, the resolution of which is user-configurable.</p>
+</section>
+<section id="id23">
+<h3>4.5.5. Algorithm Definition<a class="headerlink" href="#id23" title="Link to this heading">#</a></h3>
+<p>The target surface brightness temperature distribution <span class="math notranslate nohighlight">\(T_{B,target}(x, y)\)</span> is treated as a discrete signal,
+sampled at the chosen grid pixel spacing, and is estimated from <span class="math notranslate nohighlight">\(N\)</span> source measurements <span class="math notranslate nohighlight">\(T_{B,source}\)</span>.
+<span class="math notranslate nohighlight">\(T_{B,target}(x, y)\)</span> is considered over an image domain, <span class="math notranslate nohighlight">\(N_x \times N_y\)</span>, large enough to contain all considered
+samples and associated antenna patterns for the interpolation of a target output cell. <span class="math notranslate nohighlight">\(T_{B,target}(x, y)\)</span>
+is vectorised over this domain, <span class="math notranslate nohighlight">\(a_j = T_{B,target}(x_l, y_k)\)</span>, where <span class="math notranslate nohighlight">\(j = l + N_x k\)</span> and <span class="math notranslate nohighlight">\(l, k\)</span> correspond to
+the row and column number of the pixel in the image domain. The image domain is analogous to
+what is otherwise referred to in this report as the ‘integration grid’. The creation of this is described
+in Section XXXX.</p>
+<p>A particular measurement, <span class="math notranslate nohighlight">\(z_i\)</span>, can be expressed as</p>
+<div class="math notranslate nohighlight" id="equation-eq-rsir-1">
+<span class="eqno">(19)<a class="headerlink" href="#equation-eq-rsir-1" title="Link to this equation">#</a></span>\[
+z_i = \sum_{j \in image} h_{ij} a_j
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(h_{ij} = MRF(x_l, y_k)\)</span>, or the normalised antenna pattern projected to Earth evaluated at the <span class="math notranslate nohighlight">\(j^{th}\)</span>
+pixel centre. The MRF is negligible at a certain distance from the pixel centre and is cut to a
+user-selected value, and the sum is therefore only computed over an area local to the measurement
+position. The <span class="math notranslate nohighlight">\(h_{ij}\)</span> are normalised such that <span class="math notranslate nohighlight">\(\sum_j h_{ij} = 1\)</span>.</p>
+<p>For all measurements considered for a target output cell,</p>
+<div class="math notranslate nohighlight" id="equation-eq-rsir-2">
+<span class="eqno">(20)<a class="headerlink" href="#equation-eq-rsir-2" title="Link to this equation">#</a></span>\[
+\vec{T} = \mathbf{H}\vec{a}
+\]</div>
+<p>where <span class="math notranslate nohighlight">\(H\)</span> contains the samples MRF for each measurement, and <span class="math notranslate nohighlight">\(T\)</span> and <span class="math notranslate nohighlight">\(a\)</span> are vectors composed of the
+measurements <span class="math notranslate nohighlight">\(z_i\)</span>, and the samples surface brightness temperatures <span class="math notranslate nohighlight">\(a_j\)</span>, respectively.</p>
+<p>The rSIR algorithm solves this equation iteratively. It approximates a maximum-entropy solution to
+an underdetermined system and a least-squares solution to an overdetermined system.</p>
+<p>The first iteration is a simple estimate of <span class="math notranslate nohighlight">\(T_{B,target}\)</span> with the <span class="math notranslate nohighlight">\(j^{th}\)</span> pixel, expressed as:</p>
+<div class="math notranslate nohighlight" id="equation-eq-rsir-3">
+<span class="eqno">(21)<a class="headerlink" href="#equation-eq-rsir-3" title="Link to this equation">#</a></span>\[
+a_j^0 = \frac{\sum_i h_{ij} z_i}{\sum_i h_{ij}}
+\]</div>
+<p>At the <span class="math notranslate nohighlight">\(k\)</span>th <span class="math notranslate nohighlight">\((k &gt; 0)\)</span> iteration, the forward projection and scale factor are defined as:</p>
+<div class="math notranslate nohighlight" id="equation-eq-fk">
+<span class="eqno">(22)<a class="headerlink" href="#equation-eq-fk" title="Link to this equation">#</a></span>\[
+f_i^k = \frac{\sum_n h_{in} a_n^k}{\sum_n h_{in}}
+\]</div>
+<div class="math notranslate nohighlight" id="equation-eq-dk">
+<span class="eqno">(23)<a class="headerlink" href="#equation-eq-dk" title="Link to this equation">#</a></span>\[
+d_i^k = \sqrt{\frac{z_i}{f_i^k}}
+\]</div>
+<p>respectively, where <span class="math notranslate nohighlight">\(n\)</span> is the index to each pixel in the image. The non-linear update term is expressed
+as:</p>
+<div class="math notranslate nohighlight" id="equation-eq-rsir-4">
+<span class="eqno">(24)<a class="headerlink" href="#equation-eq-rsir-4" title="Link to this equation">#</a></span>\[\begin{split}
+u_{ij}^k =
+\begin{cases}
+\left[\dfrac{1}{2} f_i^k \left(1 - \dfrac{1}{d_i^k}\right) + \dfrac{1}{a_j^k d_i^k}\right]^{-1}, &amp; \text{if } d_i^k \geq 1 \\[8pt]
+\left[\dfrac{1}{2} f_i^k \left(1 - d_i^k\right) + a_j^k d_i^k\right], &amp; \text{if } d_i^k &lt; 1
+\end{cases}
+\end{split}\]</div>
+<p>and the <span class="math notranslate nohighlight">\(j\)</span>th image pixel is computed as:</p>
+<div class="math notranslate nohighlight" id="equation-eq-rsir-5">
+<span class="eqno">(25)<a class="headerlink" href="#equation-eq-rsir-5" title="Link to this equation">#</a></span>\[
+a_j^{k+1} = \frac{\sum_i h_{ij} u_{ij}^k}{\sum_i h_{ij}}
+\]</div>
+<p>This set of equations is iterated over <span class="math notranslate nohighlight">\(k\)</span> for the user-selected <span class="math notranslate nohighlight">\(N\)</span> iterations. The set of equations is
+minimised by cutting the MRF to within a certain user-selected value of the peak response and set to zero elsewhere.
+The set of input samples and associated MRFs input to the algorithm are calculated
+based on the satellite position and scan angle and will have different characteristics (ellipticity,
+rotation, footprint size) depending on satellite position, the band (antenna pattern) in question, and
+gain threshold considered.</p>
+<p>The final output temperature is calculated by combining the target MRF and iterated temperature
+distribution:</p>
+<div class="math notranslate nohighlight" id="equation-eq-rsir-6">
+<span class="eqno">(26)<a class="headerlink" href="#equation-eq-rsir-6" title="Link to this equation">#</a></span>\[
+T_{B_{target}} = \sum_{j \in image} h_{j_{target}} a_j^{k+1}
+\]</div>
+</section>
+<section id="id24">
+<h3>4.5.6. References<a class="headerlink" href="#id24" title="Link to this heading">#</a></h3>
+<p>For further reading on the rSIR algorithm, the reader is referred to <a class="reference internal" href="03_references.html"><span class="doc">[RD-11]</span></a>,
+<a class="reference internal" href="03_references.html"><span class="doc">[RD-17]</span></a>, and <a class="reference internal" href="03_references.html"><span class="doc">[RD-18]</span></a>.</p>
+</section>
+</section>
+<section id="nedt-and-uncertainty-propagation">
+<h2>4.7. NEDT and Uncertainty Propagation<a class="headerlink" href="#nedt-and-uncertainty-propagation" title="Link to this heading">#</a></h2>
+<p>The determination of the uncertainties output as a result of the regridding algorithms is provided in this Section. The
+uncertainty calculations are limited to the uncertainties added as a result of the regridding algorithm only. An
+additional source of uncertainty in the regridded L1r/c measurement results from the uncertainty of
+the antenna pattern gains, the interpolation of the antenna patterns to a coarser resolution, and the
+projection of the antenna pattern to Earth.</p>
+<p>As the antenna patterns utilised come without documentation/ description of uncertainty, and the
+L1b data for all instruments is provided without uncertainty quantifications for the position, velocity,
+or attitude of the satellite, it has been decided not to include these considerations in the
+approximation.</p>
+<p>A covariance matrix is required for uncertainty propagation for some of the regridding algorithms.
+The L1b NEDT and the uncertainty correlation of neighbouring arc samples are unavailable at the time of writing.
+In their absence per band NEDT cited in the <a class="reference internal" href="03_references.html"><span class="doc">[AD-03]</span></a> (Table MRD-2) is applied along the diagonals of the covariance matrix.
+Moreover, the configuration parameter <code class="docutils literal notranslate"><span class="pre">&lt;antenna_pattern_uncertainty&gt;</span></code>, which defines a single value corresponding to the
+total uncertainty of the resulting antenna pattern and associated processing. When a value is used for this configurtion
+parameter, its value is added to the NEDTs described in this Section according to the following equation:</p>
+<div class="math notranslate nohighlight" id="equation-eq-un-1">
+<span class="eqno">(27)<a class="headerlink" href="#equation-eq-un-1" title="Link to this equation">#</a></span>\[
+NEDT_{out} = \sqrt(NEDT_{BT}^{2} + NEDT_{AP}^{2})
+\]</div>
+<p>where $<span class="math notranslate nohighlight">\(NEDT_{AP}\)</span>$ represents the uncertainty added as a result of the configuration parameter <code class="docutils literal notranslate"><span class="pre">&lt;antenna_pattern_uncertainty&gt;</span></code>.</p>
+<section id="id25">
+<h3>4.7.1. Nearest Neighbour<a class="headerlink" href="#id25" title="Link to this heading">#</a></h3>
+<p>As only a single sample is used in the grid, the resulting value retains the same noise as the input sample, expressed as:</p>
+<div class="math notranslate nohighlight" id="equation-eq-un-2">
+<span class="eqno">(28)<a class="headerlink" href="#equation-eq-un-2" title="Link to this equation">#</a></span>\[
+\sigma_{eff}^{2} = \sigma^{2}
+\]</div>
+</section>
+<section id="id26">
+<h3>4.7.2. Drop-in-the-Bucket<a class="headerlink" href="#id26" title="Link to this heading">#</a></h3>
+<p>The uncertainty of the gridded $<span class="math notranslate nohighlight">\(T_{B}\)</span>$ is expressed as:</p>
+<div class="math notranslate nohighlight" id="equation-eq-un-3">
+<span class="eqno">(29)<a class="headerlink" href="#equation-eq-un-3" title="Link to this equation">#</a></span>\[
+\sigma^2_{T_{Bg}} = \frac{1}{N^2} \sum_{i=1}^{N} \sigma^2_{T_{Bi}}
+\]</div>
+</section>
+<section id="id27">
+<h3>4.7.3. Inverse Distance Squared<a class="headerlink" href="#id27" title="Link to this heading">#</a></h3>
+<p>The uncertainty of the output measurement is expressed as:</p>
+<div class="math notranslate nohighlight" id="equation-eq-un-4">
+<span class="eqno">(30)<a class="headerlink" href="#equation-eq-un-4" title="Link to this equation">#</a></span>\[
+\sigma_{T_{Bgtarget}} =
+\frac{1}{A}
+\sqrt{
+\sum_{i=1}^{N}
+\alpha_i^2 \sigma^2_{T_{Bisource}}
+}
+\]</div>
+</section>
+<section id="id28">
+<h3>4.7.4. Backus Gilbert<a class="headerlink" href="#id28" title="Link to this heading">#</a></h3>
+<p>The resulting uncertainty of the output measurement is:</p>
+<div class="math notranslate nohighlight" id="equation-eq-un-5">
+<span class="eqno">(31)<a class="headerlink" href="#equation-eq-un-5" title="Link to this equation">#</a></span>\[
+\sigma_T^2 = \mathbf{a}^T \mathbf{E} \mathbf{a}
+\]</div>
+<p>where $<span class="math notranslate nohighlight">\(\mathbf{E}\)</span><span class="math notranslate nohighlight">\( is the measurement error covariance matrix, and \)</span><span class="math notranslate nohighlight">\(\mathbf{a}\)</span><span class="math notranslate nohighlight">\( is the vector of weights defined in 
+Section XXX. In the absence of uncertainty correlations between neighbouring arc samples, the per band NEDTs stated in 
+{doc}`[AD-03]&lt;./03_references&gt;` are used along the diagonals of the of \)</span><span class="math notranslate nohighlight">\(\mathbf{E}\)</span>$.</p>
+</section>
+<section id="id29">
+<h3>4.7.5. Radiometer Scatterometer Image Reconstruction<a class="headerlink" href="#id29" title="Link to this heading">#</a></h3>
+<p>Propagating the uncertainty through this algorithm is not trivial. This is due to the non-linear update
+term, <span class="math notranslate nohighlight">\(u_{ij}^k\)</span>. Mathematical formulations for the propagation were considered; however, this poses
+challenges in uncertainty as non-linear functions can distort input distributions, have variable
+sensitivity across their domain, and introduce complex interactions between variables. Moreover, a
+method could not be found in the literature considered for this report. In addition, there is no
+mention of uncertainty in the rSIR SMAP product <a class="reference internal" href="03_references.html"><span class="doc">[RD-16]</span></a>, <a class="reference internal" href="03_references.html"><span class="doc">[RD-17]</span></a>, and uncertainty variables are
+not provided in its output.</p>
+<p>It was decided at this stage to propagate uncertainty for rSIR following the same propagation
+formulas as IDS (see Section XXX). The proportion of the antenna pattern considered for the output
+temperature is dependent on its proximity to the output location and it is therefore considered
+reasonable to propagate the uncertainty in this way.</p>
+</section>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./."
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="04_output_grids_and_map_projections.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">3. Output Grids and Map Projections</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="06_implementation.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">5. Implementation</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#nearest-neighbour">4.1. Nearest Neighbour</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#statement-of-function">4.1.1. Statement of Function</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#heritage">4.1.2. Heritage</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#limitations-and-assumptions">4.1.3. Limitations and Assumptions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#approximations">4.1.4. Approximations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#algorithm-definition">4.1.5. Algorithm Definition</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#references">4.1.6. References</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#drop-in-the-bucket">4.2. Drop-in-the-Bucket</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">4.2.1. Statement of Function</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">4.2.2. Heritage</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">4.2.3. Limitations and Assumptions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">4.2.4. Approximations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">4.2.5. Algorithm Definition</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">4.2.6. References</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#inverse-distance-squared">4.3. Inverse Distance Squared</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">4.3.1. Statement of Function</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">4.3.2. Heritage</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">4.3.3. Limitations and Assumptions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">4.3.4. Approximations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">4.3.5. Algorithm Definition</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id12">4.3.6. References</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#backus-gilbert">4.4. Backus Gilbert</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id13">4.4.1. Statement of Function</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id14">4.4.2. Heritage</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id15">4.4.3. Limitations and Assumptions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id16">4.4.4. Approximations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id17">4.4.5. Algorithm Definition</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id18">4.4.6. References</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#radiometer-scatterometer-image-reconstruction">4.5. Radiometer Scatterometer Image Reconstruction</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id19">4.5.1. Statement of Function</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id20">4.5.2. Heritage</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id21">4.5.3. Limitations and Assumptions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id22">4.5.4. Approximations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id23">4.5.5. Algorithm Definition</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id24">4.5.6. References</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#nedt-and-uncertainty-propagation">4.7. NEDT and Uncertainty Propagation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id25">4.7.1. Nearest Neighbour</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id26">4.7.2. Drop-in-the-Bucket</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id27">4.7.3. Inverse Distance Squared</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id28">4.7.4. Backus Gilbert</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id29">4.7.5. Radiometer Scatterometer Image Reconstruction</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Joseph Heywood, Maksym Brilenkov and Davide Decataldo
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
