@@ -593,6 +593,8 @@ class GridGenerator:
             y-coordinate/s
         """
 
+        lon, lat = np.asarray(lon, dtype=np.float64), np.asarray(lat, dtype=np.float64)
+
         if self.projection_definition == "G":
             # x, y = self.lonlat_to_xy_cea(lon=lon, lat=lat)
             tracked_func = RGBLogging.rgb_decorate_and_execute(

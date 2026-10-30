@@ -706,7 +706,7 @@ def vincenty_sphere_distance(lon1, lat1, lon2, lat2):
     a = (np.cos(lat2_rad)*np.sin(dlon))**2 + (np.cos(lat1_rad)*np.sin(lat2_rad) - np.sin(lat1_rad)*np.cos(lat2_rad)*np.cos(dlon))**2
     b = np.sin(lat1_rad) * np.sin(lat2_rad) + np.cos(lat1_rad)*np.cos(lat2_rad)*np.cos(dlon)
 
-    distance = Rearth * np.atan2(np.sqrt(a), b)
+    distance = Rearth * np.arctan2(np.sqrt(a), b)
     return distance
 
 

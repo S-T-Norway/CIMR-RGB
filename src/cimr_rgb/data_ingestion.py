@@ -1218,6 +1218,8 @@ class DataIngestion:
         rad = pi / 180.0
         deg = 180.0 / pi
 
+        lats_hi, lons_hi = lats_hi.astype("float64"), lons_hi.astype("float64")
+
         # Initiate lower frequency channel lat/lon arrays
         lats_lo = zeros((self.config.num_target_scans, AM2_DEF_SNUM_LOW))
         lons_lo = zeros((self.config.num_target_scans, AM2_DEF_SNUM_LOW))
