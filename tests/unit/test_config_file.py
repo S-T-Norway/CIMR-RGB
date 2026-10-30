@@ -146,6 +146,28 @@ def test_validate_input_data_type(input_value, expected_output, expect_exception
 
 
 @pytest.mark.parametrize(
+    "xml_value",
+    [
+        pytest.param("<antenna_patterns_path></antenna_patterns_path>", id="empty"),
+        pytest.param("<antenna_patterns_path>   </antenna_patterns_path>", id="blank"),
+        pytest.param("", id="missing"),
+    ],
+)
+def test_validate_input_antenna_patterns_path_not_set(xml_value):
+    """
+    An unset path raises a clear error when the antenna patterns are required.
+    """
+    config_object = ET.fromstring(f"<config><InputData>{xml_value}</InputData></config>")
+
+    with pytest.raises(ValueError, match="antenna_patterns_path"):
+        ConfigFile.validate_input_antenna_patterns_path(
+            config_object=config_object,
+            antenna_patterns_path="InputData/antenna_patterns_path",
+            input_data_type="SMAP",
+        )
+
+
+@pytest.mark.parametrize(
     "grid_type_value, input_data_type_value, expected_output, expect_exception",
     [
         # Expected to Pass
