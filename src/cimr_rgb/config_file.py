@@ -183,11 +183,8 @@ class ConfigFile:
             config_object=config_object, input_data_path="InputData/path"
         )
 
-        self.antenna_patterns_path = self.validate_input_antenna_patterns_path(
-            config_object=config_object,
-            antenna_patterns_path="InputData/antenna_patterns_path",
-            input_data_type=self.input_data_type,
-        )
+        # Only required by some algorithms, set after the antenna methods are known
+        self.antenna_patterns_path = None
 
         # self.dpr_path = path.join(path.dirname(getcwd()), "dpr")
 
@@ -465,6 +462,13 @@ class ConfigFile:
                 config_object=config_object,
                 target_antenna_threshold="ReGridderParams/target_antenna_threshold",
             )
+
+            if "instrument" in [self.source_antenna_method, self.target_antenna_method]:
+                self.antenna_patterns_path = self.validate_input_antenna_patterns_path(
+                    config_object=config_object,
+                    antenna_patterns_path="InputData/antenna_patterns_path",
+                    input_data_type=self.input_data_type,
+                )
 
             self.max_theta_antenna_patterns = self.validate_max_theta_antenna_patterns(
                 config_object=config_object,
@@ -855,9 +859,13 @@ class ConfigFile:
             Validated input data path
         """
 
-        antenna_patterns_path = pb.Path(
-            config_object.find(antenna_patterns_path).text.strip()
-        )
+        value = config_object.find(antenna_patterns_path)
+        if value is None or value.text is None or not value.text.strip():
+            raise ValueError(
+                f"`{antenna_patterns_path}` must be set when an antenna method is 'instrument'."
+            )
+
+        antenna_patterns_path = pb.Path(value.text.strip())
         antenna_patterns_path = grasp_io.resolve_config_path(
             path_string=antenna_patterns_path
         )

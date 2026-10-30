@@ -990,6 +990,9 @@ class ProductGenerator:
         - The file names are extracted from the corresponding subdirectories for each band.
         """
 
+        if self.config.antenna_patterns_path is None:
+            return "None"
+
         beamfiles_paths = []
 
         for band in self.config.target_band:
