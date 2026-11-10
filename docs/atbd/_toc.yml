@@ -1,13 +1,22 @@
 # Table of contents
 # Learn more at https://jupyterbook.org/customize/toc.html
+# Front matter and annexes are unnumbered so that Introduction = 1 ... Implementation = 5
+# (the L1C ATBD links to "RGB ATBD, Section 5.3").
 
 format: jb-book
 root: intro
-chapters:
-- file: 00_changelog
-- file: 01_acronyms
-- file: 02_introduction
-- file: 03_references
-- file: 04_output_grids_and_map_projections
-- file: 05_regridding_algorithms
-- file: 06_implementation
+parts:
+- chapters:
+  - file: 00_abstract
+  - file: 01_acronyms
+- numbered: 4
+  chapters:
+  - file: 02_introduction
+  - file: 03_references
+  - file: 04_output_grids_and_map_projections
+  - file: 05_regridding_algorithms
+  - file: 06_implementation
+  - file: 07_roadmap
+- chapters:
+  - file: Annex_A
+  - file: references

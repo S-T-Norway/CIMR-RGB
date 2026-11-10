@@ -2,35 +2,36 @@
 
 Here follows a formatted list of acronyms.
 
+You can refer and link to the acronym on any page with {term}`ATBD`.
 
 ```{glossary}
 ATBD
     Algorithm Theoretical Basis Document
 
-AP 
+AP
     Antenna Pattern
-    
+
 BG
     Backus-Gilbert
 
 CETB
-    Calibrated Enhanced-Resolution Passive Microwave Daily EASE-Grid 2.0 Brightness Temperature (CETB) product 
+    Calibrated Enhanced-Resolution Passive Microwave Daily EASE-Grid 2.0 Brightness Temperature (CETB) product
 
 CIMR
     {term}`Copernicus Imaging Microwave Radiometer`
-    
-DIB 
+
+DIB
     Drop-in-the-Bucket
-    
+
 EASE2
-    Equal Area Scaled Earth 
-    
-EPSG 
+    Equal Area Scaled Earth
+
+EPSG
      European Petroleum Survey Group
 
 FoV
     Field of View
-    
+
 IDS
     Inverse Distance Squared
 
@@ -48,13 +49,13 @@ L2PAD
 
 LUT
     Look-Up Table
-   
+
 MRF
-    Measurment Response Function
+    Measurement Response Function
 
 NEDT
     Noise Equivalent Delta Temperature
-   
+
 NN
     Nearest-Neighbour
 
@@ -66,7 +67,7 @@ NRT3H
 
 NTC
     {term}`Non-Time-Critical`
-    
+
 NSIDC
     National Snow and Ice Data Center
 
@@ -75,12 +76,12 @@ OZA
 
 RGB
     Re-Gridding tool Box
-    
-rSIR    
-    Radiometer Scatterometer Image Reconstruction 
-    
+
+rSIR
+    Radiometer Scatterometer Image Reconstruction
+
 SMAP
-    Soil Moisture Active Passie Satellite
+    Soil Moisture Active Passive Satellite
 
 TB
     Brightness Temperature
@@ -121,10 +122,6 @@ Non-Time-Critical
 
 Observation Zenith Angle
     Angle between the satellite viewing direction and the local zenith defined in the surface target reference frame (i.e., zenith – target – satellite)
-
-Radiative Transfer for TOVS
-    RTTOV (Radiative Transfer for TOVS) is a very fast radiative transfer model for passive visible, infrared and
-    microwave downward-viewing satellite radiometers, spectrometers and interferometers {cite}`saunders:2018:rttov`.
 
 Sea Ice Concentration
     The Sea Ice Concentration is the fraction of the sea surface covered by sea ice. It is a measure of the amount of sea ice in a given area. It is usually expressed as a percentage.

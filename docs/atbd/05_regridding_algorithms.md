@@ -1,4 +1,5 @@
-# 4. Regridding Algorithms
+(sec-algorithms)=
+# Regridding Algorithms
 The RGB provides functionality for a variety of regridding/ interpolation methods, whose theoretical basis are described in this Section. 
 
 All algorithms, except for NN, rely on multiple input samples to perform interpolation. The selection of these input samples
@@ -11,22 +12,23 @@ If the number of neighbours found within a specified `search_radius` exceeds the
 only the closest `N = max_neighbors` samples for interpolation. 
 
 
-## 4.1. Nearest Neighbour
+(sec-nn)=
+## Nearest Neighbour
 
 
-### 4.1.1. Statement of Function
+### Statement of Function
 
 The Nearest Neighbour (NN) regridding algorithm assigns each point in the target grid the value of the closest point in 
 the source grid. This method is especially useful when precise, discrete values need to be preserved, as it does not involve
 interpolation or averaging. 
 
-### 4.1.2. Heritage
+### Heritage
 
-NN doesn't traditionally have a heritage in formal satellite products due to it's simplicity and non-smoothing characteristics. 
-It is, however, the fastest algorithm and is useful for sanity checks in the development of more complext algorithms, or when 
+NN doesn't traditionally have a heritage in formal satellite products due to its simplicity and non-smoothing characteristics. 
+It is, however, the fastest algorithm and is useful for sanity checks in the development of more complex algorithms, or when 
 using new data. 
 
-### 4.1.3. Limitations and Assumptions
+### Limitations and Assumptions
 
 This approach is fast and simple but will likely introduce abrupt changes and artefacts in the output data due to the lack 
 of smoothing. Moreover, there will be no reduction in noise by averaging. It also throws away the vast majority of available input
@@ -34,11 +36,11 @@ data, leading to potentially inaccurate output results. However, the effective a
 the output grid cell, as opposed to other methods whose effective antenna pattern is largely widened by considering points
 far away from the target location.
 
-### 4.1.4. Approximations
+### Approximations
 
 No approximations are made for this algorithm.
 
-### 4.1.5. Algorithm Definition
+### Algorithm Definition
 The NN algorithm assigns each point in the target grid the value of the closest point in the source grid. If there are $N$ source samples $\{T_{B1}, \ldots, T_{BN}\}$ that fall within a search radius of a
 given cell, the corresponding gridded $T_B$ is expressed as
 
@@ -49,34 +51,35 @@ $$ (eq-nn)
 where $T_{Bj}$ represents the single sample that is radially closest to the grid cell centre.
 
 
-### 4.1.6. References
+### References
 
 This Section is intentionally left blank. 
 
-## 4.2. Drop-in-the-Bucket
+(sec-dib)=
+## Drop-in-the-Bucket
 
-### 4.2.1. Statement of Function
+### Statement of Function
 
 The Drop-in-the-Bucket (DIB) algorithm aggregates data from the source grid into the cells of the target grid, effectively
-"dropping" data points into the nearest target cell without weighting (i.e all have equal weights).
+"dropping" data points into the nearest target cell without weighting (i.e., all have equal weights).
 
-### 4.2.2. Heritage
+### Heritage
 
-The algorithm doesn't have significant heritage in comparable products but is frequently used in literature to compare more complext algorithms. 
+The algorithm doesn't have significant heritage in comparable products but is frequently used in literature to compare more complex algorithms. 
 
 
-### 4.2.3. Limitations and Assumptions
+### Limitations and Assumptions
 
 While the effective noise fluctuations in the source measurements are reduced in the averaging
 process, the effective antenna pattern can be significantly broadened due to equal weights given to
 source samples that may lie near the cell boundaries, resulting in the gridded result containing
 radiance from outside the target cell/ search area.
 
-### 4.2.4. Approximations
+### Approximations
 
 No approximations were made.
 
-### 4.2.5. Algorithm Definition
+### Algorithm Definition
 
 If there are $N$ source samples $\{T_{B1}, \ldots, T_{BN}\}$ that fall within a target cell/search radius, the
 corresponding gridded $T_B$ is expressed as
@@ -91,25 +94,26 @@ The RGB offers the DIB algorithm to be applied within a chosen search radius or 
 Suppose there are more neighbours in the search radius than the specified $N$ = `max_neighbours`.
 Then, the algorithm will consider the closest $N$ neighbours.  
 
-### 4.2.6. References
+### References
 
 This Section is intentionally left blank.
 
-## 4.3. Inverse Distance Squared
+(sec-ids)=
+## Inverse Distance Squared
 
-### 4.3.1. Statement of Function
+### Statement of Function
 
 The Inverse Distance Squared (IDS) regridding algorithm interpolates values from the source grid to
 the target grid by weighting each source point's influence on the target cell inversely to the square of
 the distance. Closer points have a much stronger influence than those far away, resulting in smooth
 gradients across the grid.
 
-### 4.3.2. Heritage
+### Heritage
 
 This algorithm is often used in microwave radiometry applications, most notably in the SMAP L1C
-Radiometer Half-Orbit 36 km EASE-Grid Brightness Temperatures (BTs) {doc}`[RD-4]<./03_references>`, {doc}`[RD-5]<./03_references>` product.
+Radiometer Half-Orbit 36 km EASE-Grid Brightness Temperatures (BTs) product {cite:p}`chan:2023:spl1ctb,chan:2014:smap_l1c_atbd`.
 
-### 4.3.3. Limitations and Assumptions
+### Limitations and Assumptions
 
 IDS can introduce smoothing that can mask finer details in the data, especially in the case where
 source data is unevenly distributed, as is of course the case for conically scanning radiometers. This
@@ -119,11 +123,11 @@ due to the fact that the sample temperatures are treated as discrete temperature
 as opposed to methods utilising antenna patterns, which allow the distribution of temperatures over
 larger regions.
 
-### 4.3.4. Approximations
+### Approximations
 
 No approximations were made. 
 
-### 4.3.5. Algorithm Definition
+### Algorithm Definition
 
 The Inverse Distance Squared method assigns weights to each measurement identified in the points
 selection depending on its vicinity to the centre of the target output cell.
@@ -142,13 +146,14 @@ $$ (eq-idw-c)
 
 where $d$ is the orthodromic distance based on the Earth's sphere.
 
-### 4.3.6. References
+### References
 
-The reader is referred to {doc}`[RD-4]<./03_references>` and {doc}`[RD-5]<./03_references>` for more information. 
+The reader is referred to {cite:t}`chan:2023:spl1ctb` and {cite:t}`chan:2014:smap_l1c_atbd` for more information. 
 
-## 4.4. Backus Gilbert
+(sec-bg)=
+## Backus Gilbert
 
-### 4.4.1. Statement of Function
+### Statement of Function
 
 The Backus-Gilbert (BG) regridding algorithm interpolates values from the source grid to the target
 grid using a weighted average of the source points. The weights are chosen to minimise the fit
@@ -158,23 +163,23 @@ had it been pointed directly at the interpolation point. The algorithm takes adv
 non-uniform spatial sampling characteristic of conical microwave radiometer measurements, which
 oversample in certain regions.
 
-### 4.4.2. Heritage
+### Heritage
 
 The Backus-Gilbert interpolation algorithm was first developed in the 1960's in order to better
 understand the internal structure of the Earth. Since its first development, the BG method has been
 widely used in a variety of scientific fields, mostly in geophysics and, more recently, in the field of
 spatial data interpolation and resolution enhancement. The algorithm was selected for
 implementation in the RGB as a result of a literature review of state-of-the-art algorithms, detailed in
-the Comparative Performance Assessment Plan {doc}`[AD-2]<./03_references>`.
+the Comparative Performance Assessment Plan {doc}`[RD-2]<03_references>`.
 
 In the last 15 years or so, BG has been extensively researched in the application of microwave
 radiometry and applied as the chosen interpolation method for a variety of satellite data products.
 Most notably, the BG algorithm was used in the creation of the “GCOM-W1 AMSR2 Level 1R
-Product” {doc}`[RD-6]<./03_references>` and the “SMAP Enhanced L1C Radiometer Half-Orbit 9 km EASE-Grid Brightness
-Temperatures” {doc}`[RD-7]<./03_references>` and has also been applied to the Microwave Imager (MWI) and Ice Cloud Imager (ICI)
-L2 products {doc}`[RD-8]<./03_references>`.
+Product” {cite:p}`maeda:2016:amsr2_l1r` and the “SMAP Enhanced L1C Radiometer Half-Orbit 9 km EASE-Grid Brightness
+Temperatures” {cite:p}`chaubell:2023:spl1ctb_e` and has also been applied to the Microwave Imager (MWI) and Ice Cloud Imager (ICI)
+L2 products {cite:p}`eumetsat:2019:bg_mwi_ici`.
 
-### 4.4.3. Limitations and Assumptions
+### Limitations and Assumptions
 
 Despite its powerful capabilities, the Backus-Gilbert method has faced challenges in widespread
 adoption, primarily due to its computational cost and complexity in implementation, especially for
@@ -193,7 +198,7 @@ time in-between two samples in which one was taken from a forward-looking part o
 the backward-looking part of another. The user should consider this in their choice of configuration
 parameters.
 
-### 4.4.4. Approximations
+### Approximations
 
 Several approximations are required in order to implement the BG algorithm for the interpolation of
 radiometric data, in particular when there is a large number of high-resolution measurements,
@@ -204,22 +209,23 @@ the full forward hemisphere. Projecting all the gain values on Earth's surface f
 is not feasible, and the following strategies are adopted to decrease the computational load:
 
 - Antenna patterns are sub-sampled to lower resolution
-- Gain values smaller than a threshold values are set to zero
+- Gain values smaller than a threshold value are set to zero
 - Antenna patterns are projected to an integration grid on the Earth's surface (with resolution being a user-defined parameter), which could downgrade further the antenna pattern
 resolution
 
 Antenna temperature measurements, described by 4 Stokes parameters, are, in principle, obtained
 via a radiative transfer calculation, which can be described with a Mueller Matrix. The full Mueller
-matrix for the SMAP and CIMR instrument is provided and can be included in the BG algorithm when
+matrix for the SMAP and CIMR instruments is provided and can be included in the BG algorithm when
 interpolating the 4 Stokes parameters. However, this significantly increases the amount of operations
 in the projection step since all 16 values of the Mueller matrix need to be projected to Earth and
 recomputed in a Ludwig-3 polarisation basis relative to the Earth's surface. Therefore, an
 approximation is performed that derives a scalar value from the Mueller matrix to characterise the
-antenna gain, as described in Section XXX. This considerably speeds up the calculation, with the
+antenna gain, as described in {numref}`Section %s <sec-ap-init>`. This considerably speeds up the calculation, with the
 drawback that all 4 Stokes parameters will be interpolated with the same scalar value of the gain,
 neglecting the different response of the feedhorn to different polarisation components.
 
-### 4.4.5. Algorithm Definition
+(sec-bg-definition)=
+### Algorithm Definition
 
 The $T_B$ measured by a receiving antenna is expressed as
 
@@ -243,7 +249,7 @@ where $G_i$ $(i = 1, \ldots, N)$.
 
 The target measurement, $T_{B_{target}}$, is measured by another receiving antenna pattern. Depending on
 the desired output grid type, this could be the real or simulated antenna pattern of the target band
-in the case of an L1R remap or a gaussian fit to the size of the output cell in the case of an L1C
+in the case of an L1R remap or a Gaussian centred on the output cell in the case of an L1C
 remap. The target measurement is expressed as
 
 $$
@@ -293,31 +299,32 @@ $$ (eq-bg-10)
 $k$ is a factor multiplied by the identity matrix $I$, which varies from 0 to infinity and smooths the
 variation of the coefficient $a_i$.
 
-### 4.4.6. References
+### References
 
-For further reading on the BG algorithm, we refer the reader to {doc}`[RD-9]<./03_references>`, {doc}`[RD-10]<./03_references>` , {doc}`[RD-8]<./03_references>`,
-{doc}`[RD-11]<./03_references>`, {doc}`[RD-12]<./03_references>`, {doc}`[RD-6]<./03_references>`, {doc}`[RD-12]<./03_references>`, {doc}`[RD-7]<./03_references>` and  {doc}`[RD-13]<./03_references>`.
+For further reading on the BG algorithm, we refer the reader to {cite:t}`backus:1967:bg`, {cite:t}`zaroli:2016:bg`, {cite:t}`eumetsat:2019:bg_mwi_ici`,
+{cite:t}`long:1998:ssmi`, {cite:t}`nunziata:2021:enhanced`, {cite:t}`maeda:2016:amsr2_l1r`, {cite:t}`ashcroft:2000:amsre_l2a`, {cite:t}`chaubell:2023:spl1ctb_e` and {cite:t}`chaubell:2018:smap_atbd`.
 
-## 4.5. Radiometer Scatterometer Image Reconstruction
+(sec-rsir)=
+## Radiometer Scatterometer Image Reconstruction
 
-### 4.5.1. Statement of Function
+### Statement of Function
 
 The Radiometer Scatterometer Image Reconstruction (rSIR) method is an iterative image reconstruction technique. 
-rSIR makes use of a surface temperature distribution defined by the instruments antenna patterns. The algorithm uses 
+rSIR makes use of a surface temperature distribution defined by the instrument's antenna patterns. The algorithm uses 
 regularisation in order to trade-off between noise amplification and spatial resolution. It achieves this by selecting
 an appropriate number of iterations, which consequently produces only a partial reconstruction of the image. 
 
-The aim is to estimate the surface brightness temperature based on the noise source measurements. The algorithm makes
-use of the instruments (or simulated) antenna patterns, which translate to the Measurement Response Function (MRF) on the Earth’s surface and is therefore highly sensitive to
+The aim is to estimate the surface brightness temperature based on the noisy source measurements. The algorithm makes
+use of the instrument's (or simulated) antenna patterns, which translate to the Measurement Response Function (MRF) on the Earth’s surface and is therefore highly sensitive to
 processing decisions pertaining to this. The MRF is calculated using the satellite position, antenna
 scan angle, and the antenna gain pattern. The processing of antenna patterns and their associated
-MRF’s is discussed in Section XXX. 
+MRFs are discussed in {numref}`Section %s <sec-ap-projection>`. 
 
-### 4.5.2. Heritage
+### Heritage
 
 rSIR was selected as an outcome of a literature study on state-of-the-art regridding algorithms
-outlined in the Comparative Performance Assessment Plan {doc}`[AD-02]<./03_references>`. The studies by Long et al. 
-{doc}`[RD-14]<./03_references>`, {doc}`[RD-15]<./03_references>` applied to SMAP data demonstrate that in comparison 
+outlined in the Comparative Performance Assessment Plan {doc}`[RD-2]<03_references>`. The studies by Long et al. 
+{cite:p}`long:2016:optimum,long:2019:smap_rsir` applied to SMAP data demonstrate that in comparison 
 with other image production methods, rSIR produces images with finer resolution and lower Root Mean Square Errors 
 (RMSEs). rSIR, in particular, exhibits slightly lower noise in simulations and finer resolution by certain metrics. The
 studies conclude that due to its lower computational requirements and superior performance, rSIR is
@@ -325,10 +332,10 @@ preferred for generating enhanced-resolution images for Calibrated Passive Micro
 Equal-Area Scalable Earth Grid 2.0 (EASE2) Brightness Temperature (CETB) products, specifically for
 SMAP applications.
 rSIR has been applied to SMAP data in a stand-alone NSIDC product, “SMAP Radiometer Twice-Daily
-rSIR-Enhanced EASE-Grid 2.0 Brightness Temperatures” {doc}`[RD-16]<./03_references>`. This product (and its associated
+rSIR-Enhanced EASE-Grid 2.0 Brightness Temperatures” {cite:p}`brodzik:2021:nsidc0738`. This product (and its associated
 documentation) was one of the main sources of reference in the implementation of this algorithm.
 
-### 4.5.3. Limitations and Assumptions
+### Limitations and Assumptions
 
 As the rSIR algorithm is an iterative update of temperature distribution over a larger area
 surrounding the target location, it is only appropriate to apply it to the brightness temperatures
@@ -342,7 +349,7 @@ significantly more time in-between two samples in which one was taken from a for
 of one scan and the backward-looking part of another. The user should consider this in their choice
 of configuration parameters.
 
-### 4.5.4. Approximations
+### Approximations
 
 If a full reconstruction were employed, noise in the source samples could be excessively amplified.
 The algorithm is therefore regularised through the iteration number, which effectively imposes a
@@ -350,16 +357,16 @@ smoothing constraint on the image.
 
 The antenna pattern processing and, consequently, the MRF, contains a degree of approximation
 regardless of the method used to generate it (users can employ instrument antenna patterns or
-simulate a Gaussian; see the Software Installation and User Manual {doc}`[AD-01]<./03_references>` for more details). In all
-cases, users must choose a gain threshold, below which the antenna pattern is ignored and not
-considered part of the "footprint." This threshold is generally taken in the field to be 3 dB (half
-power). Moreover, when "instrument" antenna patterns are used, some interpolation is applied to
+simulate a Gaussian; see the Software Installation and User Manual {doc}`[RD-3]<03_references>` for more details). In all
+cases, users must choose a gain threshold, below which the antenna pattern is set to zero ({numref}`Section %s <sec-ap-init>`).
+The threshold must be low enough for the truncated pattern to retain nearly all of the power of the antenna pattern, while a lower
+threshold increases the size of the integration grid and the computational cost. The threshold is typically chosen between −8 dB and −30 dB. Moreover, when "instrument" antenna patterns are used, some interpolation is applied to
 the patterns before ingestion into the RGB, when "gaussian" or "gaussian_projected" patterns are
 selected, the antenna pattern itself is naturally approximated by a Gaussian function (see Sections
-XXX to XXX for details on this function). The MRF is further approximated in its superposition onto
+{numref}`%s <sec-ap-gaussian>` to {numref}`%s <sec-ap-smap>` for details on this function). The MRF is further approximated in its superposition onto
 the image domain/integration grid, the resolution of which is user-configurable.
 
-### 4.5.5. Algorithm Definition
+### Algorithm Definition
 
 The target surface brightness temperature distribution $T_{B,target}(x, y)$ is treated as a discrete signal,
 sampled at the chosen grid pixel spacing, and is estimated from $N$ source measurements $T_{B,source}$.
@@ -368,7 +375,7 @@ samples and associated antenna patterns for the interpolation of a target output
 is vectorised over this domain, $a_j = T_{B,target}(x_l, y_k)$, where $j = l + N_x k$ and $l, k$ correspond to
 the row and column number of the pixel in the image domain. The image domain is analogous to
 what is otherwise referred to in this report as the 'integration grid'. The creation of this is described
-in Section XXXX.
+in {numref}`Section %s <sec-integration-grid>`.
 
 A particular measurement, $z_i$, can be expressed as
 
@@ -442,13 +449,14 @@ $$ (eq-rsir-6)
 
 
 
-### 4.5.6. References
+### References
 
-For further reading on the rSIR algorithm, the reader is referred to {doc}`[RD-11]<./03_references>`, 
-{doc}`[RD-17]<./03_references>`, and {doc}`[RD-18]<./03_references>`.
+For further reading on the rSIR algorithm, the reader is referred to {cite:t}`long:1998:ssmi`, 
+{cite:t}`brodzik:2021:rsir_atbd`, and {cite:t}`brodzik:2021:nsidc0738`.
 
 
-## 4.7. NEDT and Uncertainty Propagation
+(sec-uncertainty)=
+## NEDT and Uncertainty Propagation
 The determination of the uncertainties output as a result of the regridding algorithms is provided in this Section. The
 uncertainty calculations are limited to the uncertainties added as a result of the regridding algorithm only. An
 additional source of uncertainty in the regridded L1r/c measurement results from the uncertainty of
@@ -462,18 +470,18 @@ approximation.
 
 A covariance matrix is required for uncertainty propagation for some of the regridding algorithms.
 The L1b NEDT and the uncertainty correlation of neighbouring arc samples are unavailable at the time of writing. 
-In their absence per band NEDT cited in the {doc}`[AD-03]<./03_references>` (Table MRD-2) is applied along the diagonals of the covariance matrix.
-Moreover, the configuration parameter `<antenna_pattern_uncertainty>`, which defines a single value corresponding to the 
-total uncertainty of the resulting antenna pattern and associated processing. When a value is used for this configurtion 
+In their absence, the per-band NEDT cited in the MRD {doc}`[RD-1]<03_references>` (Table MRD-2) is applied along the diagonals of the covariance matrix.
+Moreover, the configuration parameter `<antenna_pattern_uncertainty>` defines a single value corresponding to the 
+total uncertainty of the resulting antenna pattern and associated processing. When a value is used for this configuration 
 parameter, its value is added to the NEDTs described in this Section according to the following equation: 
 
 $$
-NEDT_{out} = \sqrt(NEDT_{BT}^{2} + NEDT_{AP}^{2})
+NEDT_{out} = \sqrt{NEDT_{BT}^{2} + NEDT_{AP}^{2}}
 $$ (eq-un-1)
 
-where $$NEDT_{AP}$$ represents the uncertainty added as a result of the configuration parameter `<antenna_pattern_uncertainty>`.
+where $NEDT_{AP}$ represents the uncertainty added as a result of the configuration parameter `<antenna_pattern_uncertainty>`.
 
-### 4.7.1. Nearest Neighbour
+### Nearest Neighbour
 
 As only a single sample is used in the grid, the resulting value retains the same noise as the input sample, expressed as: 
 
@@ -481,28 +489,29 @@ $$
 \sigma_{eff}^{2} = \sigma^{2}
 $$ (eq-un-2)
 
-### 4.7.2. Drop-in-the-Bucket
+### Drop-in-the-Bucket
 
-The uncertainty of the gridded $$T_{B}$$ is expressed as:
+The uncertainty of the gridded $T_{B}$ is expressed as:
 
 $$
 \sigma^2_{T_{Bg}} = \frac{1}{N^2} \sum_{i=1}^{N} \sigma^2_{T_{Bi}}
 $$ (eq-un-3)
 
-### 4.7.3. Inverse Distance Squared
+(sec-uncertainty-ids)=
+### Inverse Distance Squared
 
 The uncertainty of the output measurement is expressed as: 
 
 $$
-\sigma_{T_{Bgtarget}} =
+\sigma_{T_{B_{target}}} =
 \frac{1}{A}
 \sqrt{
 \sum_{i=1}^{N}
-\alpha_i^2 \sigma^2_{T_{Bisource}}
+\alpha_i^2 \sigma^2_{T_{B_{i_{source}}}}
 }
 $$ (eq-un-4)
 
-### 4.7.4. Backus Gilbert
+### Backus Gilbert
 
 The resulting uncertainty of the output measurement is:
 
@@ -510,24 +519,24 @@ $$
 \sigma_T^2 = \mathbf{a}^T \mathbf{E} \mathbf{a}
 $$ (eq-un-5)
 
-where $$\mathbf{E}$$ is the measurement error covariance matrix, and $$\mathbf{a}$$ is the vector of weights defined in 
-Section XXX. In the absence of uncertainty correlations between neighbouring arc samples, the per band NEDTs stated in 
-{doc}`[AD-03]<./03_references>` are used along the diagonals of the of $$\mathbf{E}$$.
+where $\mathbf{E}$ is the measurement error covariance matrix, and $\mathbf{a}$ is the vector of weights defined in 
+{numref}`Section %s <sec-bg-definition>`. In the absence of uncertainty correlations between neighbouring arc samples, the per band NEDTs stated in 
+the MRD {doc}`[RD-1]<03_references>` are used along the diagonal of $\mathbf{E}$.
 
 
-### 4.7.5. Radiometer Scatterometer Image Reconstruction
+### Radiometer Scatterometer Image Reconstruction
 
 Propagating the uncertainty through this algorithm is not trivial. This is due to the non-linear update
-term, $u_{ij}^k$. Mathematical formulations for the propagation were considered; however, this poses
+term, $u_{ij}^k$. Mathematical formulations for the propagation were considered. However, this poses
 challenges in uncertainty as non-linear functions can distort input distributions, have variable
 sensitivity across their domain, and introduce complex interactions between variables. Moreover, a
 method could not be found in the literature considered for this report. In addition, there is no
-mention of uncertainty in the rSIR SMAP product {doc}`[RD-16]<./03_references>`, {doc}`[RD-17]<./03_references>`, and uncertainty variables are
+mention of uncertainty in the rSIR SMAP product {cite:p}`brodzik:2021:rsir_atbd,brodzik:2021:nsidc0738`, and uncertainty variables are
 not provided in its output.
 
 It was decided at this stage to propagate uncertainty for rSIR following the same propagation
-formulas as IDS (see Section XXX). The proportion of the antenna pattern considered for the output
-temperature is dependent on its proximity to the output location and it is therefore considered
+formulas as IDS (see {numref}`Section %s <sec-uncertainty-ids>`). The proportion of the antenna pattern considered for the output
+temperature is dependent on its proximity to the output location, and it is therefore considered
 reasonable to propagate the uncertainty in this way.
 
 
