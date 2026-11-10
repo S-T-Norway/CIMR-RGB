@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Acronyms and definitions &#8212; CIMR RGB Algorithms Theoretical Baseline Document</title>
+    <title>Acronyms and definitions &#8212; CIMR RGB ATBD</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
     <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=9c3e77be" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="_static/styles.css?v=df429b37" />
@@ -66,7 +66,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="1. Introduction" href="02_introduction.html" />
-    <link rel="prev" title="Changelog" href="00_changelog.html" />
+    <link rel="prev" title="Abstract" href="00_abstract.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -113,6 +113,9 @@
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">This is V2 of the ATBD, converted to Jupyter book from CIMR L1C PR2</div>
+</aside>
 
   
     <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
@@ -189,8 +192,14 @@
   
   
   
+    
+    
+      
+    
+    
+    <img src="_static/logo.jpg" class="logo__image only-light" alt="CIMR RGB ATBD - Home"/>
+    <img src="_static/logo.jpg" class="logo__image only-dark pst-js-only" alt="CIMR RGB ATBD - Home"/>
   
-    <p class="title logo__title">CIMR RGB Algorithms Theoretical Baseline Document</p>
   
 </a></div>
         <div class="sidebar-primary-item">
@@ -206,19 +215,25 @@
         <ul class="nav bd-sidenav bd-sidenav__home-link">
             <li class="toctree-l1">
                 <a class="reference internal" href="intro.html">
-                    ATBD - Algorithms Theoretical Baseline
+                    CIMR RGB Algorithms Theoretical Baseline Document
                 </a>
             </li>
         </ul>
         <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="00_changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="00_abstract.html">Abstract</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Acronyms and definitions</a></li>
+</ul>
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="02_introduction.html">1. Introduction</a></li>
-<li class="toctree-l1"><a class="reference internal" href="03_references.html">2. References</a></li>
-
+<li class="toctree-l1"><a class="reference internal" href="03_references.html">2. Applicable and reference documents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="04_output_grids_and_map_projections.html">3. Output Grids and Map Projections</a></li>
 <li class="toctree-l1"><a class="reference internal" href="05_regridding_algorithms.html">4. Regridding Algorithms</a></li>
 <li class="toctree-l1"><a class="reference internal" href="06_implementation.html">5. Implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="07_roadmap.html">6. Roadmap</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Annex_A.html">Annex A - Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
 </ul>
 
     </div>
@@ -384,10 +399,11 @@
   <section class="tex2jax_ignore mathjax_ignore" id="acronyms-and-definitions">
 <h1>Acronyms and definitions<a class="headerlink" href="#acronyms-and-definitions" title="Link to this heading">#</a></h1>
 <p>Here follows a formatted list of acronyms.</p>
+<p>You can refer and link to the acronym on any page with <a class="reference internal" href="#term-ATBD"><span class="xref std std-term">ATBD</span></a>.</p>
 <dl class="simple glossary">
 <dt id="term-ATBD">ATBD<a class="headerlink" href="#term-ATBD" title="Link to this term">#</a></dt><dd><p>Algorithm Theoretical Basis Document</p>
 </dd>
-<dt id="term-AP">AP <a class="headerlink" href="#term-AP" title="Link to this term">#</a></dt><dd><p>Antenna Pattern</p>
+<dt id="term-AP">AP<a class="headerlink" href="#term-AP" title="Link to this term">#</a></dt><dd><p>Antenna Pattern</p>
 </dd>
 <dt id="term-BG">BG<a class="headerlink" href="#term-BG" title="Link to this term">#</a></dt><dd><p>Backus-Gilbert</p>
 </dd>
@@ -395,11 +411,11 @@
 </dd>
 <dt id="term-CIMR">CIMR<a class="headerlink" href="#term-CIMR" title="Link to this term">#</a></dt><dd><p><a class="reference internal" href="#term-Copernicus-Imaging-Microwave-Radiometer"><span class="xref std std-term">Copernicus Imaging Microwave Radiometer</span></a></p>
 </dd>
-<dt id="term-DIB">DIB <a class="headerlink" href="#term-DIB" title="Link to this term">#</a></dt><dd><p>Drop-in-the-Bucket</p>
+<dt id="term-DIB">DIB<a class="headerlink" href="#term-DIB" title="Link to this term">#</a></dt><dd><p>Drop-in-the-Bucket</p>
 </dd>
 <dt id="term-EASE2">EASE2<a class="headerlink" href="#term-EASE2" title="Link to this term">#</a></dt><dd><p>Equal Area Scaled Earth</p>
 </dd>
-<dt id="term-EPSG">EPSG <a class="headerlink" href="#term-EPSG" title="Link to this term">#</a></dt><dd><p>European Petroleum Survey Group</p>
+<dt id="term-EPSG">EPSG<a class="headerlink" href="#term-EPSG" title="Link to this term">#</a></dt><dd><p>European Petroleum Survey Group</p>
 </dd>
 <dt id="term-FoV">FoV<a class="headerlink" href="#term-FoV" title="Link to this term">#</a></dt><dd><p>Field of View</p>
 </dd>
@@ -415,7 +431,7 @@
 </dd>
 <dt id="term-LUT">LUT<a class="headerlink" href="#term-LUT" title="Link to this term">#</a></dt><dd><p>Look-Up Table</p>
 </dd>
-<dt id="term-MRF">MRF<a class="headerlink" href="#term-MRF" title="Link to this term">#</a></dt><dd><p>Measurment Response Function</p>
+<dt id="term-MRF">MRF<a class="headerlink" href="#term-MRF" title="Link to this term">#</a></dt><dd><p>Measurement Response Function</p>
 </dd>
 <dt id="term-NEDT">NEDT<a class="headerlink" href="#term-NEDT" title="Link to this term">#</a></dt><dd><p>Noise Equivalent Delta Temperature</p>
 </dd>
@@ -433,9 +449,9 @@
 </dd>
 <dt id="term-RGB">RGB<a class="headerlink" href="#term-RGB" title="Link to this term">#</a></dt><dd><p>Re-Gridding tool Box</p>
 </dd>
-<dt id="term-rSIR">rSIR    <a class="headerlink" href="#term-rSIR" title="Link to this term">#</a></dt><dd><p>Radiometer Scatterometer Image Reconstruction</p>
+<dt id="term-rSIR">rSIR<a class="headerlink" href="#term-rSIR" title="Link to this term">#</a></dt><dd><p>Radiometer Scatterometer Image Reconstruction</p>
 </dd>
-<dt id="term-SMAP">SMAP<a class="headerlink" href="#term-SMAP" title="Link to this term">#</a></dt><dd><p>Soil Moisture Active Passie Satellite</p>
+<dt id="term-SMAP">SMAP<a class="headerlink" href="#term-SMAP" title="Link to this term">#</a></dt><dd><p>Soil Moisture Active Passive Satellite</p>
 </dd>
 <dt id="term-TB">TB<a class="headerlink" href="#term-TB" title="Link to this term">#</a></dt><dd><p>Brightness Temperature</p>
 </dd>
@@ -464,9 +480,6 @@ on the availability of auxiliary of the highest quality. NTC products are consol
 precise auxiliary information, orbit knowledge, uncertainty estimates, quality control and other parameter available.</p>
 </dd>
 <dt id="term-Observation-Zenith-Angle">Observation Zenith Angle<a class="headerlink" href="#term-Observation-Zenith-Angle" title="Link to this term">#</a></dt><dd><p>Angle between the satellite viewing direction and the local zenith defined in the surface target reference frame (i.e., zenith – target – satellite)</p>
-</dd>
-<dt id="term-Radiative-Transfer-for-TOVS">Radiative Transfer for TOVS<a class="headerlink" href="#term-Radiative-Transfer-for-TOVS" title="Link to this term">#</a></dt><dd><p>RTTOV (Radiative Transfer for TOVS) is a very fast radiative transfer model for passive visible, infrared and
-microwave downward-viewing satellite radiometers, spectrometers and interferometers .</p>
 </dd>
 <dt id="term-Sea-Ice-Concentration">Sea Ice Concentration<a class="headerlink" href="#term-Sea-Ice-Concentration" title="Link to this term">#</a></dt><dd><p>The Sea Ice Concentration is the fraction of the sea surface covered by sea ice. It is a measure of the amount of sea ice in a given area. It is usually expressed as a percentage.</p>
 </dd>
@@ -504,12 +517,12 @@ microwave downward-viewing satellite radiometers, spectrometers and interferomet
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="00_changelog.html"
+       href="00_abstract.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Changelog</p>
+        <p class="prev-next-title">Abstract</p>
       </div>
     </a>
     <a class="right-next"
@@ -517,7 +530,7 @@ microwave downward-viewing satellite radiometers, spectrometers and interferomet
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">1. Introduction</p>
+        <p class="prev-next-title"><span class="section-number">1. </span>Introduction</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -553,6 +566,15 @@ By Joseph Heywood, Maksym Brilenkov and Davide Decataldo
   
   <div class="footer-item">
     
+<div class="extra_footer">
+  <p>
+  This ATBD was developed in the context of the ESA-funded CIMR RGB Re-Gridding Tool Box EXPRO project (4000141564/23/I-AG).
+</p>
+<p>
+  Document ID: CIMR-ATBD-ST-RGB-005 v2.0
+</p>
+
+</div>
   </div>
   
 </div>

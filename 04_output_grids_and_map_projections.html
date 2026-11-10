@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>3. Output Grids and Map Projections &#8212; CIMR RGB Algorithms Theoretical Baseline Document</title>
+    <title>3. Output Grids and Map Projections &#8212; CIMR RGB ATBD</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
     <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=9c3e77be" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="_static/styles.css?v=df429b37" />
@@ -68,7 +68,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="4. Regridding Algorithms" href="05_regridding_algorithms.html" />
-    <link rel="prev" title="2. References" href="03_references.html" />
+    <link rel="prev" title="2. Applicable and reference documents" href="03_references.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -115,6 +115,9 @@
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">This is V2 of the ATBD, converted to Jupyter book from CIMR L1C PR2</div>
+</aside>
 
   
     <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
@@ -195,8 +198,14 @@
   
   
   
+    
+    
+      
+    
+    
+    <img src="_static/logo.jpg" class="logo__image only-light" alt="CIMR RGB ATBD - Home"/>
+    <img src="_static/logo.jpg" class="logo__image only-dark pst-js-only" alt="CIMR RGB ATBD - Home"/>
   
-    <p class="title logo__title">CIMR RGB Algorithms Theoretical Baseline Document</p>
   
 </a></div>
         <div class="sidebar-primary-item">
@@ -212,19 +221,25 @@
         <ul class="nav bd-sidenav bd-sidenav__home-link">
             <li class="toctree-l1">
                 <a class="reference internal" href="intro.html">
-                    ATBD - Algorithms Theoretical Baseline
+                    CIMR RGB Algorithms Theoretical Baseline Document
                 </a>
             </li>
         </ul>
-        <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="00_changelog.html">Changelog</a></li>
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="00_abstract.html">Abstract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="01_acronyms.html">Acronyms and definitions</a></li>
+</ul>
+<ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="02_introduction.html">1. Introduction</a></li>
-<li class="toctree-l1"><a class="reference internal" href="03_references.html">2. References</a></li>
-
+<li class="toctree-l1"><a class="reference internal" href="03_references.html">2. Applicable and reference documents</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">3. Output Grids and Map Projections</a></li>
 <li class="toctree-l1"><a class="reference internal" href="05_regridding_algorithms.html">4. Regridding Algorithms</a></li>
 <li class="toctree-l1"><a class="reference internal" href="06_implementation.html">5. Implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="07_roadmap.html">6. Roadmap</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Annex_A.html">Annex A - Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
 </ul>
 
     </div>
@@ -375,7 +390,7 @@
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>3. Output Grids and Map Projections</h1>
+    <h1>Output Grids and Map Projections</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -399,16 +414,16 @@
                 <article class="bd-article">
                   
   <section class="tex2jax_ignore mathjax_ignore" id="output-grids-and-map-projections">
-<h1>3. Output Grids and Map Projections<a class="headerlink" href="#output-grids-and-map-projections" title="Link to this heading">#</a></h1>
+<span id="sec-grids"></span><h1><span class="section-number">3. </span>Output Grids and Map Projections<a class="headerlink" href="#output-grids-and-map-projections" title="Link to this heading">#</a></h1>
 <p>The RGB offers a variety of output grids and map projections for L1C interpolations.
 An overview of grids and projections available to the user are provided in the CIMR RGB Software
-Installation and User manual <a class="reference internal" href="03_references.html"><span class="doc">[AD-1]</span></a>, Tables XXX and XXX respectively. This Section describes the
+Installation and User manual <a class="reference internal" href="03_references.html"><span class="doc">[RD-3]</span></a>, Tables 2 and 3 respectively. This Section describes the
 implementation of these grids within the processing pipeline.</p>
 <p>The <a class="reference external" href="https://github.com/S-T-Norway/CIMR-RGB/blob/main/src/cimr_rgb/grid_generator.py"><code class="docutils literal notranslate"><span class="pre">grid_generator</span></code></a>
 module contains the definition of available output grids and projections as well as functionality to
-CREATE GRIDS and convert coordinates between different projections.</p>
+create grids and convert coordinates between different projections.</p>
 <section id="generating-grids">
-<h2>3.1. Generating grids<a class="headerlink" href="#generating-grids" title="Link to this heading">#</a></h2>
+<span id="sec-grid-generation"></span><h2><span class="section-number">3.1. </span>Generating grids<a class="headerlink" href="#generating-grids" title="Link to this heading">#</a></h2>
 <p>An example of a grid definition string is provided below for an EASE2 Global 9km grid (<code class="docutils literal notranslate"><span class="pre">EASE2_G9km</span></code>):</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="s1">&#39;EASE2_G9km&#39;</span><span class="p">:</span> <span class="p">{</span>
     <span class="s1">&#39;epsg&#39;</span><span class="p">:</span> <span class="mi">6933</span><span class="p">,</span>
@@ -423,23 +438,23 @@ CREATE GRIDS and convert coordinates between different projections.</p>
 </div>
 <p>Upon initiation of the RGB, the user selected grid is queried and samples from the L1b data are removed
 if they fall out of the boundaries of the grid.</p>
-<p>It is necessary for a grid to be generated in order to interpolate L1B BTs onto. The grids are generated in a cartesian coordinate system
+<p>It is necessary for a grid to be generated in order to interpolate L1B BTs onto. The grids are generated in a Cartesian coordinate system
 defined by the input projection (<code class="docutils literal notranslate"><span class="pre">epsg</span></code>), where the upper left corner is equal to the grid definition string’s (<code class="docutils literal notranslate"><span class="pre">x_min</span></code>,<code class="docutils literal notranslate"><span class="pre">y_max</span></code>), the coordinates
-of the center of each grid cell is defined as:</p>
+of the centre of each grid cell, which are the target locations of the interpolation, are defined as:</p>
 <div class="math notranslate nohighlight" id="equation-eq-grid-x">
-<span class="eqno">(1)<a class="headerlink" href="#equation-eq-grid-x" title="Link to this equation">#</a></span>\[
-xs[i_{col}] = x_{min} + (i_{col}*res)
+<span class="eqno">(3.1)<a class="headerlink" href="#equation-eq-grid-x" title="Link to this equation">#</a></span>\[
+xs[i_{col}] = x_{min} + res/2 + (i_{col}*res)
 \]</div>
 <div class="math notranslate nohighlight" id="equation-eq-grid-y">
-<span class="eqno">(2)<a class="headerlink" href="#equation-eq-grid-y" title="Link to this equation">#</a></span>\[
-ys[i_{row}] = y_{max} - (i_{row}*res)
+<span class="eqno">(3.2)<a class="headerlink" href="#equation-eq-grid-y" title="Link to this equation">#</a></span>\[
+ys[i_{row}] = y_{max} - res/2 - (i_{row}*res)
 \]</div>
 <p>for</p>
 <div class="math notranslate nohighlight" id="equation-eq-grid-res">
-<span class="eqno">(3)<a class="headerlink" href="#equation-eq-grid-res" title="Link to this equation">#</a></span>\[
+<span class="eqno">(3.3)<a class="headerlink" href="#equation-eq-grid-res" title="Link to this equation">#</a></span>\[
 i_{col} = 0,..., n_{cols} - 1, i_{row} = 0,...,n_{rows} - 1
 \]</div>
-<p>The procedure outlines above is used for all EASE2 and stereographic grids, for which commonly used
+<p>The procedure outlined above is used for all EASE2 and stereographic grids, for which commonly used
 grids have already been defined for this purpose. For the Mercator grids, in the absence of a standard
 grid used by the community, it was necessary to create a custom definition. This was achieved by selecting the
 longitude and latitude bounds for which the grid is required, converting to the Mercator projection and creating
@@ -450,16 +465,16 @@ with the output data (indexing every BT to a grid cell), allowing the user to ea
 onto the chosen grid.</p>
 </section>
 <section id="converting-coordinates-between-projections">
-<h2>3.2. Converting coordinates between projections<a class="headerlink" href="#converting-coordinates-between-projections" title="Link to this heading">#</a></h2>
+<span id="sec-coord-conversion"></span><h2><span class="section-number">3.2. </span>Converting coordinates between projections<a class="headerlink" href="#converting-coordinates-between-projections" title="Link to this heading">#</a></h2>
 <p>The <a class="reference external" href="https://github.com/S-T-Norway/CIMR-RGB/blob/main/src/cimr_rgb/grid_generator.py"><code class="docutils literal notranslate"><span class="pre">grid_generator</span></code></a> module
 provides functionality to convert between (<code class="docutils literal notranslate"><span class="pre">lon</span></code>, <code class="docutils literal notranslate"><span class="pre">lat</span></code>), (<code class="docutils literal notranslate"><span class="pre">x</span></code>,<code class="docutils literal notranslate"><span class="pre">y</span></code>) and (<code class="docutils literal notranslate"><span class="pre">row</span></code>,<code class="docutils literal notranslate"><span class="pre">col</span></code>) for all provided projections.
 The module is frequently called throughout the RGB processing chain to convert between these coordinate systems when
 required or more convenient for a certain numerical operation.</p>
-<p>Each of the six projections offered come with their own set of conversion formulae. For the projections used in the
+<p>Each of the six projections offered comes with their own set of conversion formulae. For the projections used in the
 EASE2 grids (Cylindrical Equal Area (CEA) and Lambert’s Azimuthal Equal Area (LAEA)), the conversion formulae
-were implemented directly according to the EASE2 definition <a class="reference internal" href="03_references.html"><span class="doc">[RD-1]</span></a> and <a class="reference internal" href="03_references.html"><span class="doc">[RD-2]</span></a>. For the remainder of the projections (Stereographic and Mercator), the
+were implemented directly according to the EASE2 definition <span class="bibtex-citation" id="id1">[<a class="reference internal" href="references.html#id2" title="M. J. Brodzik, B. Billingsley, T. Haran, B. Raup, and M. H. Savoie. EASE-Grid 2.0: Incremental but Significant Improvements for Earth-Gridded Data Sets. ISPRS International Journal of Geo-Information, 1(1):32 – 45, 2012. \doi 10.3390/ijgi1010032.">Brodzik <em>et al.</em>, 2012</a>, <a class="reference internal" href="references.html#id3" title="National Snow and Ice Data Center. EASE-Grid conversion tools (easegrids-easeconv). GitHub repository. Retrieved 15 January 2025. URL: https://github.com/nsidc/easegrids-easeconv.">National Snow and Ice Data Center, n.d.</a>]</span>. For the remainder of the projections (Stereographic and Mercator), the
 <a class="reference external" href="https://github.com/OSGeo/PROJ"><code class="docutils literal notranslate"><span class="pre">Proj</span></code></a> library is used.</p>
-<p>For a comprehensive overview of projections and their associated transformations, <a class="reference internal" href="03_references.html"><span class="doc">[RD-3]</span></a> serves as an invaluable resource.</p>
+<p>For a comprehensive overview of projections and their associated transformations, <span class="bibtex-citation" id="id2">Snyder [<a class="reference internal" href="references.html#id4" title="J. P. Snyder. Map projections: a working manual. Professional Paper 1395, U.S. Geological Survey, Washington, DC, 1987.">1987</a>]</span> serves as an invaluable resource.</p>
 </section>
 </section>
 
@@ -499,7 +514,7 @@ were implemented directly according to the EASE2 definition <a class="reference 
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">2. References</p>
+        <p class="prev-next-title"><span class="section-number">2. </span>Applicable and reference documents</p>
       </div>
     </a>
     <a class="right-next"
@@ -507,7 +522,7 @@ were implemented directly according to the EASE2 definition <a class="reference 
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">4. Regridding Algorithms</p>
+        <p class="prev-next-title"><span class="section-number">4. </span>Regridding Algorithms</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -561,6 +576,15 @@ By Joseph Heywood, Maksym Brilenkov and Davide Decataldo
   
   <div class="footer-item">
     
+<div class="extra_footer">
+  <p>
+  This ATBD was developed in the context of the ESA-funded CIMR RGB Re-Gridding Tool Box EXPRO project (4000141564/23/I-AG).
+</p>
+<p>
+  Document ID: CIMR-ATBD-ST-RGB-005 v2.0
+</p>
+
+</div>
   </div>
   
 </div>

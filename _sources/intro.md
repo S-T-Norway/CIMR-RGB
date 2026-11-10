@@ -1,8 +1,6 @@
-# ATBD - Algorithms Theoretical Baseline
+# CIMR RGB Algorithms Theoretical Baseline Document
 
-This Jupyter Book is the CIMR RGB **Algorithms Theoretical Baseline Document**
-(source: `CIMR-ATBD-ST-RGB-005`), describing the theoretical basis of the
-re-gridding algorithms implemented in the Re-Gridding Toolbox (RGB).
+This Algorithm Theoretical Basis Document (ATBD) describes the theoretical basis of the regridding algorithms implemented in the CIMR Re-Gridding Toolbox (RGB).
 
 ```{tableofcontents}
 ```

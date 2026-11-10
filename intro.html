@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>ATBD - Algorithms Theoretical Baseline &#8212; CIMR RGB Algorithms Theoretical Baseline Document</title>
+    <title>CIMR RGB Algorithms Theoretical Baseline Document &#8212; CIMR RGB ATBD</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
     <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=9c3e77be" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="_static/styles.css?v=df429b37" />
@@ -67,7 +67,7 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Changelog" href="00_changelog.html" />
+    <link rel="next" title="Abstract" href="00_abstract.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -114,6 +114,9 @@
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">This is V2 of the ATBD, converted to Jupyter book from CIMR L1C PR2</div>
+</aside>
 
   
     <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
@@ -192,8 +195,14 @@
   
   
   
+    
+    
+      
+    
+    
+    <img src="_static/logo.jpg" class="logo__image only-light" alt="CIMR RGB ATBD - Home"/>
+    <img src="_static/logo.jpg" class="logo__image only-dark pst-js-only" alt="CIMR RGB ATBD - Home"/>
   
-    <p class="title logo__title">CIMR RGB Algorithms Theoretical Baseline Document</p>
   
 </a></div>
         <div class="sidebar-primary-item">
@@ -209,19 +218,25 @@
         <ul class="nav bd-sidenav bd-sidenav__home-link">
             <li class="toctree-l1 current active">
                 <a class="reference internal" href="#">
-                    ATBD - Algorithms Theoretical Baseline
+                    CIMR RGB Algorithms Theoretical Baseline Document
                 </a>
             </li>
         </ul>
         <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="00_changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="00_abstract.html">Abstract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="01_acronyms.html">Acronyms and definitions</a></li>
+</ul>
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="02_introduction.html">1. Introduction</a></li>
-<li class="toctree-l1"><a class="reference internal" href="03_references.html">2. References</a></li>
-
+<li class="toctree-l1"><a class="reference internal" href="03_references.html">2. Applicable and reference documents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="04_output_grids_and_map_projections.html">3. Output Grids and Map Projections</a></li>
 <li class="toctree-l1"><a class="reference internal" href="05_regridding_algorithms.html">4. Regridding Algorithms</a></li>
 <li class="toctree-l1"><a class="reference internal" href="06_implementation.html">5. Implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="07_roadmap.html">6. Roadmap</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Annex_A.html">Annex A - Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
 </ul>
 
     </div>
@@ -370,7 +385,7 @@
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>ATBD - Algorithms Theoretical Baseline</h1>
+    <h1>CIMR RGB Algorithms Theoretical Baseline Document</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -384,21 +399,29 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="atbd-algorithms-theoretical-baseline">
-<h1>ATBD - Algorithms Theoretical Baseline<a class="headerlink" href="#atbd-algorithms-theoretical-baseline" title="Link to this heading">#</a></h1>
-<p>This Jupyter Book is the CIMR RGB <strong>Algorithms Theoretical Baseline Document</strong>
-(source: <code class="docutils literal notranslate"><span class="pre">CIMR-ATBD-ST-RGB-005</span></code>), describing the theoretical basis of the
-re-gridding algorithms implemented in the Re-Gridding Toolbox (RGB).</p>
+  <section class="tex2jax_ignore mathjax_ignore" id="cimr-rgb-algorithms-theoretical-baseline-document">
+<h1>CIMR RGB Algorithms Theoretical Baseline Document<a class="headerlink" href="#cimr-rgb-algorithms-theoretical-baseline-document" title="Link to this heading">#</a></h1>
+<p>This Algorithm Theoretical Basis Document (ATBD) describes the theoretical basis of the regridding algorithms implemented in the CIMR Re-Gridding Toolbox (RGB).</p>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="00_changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="00_abstract.html">Abstract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="01_acronyms.html">Acronyms and definitions</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="02_introduction.html">1. Introduction</a></li>
-<li class="toctree-l1"><a class="reference internal" href="03_references.html">2. References</a></li>
-<li class="toctree-l1"><a class="reference internal" href="03_references.html#applicable-and-reference-documents">Applicable and reference documents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="03_references.html">2. Applicable and reference documents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="04_output_grids_and_map_projections.html">3. Output Grids and Map Projections</a></li>
 <li class="toctree-l1"><a class="reference internal" href="05_regridding_algorithms.html">4. Regridding Algorithms</a></li>
 <li class="toctree-l1"><a class="reference internal" href="06_implementation.html">5. Implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="07_roadmap.html">6. Roadmap</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="Annex_A.html">Annex A - Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
 </ul>
 </div>
 </section>
@@ -434,11 +457,11 @@ re-gridding algorithms implemented in the Re-Gridding Toolbox (RGB).</p>
                   
 <div class="prev-next-area">
     <a class="right-next"
-       href="00_changelog.html"
+       href="00_abstract.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Changelog</p>
+        <p class="prev-next-title">Abstract</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -474,6 +497,15 @@ By Joseph Heywood, Maksym Brilenkov and Davide Decataldo
   
   <div class="footer-item">
     
+<div class="extra_footer">
+  <p>
+  This ATBD was developed in the context of the ESA-funded CIMR RGB Re-Gridding Tool Box EXPRO project (4000141564/23/I-AG).
+</p>
+<p>
+  Document ID: CIMR-ATBD-ST-RGB-005 v2.0
+</p>
+
+</div>
   </div>
   
 </div>
